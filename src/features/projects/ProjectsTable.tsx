@@ -77,61 +77,191 @@ export default function ProjectsTable() {
     }
   };
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+    </div>
+  );
+  if (error) return (
+    <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+      Error: {error}
+    </div>
+  );
+
+  const getStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      'Design': 'bg-blue-100 text-blue-800',
+      'Production': 'bg-yellow-100 text-yellow-800',
+      'Installation': 'bg-purple-100 text-purple-800',
+      'Done': 'bg-green-100 text-green-800',
+    };
+    return colors[status] || 'bg-gray-100 text-gray-800';
+  };
+
+  const formatCurrency = (value?: number) => {
+    if (!value) return '-';
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(value);
+  };
 
   return (
-    <div>
-      <form onSubmit={editingId ? handleUpdate : handleAdd} className="mb-6 space-y-2">
-        <div className="flex gap-2 flex-wrap">
-          <input name="name" value={form.name || ''} onChange={handleChange} placeholder="Project Name" className="input input-bordered flex-1" required />
-          <select name="client_id" value={form.client_id || ''} onChange={handleChange} className="input input-bordered flex-1">
-            <option value="">Select Client</option>
-            {clients.map((client) => (
-              <option key={client.id} value={client.id}>{client.name}</option>
-            ))}
-          </select>
-          <input name="budget" value={form.budget || ''} onChange={handleChange} placeholder="Budget" type="number" className="input input-bordered flex-1" />
-          <select name="status" value={form.status || 'Design'} onChange={handleChange} className="input input-bordered flex-1">
-            {statusOptions.map((status) => (
-              <option key={status} value={status}>{status}</option>
-            ))}
-          </select>
-          <input name="deadline" value={form.deadline || ''} onChange={handleChange} placeholder="Deadline" type="date" className="input input-bordered flex-1" />
+    <div className="space-y-6">
+      {/* Form Card */}
+      <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">
+          {editingId ? '✏️ Edit Project' : '➕ Add New Project'}
+        </h3>
+        <form onSubmit={editingId ? handleUpdate : handleAdd} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Project Name *</label>
+              <input 
+                name="name" 
+                value={form.name || ''} 
+                onChange={handleChange} 
+                placeholder="Project name" 
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
+                required 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Client</label>
+              <select 
+                name="client_id" 
+                value={form.client_id || ''} 
+                onChange={handleChange} 
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
+              >
+                <option value="">Select Client</option>
+                {clients.map((client) => (
+                  <option key={client.id} value={client.id}>{client.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Budget</label>
+              <input 
+                name="budget" 
+                value={form.budget || ''} 
+                onChange={handleChange} 
+                placeholder="0" 
+                type="number"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Status *</label>
+              <select 
+                name="status" 
+                value={form.status || 'Design'} 
+                onChange={handleChange} 
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
+              >
+                {statusOptions.map((status) => (
+                  <option key={status} value={status}>{status}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Deadline</label>
+              <input 
+                name="deadline" 
+                value={form.deadline || ''} 
+                onChange={handleChange} 
+                type="date"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
+              />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button 
+              type="submit" 
+              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={saving}
+            >
+              {saving ? '⏳ Saving...' : (editingId ? '💾 Update Project' : '✨ Add Project')}
+            </button>
+            {editingId && (
+              <button 
+                type="button" 
+                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+                onClick={() => { setEditingId(null); setForm({ status: 'Design' }); }}
+              >
+                ❌ Cancel
+              </button>
+            )}
+          </div>
+        </form>
+      </div>
+
+      {/* Table Card */}
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
+        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
+          <h3 className="text-lg font-semibold text-gray-800">📁 Projects List</h3>
         </div>
-        <button type="submit" className="btn btn-primary" disabled={saving}>{editingId ? 'Update' : 'Add'} Project</button>
-        {editingId && <button type="button" className="btn ml-2" onClick={() => { setEditingId(null); setForm({ status: 'Design' }); }}>Cancel</button>}
-      </form>
-      <table className="min-w-full bg-white border">
-        <thead>
-          <tr>
-            <th className="border px-4 py-2">Project Name</th>
-            <th className="border px-4 py-2">Client</th>
-            <th className="border px-4 py-2">Budget</th>
-            <th className="border px-4 py-2">Status</th>
-            <th className="border px-4 py-2">Deadline</th>
-            <th className="border px-4 py-2">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {projects.map((project) => {
-            const client = clients.find((c) => c.id === project.client_id);
-            return (
-              <tr key={project.id}>
-                <td className="border px-4 py-2">{project.name}</td>
-                <td className="border px-4 py-2">{client?.name || '-'}</td>
-                <td className="border px-4 py-2">{project.budget}</td>
-                <td className="border px-4 py-2">{project.status}</td>
-                <td className="border px-4 py-2">{project.deadline}</td>
-                <td className="border px-4 py-2">
-                  <button className="btn btn-xs btn-outline mr-2" onClick={() => handleEdit(project)}>Edit</button>
-                  <button className="btn btn-xs btn-error" onClick={() => handleDelete(project.id)}>Delete</button>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="min-w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project Name</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Budget</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deadline</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {projects.map((project) => {
+                const client = clients.find((c) => c.id === project.client_id);
+                return (
+                  <tr key={project.id} className="hover:bg-gray-50 transition">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{project.name}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">{client?.name || '-'}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{formatCurrency(project.budget)}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-3 py-1 text-xs font-medium rounded-full ${getStatusColor(project.status)}`}>
+                        {project.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">{project.deadline || '-'}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex gap-2">
+                        <button 
+                          className="px-3 py-1 text-sm bg-green-50 text-green-600 rounded hover:bg-green-100 transition"
+                          onClick={() => handleEdit(project)}
+                        >
+                          ✏️ Edit
+                        </button>
+                        <button 
+                          className="px-3 py-1 text-sm bg-red-50 text-red-600 rounded hover:bg-red-100 transition"
+                          onClick={() => handleDelete(project.id)}
+                        >
+                          🗑️ Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {projects.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                    📭 No projects yet. Add your first project above!
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }
