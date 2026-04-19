@@ -5,6 +5,12 @@ export interface Client {
   address?: string;
   notes?: string;
   created_at?: string;
+  project_name?: string;
+  property_type?: string;
+  budget_range?: string;
+  lead_status?: string;
+  source?: string;
+  priority?: string;
 }
 
 export type LeadStatus = 'New Lead' | 'Contacted' | 'Survey' | 'Deal' | 'Lost';
