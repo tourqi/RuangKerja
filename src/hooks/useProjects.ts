@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { getProjects } from '@/services/projects';
 import { Project } from '@/types/db';
 
@@ -8,7 +8,7 @@ export function useProjects() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const refetch = useCallback(() => {
     setLoading(true);
     getProjects()
       .then(setProjects)
@@ -16,5 +16,9 @@ export function useProjects() {
       .finally(() => setLoading(false));
   }, []);
 
-  return { projects, loading, error };
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
+
+  return { projects, loading, error, refetch };
 }

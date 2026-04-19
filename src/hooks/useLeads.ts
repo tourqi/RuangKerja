@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { getLeads } from '@/services/leads';
 import { Lead } from '@/types/db';
 
@@ -8,7 +8,7 @@ export function useLeads() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const refetch = useCallback(() => {
     setLoading(true);
     getLeads()
       .then(setLeads)
@@ -16,5 +16,9 @@ export function useLeads() {
       .finally(() => setLoading(false));
   }, []);
 
-  return { leads, loading, error };
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
+
+  return { leads, loading, error, refetch };
 }
