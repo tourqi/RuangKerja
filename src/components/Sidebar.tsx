@@ -8,6 +8,7 @@ const navItems = [
   { href: "/clients", label: "Clients", icon: "⊙" },
   { href: "/leads", label: "Leads", icon: "◎" },
   { href: "/projects", label: "Projects", icon: "▣" },
+  { href: "/reports", label: "Laporan", icon: "◈" },
 ];
 
 export default function Sidebar() {

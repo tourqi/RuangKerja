@@ -2,55 +2,117 @@
 import React, { useState } from "react";
 import { useProjects } from "@/hooks/useProjects";
 import { useClients } from "@/hooks/useClients";
+import { useLeads } from "@/hooks/useLeads";
 import { addProject, updateProject, deleteProject } from "@/services/projects";
-import { Project, ProjectStatus } from "@/types/db";
+import { Project, ProjectStatus, projectStatusLabel } from "@/types/db";
 
-const statusOptions: ProjectStatus[] = ["Design", "Production", "Installation", "Done"];
+const statusOptions: ProjectStatus[] = ["Planning", "Design", "Production", "Installation", "Done"];
 
-const statusColors: Record<string, string> = {
+const statusColors: Record<ProjectStatus, string> = {
+  Planning: "bg-gray-100 text-gray-700",
   Design: "bg-blue-100 text-blue-800",
   Production: "bg-yellow-100 text-yellow-800",
   Installation: "bg-purple-100 text-purple-800",
   Done: "bg-green-100 text-green-800",
 };
 
-const formatCurrency = (value?: number) => {
+const formatRupiah = (value?: number) => {
   if (!value) return "-";
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(value);
 };
 
+const PROJECT_COLUMNS: (keyof Project)[] = [
+  "client_id", "name", "value", "status", "start_date", "deadline", "assigned_to", "progress",
+];
+
 export default function ProjectsTable() {
   const { projects, loading, error, refetch } = useProjects();
   const { clients } = useClients();
-  const [form, setForm] = useState<Partial<Project>>({ status: "Design" });
+  const { leads } = useLeads();
+  const [form, setForm] = useState<Partial<Project>>({ status: "Planning", progress: 0 });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [viewingProject, setViewingProject] = useState<Project | null>(null);
+
+  // --- FILTER STATE ---
+  const [filterName, setFilterName] = useState("");
+  const [filterClient, setFilterClient] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterAssigned, setFilterAssigned] = useState("");
+  const [filterStartFrom, setFilterStartFrom] = useState("");
+  const [filterStartTo, setFilterStartTo] = useState("");
+  const [filterDeadlineFrom, setFilterDeadlineFrom] = useState("");
+  const [filterDeadlineTo, setFilterDeadlineTo] = useState("");
+  const [filterProgressMin, setFilterProgressMin] = useState("");
+  const [filterProgressMax, setFilterProgressMax] = useState("");
+
+  const resetFilters = () => {
+    setFilterName(""); setFilterClient(""); setFilterStatus("");
+    setFilterAssigned(""); setFilterStartFrom(""); setFilterStartTo("");
+    setFilterDeadlineFrom(""); setFilterDeadlineTo("");
+    setFilterProgressMin(""); setFilterProgressMax("");
+  };
+
+  // hanya client yang leads-nya Deal (WON)
+  const wonClientIds = new Set((leads || []).filter(l => l.status === "Deal").map(l => l.client_id));
+  const wonClients = (clients || []).filter(c => wonClientIds.has(c.id));
+
+  // --- FILTERED PROJECTS ---
+  const filteredProjects = (projects || []).filter(p => {
+    if (filterName && !p.name?.toLowerCase().includes(filterName.toLowerCase())) return false;
+    if (filterClient) {
+      const c = (clients || []).find(cl => cl.id === p.client_id);
+      if (!c?.name?.toLowerCase().includes(filterClient.toLowerCase())) return false;
+    }
+    if (filterStatus && p.status !== filterStatus) return false;
+    if (filterAssigned && !p.assigned_to?.toLowerCase().includes(filterAssigned.toLowerCase())) return false;
+    if (filterStartFrom && p.start_date && p.start_date < filterStartFrom) return false;
+    if (filterStartTo && p.start_date && p.start_date > filterStartTo) return false;
+    if (filterDeadlineFrom && p.deadline && p.deadline < filterDeadlineFrom) return false;
+    if (filterDeadlineTo && p.deadline && p.deadline > filterDeadlineTo) return false;
+    if (filterProgressMin !== "" && (p.progress ?? 0) < Number(filterProgressMin)) return false;
+    if (filterProgressMax !== "" && (p.progress ?? 0) > Number(filterProgressMax)) return false;
+    return true;
+  });
+
+  const resetForm = () => setForm({ status: "Planning", progress: 0 });
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setForm(prev => ({
+      ...prev,
+      [name]: name === "value" || name === "progress" ? (value === "" ? undefined : Number(value)) : value,
+    }));
   };
 
-  const handleAdd = async (e: React.SubmitEvent<HTMLFormElement>) => {
+  const buildPayload = () => {
+    const payload = Object.fromEntries(
+      PROJECT_COLUMNS
+        .filter(k => form[k] !== undefined && form[k] !== "")
+        .map(k => [k, form[k]])
+    ) as Omit<Project, "id" | "created_at">;
+    payload.status = (form.status || "Planning") as ProjectStatus;
+    return payload;
+  };
+
+  const handleAdd = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!form.name) { alert("Nama project wajib diisi"); return; }
     setSaving(true);
     try {
-      await addProject({
-        name: form.name || "",
-        client_id: form.client_id,
-        budget: form.budget ? Number(form.budget) : undefined,
-        status: form.status as ProjectStatus,
-        deadline: form.deadline,
-      });
-      setForm({ status: "Design" });
+      await addProject(buildPayload());
+      resetForm();
       setShowModal(false);
       refetch();
-    } catch {
-      alert("Gagal menambah project");
+    } catch (err: unknown) {
+      const pg = err as { message?: string };
+      console.error("addProject error:", err);
+      alert(`Gagal menambah project: ${pg?.message || JSON.stringify(err)}`);
     } finally {
       setSaving(false);
     }
@@ -62,18 +124,20 @@ export default function ProjectsTable() {
     setShowModal(true);
   };
 
-  const handleUpdate = async (e: React.SubmitEvent<HTMLFormElement>) => {
+  const handleUpdate = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!editingId) return;
     setSaving(true);
     try {
-      await updateProject(editingId, form);
+      await updateProject(editingId, buildPayload());
       setEditingId(null);
-      setForm({ status: "Design" });
+      resetForm();
       setShowModal(false);
       refetch();
-    } catch {
-      alert("Gagal update project");
+    } catch (err: unknown) {
+      const pg = err as { message?: string };
+      console.error("updateProject error:", err);
+      alert(`Gagal update project: ${pg?.message || JSON.stringify(err)}`);
     } finally {
       setSaving(false);
     }
@@ -112,14 +176,85 @@ export default function ProjectsTable() {
   return (
     <div>
       {/* Toolbar */}
-      <div className="flex items-center justify-between mb-5">
-        <p className="text-sm text-gray-500">{projects.length} project</p>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-4">
+          <p className="text-sm text-gray-500">{filteredProjects.length} project</p>
+          <p className="text-sm font-semibold text-green-700">
+            Total: {formatRupiah(filteredProjects.reduce((sum, p) => sum + (p.value ?? 0), 0))}
+          </p>
+        </div>
         <button
           className="px-5 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition font-medium"
-          onClick={() => { setEditingId(null); setForm({ status: "Design" }); setShowModal(true); }}
+          onClick={() => { setEditingId(null); resetForm(); setShowModal(true); }}
         >
           + Tambah Project
         </button>
+      </div>
+
+      {/* Filter Bar */}
+      <div className="bg-white rounded-xl shadow border border-gray-100 p-4 mb-5 flex flex-col gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <input
+            type="text"
+            value={filterName}
+            onChange={e => setFilterName(e.target.value)}
+            placeholder="Cari nama project..."
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black placeholder:text-gray-400 focus:ring-2 focus:ring-green-500 outline-none"
+          />
+          <input
+            type="text"
+            value={filterClient}
+            onChange={e => setFilterClient(e.target.value)}
+            placeholder="Cari nama client..."
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black placeholder:text-gray-400 focus:ring-2 focus:ring-green-500 outline-none"
+          />
+          <select
+            value={filterStatus}
+            onChange={e => setFilterStatus(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-green-500 outline-none"
+          >
+            <option value="">Semua Status</option>
+            {statusOptions.map(s => <option key={s} value={s}>{projectStatusLabel[s]}</option>)}
+          </select>
+          <input
+            type="text"
+            value={filterAssigned}
+            onChange={e => setFilterAssigned(e.target.value)}
+            placeholder="Assigned to..."
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black placeholder:text-gray-400 focus:ring-2 focus:ring-green-500 outline-none"
+          />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Start Date</label>
+            <div className="flex items-center gap-2">
+              <input type="date" value={filterStartFrom} onChange={e => setFilterStartFrom(e.target.value)} className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-green-500 outline-none" />
+              <span className="text-gray-400 shrink-0">—</span>
+              <input type="date" value={filterStartTo} onChange={e => setFilterStartTo(e.target.value)} className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-green-500 outline-none" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Deadline</label>
+            <div className="flex items-center gap-2">
+              <input type="date" value={filterDeadlineFrom} onChange={e => setFilterDeadlineFrom(e.target.value)} className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-green-500 outline-none" />
+              <span className="text-gray-400 shrink-0">—</span>
+              <input type="date" value={filterDeadlineTo} onChange={e => setFilterDeadlineTo(e.target.value)} className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-green-500 outline-none" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Progress (%)</label>
+            <div className="flex items-center gap-2">
+              <input type="number" min={0} max={100} value={filterProgressMin} onChange={e => setFilterProgressMin(e.target.value)} placeholder="Min" className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-green-500 outline-none" />
+              <span className="text-gray-400 shrink-0">—</span>
+              <input type="number" min={0} max={100} value={filterProgressMax} onChange={e => setFilterProgressMax(e.target.value)} placeholder="Max" className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-green-500 outline-none" />
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-end">
+          <button onClick={resetFilters} className="px-4 py-1.5 text-sm text-gray-500 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+            Reset Filter
+          </button>
+        </div>
       </div>
 
       {/* Table */}
@@ -128,30 +263,50 @@ export default function ProjectsTable() {
           <h3 className="text-base font-semibold text-gray-800">Daftar Project</h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[700px] text-sm">
+          <table className="w-full min-w-[900px] text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                {["Nama Project", "Client", "Budget", "Status", "Deadline", "Aksi"].map((h) => (
-                  <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
+                {["Nama Project", "Client", "Nilai Project", "Status", "Start Date", "Deadline", "Assigned To", "Progress", "Aksi"].map((h) => (
+                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {projects.map((project) => {
+              {filteredProjects.map((project) => {
                 const client = clients.find((c) => c.id === project.client_id);
+                const progress = project.progress ?? 0;
                 return (
                   <tr key={project.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-5 py-3 font-medium text-gray-900 whitespace-nowrap">{project.name}</td>
-                    <td className="px-5 py-3 text-gray-500 whitespace-nowrap">{client?.name || "-"}</td>
-                    <td className="px-5 py-3 text-gray-700 font-medium whitespace-nowrap">{formatCurrency(project.budget)}</td>
-                    <td className="px-5 py-3 whitespace-nowrap">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[project.status] || "bg-gray-100 text-gray-700"}`}>
-                        {project.status}
+                    <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">{project.name}</td>
+                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{client?.name || "-"}</td>
+                    <td className="px-4 py-3 text-gray-700 font-medium whitespace-nowrap">{formatRupiah(project.value)}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[project.status]}`}>
+                        {projectStatusLabel[project.status]}
                       </span>
                     </td>
-                    <td className="px-5 py-3 text-gray-500 whitespace-nowrap">{project.deadline || "-"}</td>
-                    <td className="px-5 py-3 whitespace-nowrap">
+                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{project.start_date ? project.start_date.slice(0, 10) : "-"}</td>
+                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{project.deadline ? project.deadline.slice(0, 10) : "-"}</td>
+                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{project.assigned_to || "-"}</td>
+                    <td className="px-4 py-3 whitespace-nowrap min-w-[120px]">
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 bg-gray-200 rounded-full h-1.5">
+                          <div
+                            className="bg-green-500 h-1.5 rounded-full transition-all"
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-gray-500 w-8 text-right">{progress}%</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex gap-2">
+                        <button
+                          className="px-3 py-1 text-xs font-medium bg-gray-50 text-gray-600 rounded-md hover:bg-gray-100 transition"
+                          onClick={() => setViewingProject(project)}
+                        >
+                          Lihat
+                        </button>
                         <button
                           className="px-3 py-1 text-xs font-medium bg-green-50 text-green-600 rounded-md hover:bg-green-100 transition"
                           onClick={() => handleEdit(project)}
@@ -169,9 +324,9 @@ export default function ProjectsTable() {
                   </tr>
                 );
               })}
-              {projects.length === 0 && (
+              {filteredProjects.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-gray-400 text-sm">
+                  <td colSpan={9} className="px-6 py-12 text-center text-gray-400 text-sm">
                     Belum ada project. Klik "Tambah Project" untuk memulai.
                   </td>
                 </tr>
@@ -184,69 +339,94 @@ export default function ProjectsTable() {
       {/* Modal Form */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
               <h2 className="text-lg font-semibold text-gray-900">
                 {editingId ? "Edit Project" : "Tambah Project Baru"}
               </h2>
               <button
                 className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition"
-                onClick={() => { setShowModal(false); setEditingId(null); setForm({ status: "Design" }); }}
+                onClick={() => { setShowModal(false); setEditingId(null); resetForm(); }}
               >
                 ✕
               </button>
             </div>
             <form onSubmit={editingId ? handleUpdate : handleAdd} className="px-6 py-5 space-y-4">
+              {/* Nama Project */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nama Project <span className="text-red-500">*</span></label>
+                <input
+                  name="name"
+                  value={form.name || ""}
+                  onChange={handleChange}
+                  required
+                  placeholder="Nama project"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+
+              {/* Client */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Client (Lead Deal)</label>
+                <select
+                  name="client_id"
+                  value={form.client_id || ""}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500"
+                >
+                  <option value="">Pilih Client</option>
+                  {wonClients.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+                {wonClients.length === 0 && (
+                  <p className="text-xs text-gray-400 mt-1">Belum ada lead dengan status Deal.</p>
+                )}
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Nilai Project */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nama Project <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nilai Project (Rp)</label>
                   <input
-                    name="name"
-                    value={form.name || ""}
-                    onChange={handleChange}
-                    required
-                    placeholder="Nama project"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Client</label>
-                  <select
-                    name="client_id"
-                    value={form.client_id || ""}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500"
-                  >
-                    <option value="">Pilih Client</option>
-                    {clients.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Budget (Rp)</label>
-                  <input
-                    name="budget"
-                    value={form.budget || ""}
+                    name="value"
+                    value={form.value ?? ""}
                     onChange={handleChange}
                     type="number"
+                    min={0}
                     placeholder="0"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
+
+                {/* Status */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Status <span className="text-red-500">*</span></label>
                   <select
                     name="status"
-                    value={form.status || "Design"}
+                    value={form.status || "Planning"}
                     onChange={handleChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500"
                   >
                     {statusOptions.map((s) => (
-                      <option key={s} value={s}>{s}</option>
+                      <option key={s} value={s}>{projectStatusLabel[s]}</option>
                     ))}
                   </select>
                 </div>
+
+                {/* Start Date */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                  <input
+                    name="start_date"
+                    value={form.start_date || ""}
+                    onChange={handleChange}
+                    type="date"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+
+                {/* Deadline */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Deadline</label>
                   <input
@@ -257,7 +437,42 @@ export default function ProjectsTable() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
+
+                {/* Assigned To */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
+                  <input
+                    name="assigned_to"
+                    value={form.assigned_to || ""}
+                    onChange={handleChange}
+                    placeholder="Nama tim / PIC"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+
+                {/* Progress */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Progress <span className="text-gray-400 font-normal">({form.progress ?? 0}%)</span>
+                  </label>
+                  <input
+                    name="progress"
+                    value={form.progress ?? 0}
+                    onChange={handleChange}
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={5}
+                    className="w-full accent-green-600"
+                  />
+                  <div className="flex justify-between text-xs text-gray-400 mt-0.5">
+                    <span>0%</span>
+                    <span>50%</span>
+                    <span>100%</span>
+                  </div>
+                </div>
               </div>
+
               <div className="flex gap-2 pt-1">
                 <button
                   type="submit"
@@ -269,7 +484,7 @@ export default function ProjectsTable() {
                 <button
                   type="button"
                   className="px-6 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition"
-                  onClick={() => { setShowModal(false); setEditingId(null); setForm({ status: "Design" }); }}
+                  onClick={() => { setShowModal(false); setEditingId(null); resetForm(); }}
                 >
                   Batal
                 </button>
@@ -278,6 +493,67 @@ export default function ProjectsTable() {
           </div>
         </div>
       )}
+
+      {/* View Modal */}
+      {viewingProject && (() => {
+        const vc = clients.find(c => c.id === viewingProject.client_id);
+        const progress = viewingProject.progress ?? 0;
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+                <h2 className="text-lg font-semibold text-gray-900">Detail Project</h2>
+                <button className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition" onClick={() => setViewingProject(null)}>✕</button>
+              </div>
+              <div className="px-6 py-5 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-0.5">Nama Project</p>
+                    <p className="text-base font-semibold text-gray-900">{viewingProject.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-0.5">Client</p>
+                    <p className="text-sm text-gray-800">{vc?.name || "-"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Status</p>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[viewingProject.status]}`}>{projectStatusLabel[viewingProject.status]}</span>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-0.5">Nilai Project</p>
+                    <p className="text-sm font-semibold text-gray-800">{formatRupiah(viewingProject.value)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-0.5">Assigned To</p>
+                    <p className="text-sm text-gray-800">{viewingProject.assigned_to || "-"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-0.5">Start Date</p>
+                    <p className="text-sm text-gray-800">{viewingProject.start_date?.slice(0, 10) || "-"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-0.5">Deadline</p>
+                    <p className="text-sm text-gray-800">{viewingProject.deadline?.slice(0, 10) || "-"}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Progress</p>
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 bg-gray-200 rounded-full h-2">
+                        <div className="bg-green-500 h-2 rounded-full transition-all" style={{ width: `${progress}%` }} />
+                      </div>
+                      <span className="text-sm font-semibold text-gray-700 w-10 text-right">{progress}%</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+                  <button className="px-4 py-2 text-sm font-medium bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition" onClick={() => { setViewingProject(null); handleEdit(viewingProject); }}>Edit</button>
+                  <button className="px-4 py-2 text-sm font-medium bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition" onClick={() => setViewingProject(null)}>Tutup</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Delete Modal */}
       {showDeleteModal && (

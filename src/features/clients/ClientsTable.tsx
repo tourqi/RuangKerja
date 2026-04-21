@@ -29,6 +29,7 @@ export default function ClientsTable() {
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [viewingClient, setViewingClient] = useState<Client | null>(null);
 
   const [filter, setFilter] = useState({
     name: "",
@@ -255,6 +256,12 @@ export default function ClientsTable() {
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex gap-2">
                         <button
+                          className="px-3 py-1 text-xs font-medium bg-gray-50 text-gray-600 rounded-md hover:bg-gray-100 transition"
+                          onClick={() => setViewingClient(client)}
+                        >
+                          Lihat
+                        </button>
+                        <button
                           className="px-3 py-1 text-xs font-medium bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition"
                           onClick={() => handleEdit(client)}
                         >
@@ -393,6 +400,62 @@ export default function ClientsTable() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* View Modal */}
+      {viewingClient && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+              <h2 className="text-lg font-semibold text-gray-900">Detail Client</h2>
+              <button
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition"
+                onClick={() => setViewingClient(null)}
+              >✕</button>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                {[
+                  { label: "Nama", value: viewingClient.name },
+                  { label: "No. HP", value: viewingClient.phone },
+                  { label: "Alamat", value: viewingClient.address },
+                  { label: "Nama Project", value: viewingClient.project_name },
+                  { label: "Tipe Properti", value: viewingClient.property_type },
+                  { label: "Budget", value: viewingClient.budget_range },
+                  { label: "Sumber", value: viewingClient.source },
+                  { label: "Prioritas", value: viewingClient.priority },
+                ].map(({ label, value }) => (
+                  <div key={label}>
+                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-0.5">{label}</p>
+                    <p className="text-sm text-gray-800">{value || "-"}</p>
+                  </div>
+                ))}
+                <div className="col-span-2">
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-0.5">Status Lead</p>
+                  {viewingClient.lead_status ? (
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${leadStatusColors[viewingClient.lead_status] || "bg-gray-100 text-gray-700"}`}>
+                      {viewingClient.lead_status}
+                    </span>
+                  ) : <p className="text-sm text-gray-800">-</p>}
+                </div>
+                <div className="col-span-2">
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-0.5">Catatan</p>
+                  <p className="text-sm text-gray-800 whitespace-pre-wrap">{viewingClient.notes || "-"}</p>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+                <button
+                  className="px-4 py-2 text-sm font-medium bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition"
+                  onClick={() => { setViewingClient(null); handleEdit(viewingClient); }}
+                >Edit</button>
+                <button
+                  className="px-4 py-2 text-sm font-medium bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+                  onClick={() => setViewingClient(null)}
+                >Tutup</button>
+              </div>
+            </div>
           </div>
         </div>
       )}
