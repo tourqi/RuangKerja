@@ -56,3 +56,34 @@ export interface Project {
   progress?: number;
   created_at?: string;
 }
+
+export type RabStatus = 'draft' | 'sent' | 'approved';
+
+export interface Rab {
+  id: string;
+  lead_id: string;
+  nama: string;
+  status: RabStatus;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface RabGroup {
+  id: string;
+  rab_id: string;
+  no: number;
+  deskripsi: string;
+  created_at?: string;
+  items?: RabItem[];
+}
+
+export interface RabItem {
+  id: string;
+  group_id: string;
+  spesifikasi: string;
+  qty: number;
+  unit: string;
+  harga: number;
+  sort_order: number;
+  created_at?: string;
+}

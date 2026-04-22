@@ -6,7 +6,6 @@ import Link from "next/link";
 import {
   PieChart,
   Pie,
-  Cell,
   Tooltip,
   BarChart,
   Bar,
@@ -141,6 +140,7 @@ export default function DashboardOverview() {
   const leadPieData = LEAD_STATUSES.map((s) => ({
     name: s,
     value: leads.filter((l) => l.status === s).length,
+    fill: LEAD_COLORS[s],
   })).filter((d) => d.value > 0);
 
   /* Bar: Project status (count + value) */
@@ -148,7 +148,7 @@ export default function DashboardOverview() {
     name: PROJECT_LABEL[s],
     jumlah: projects.filter((p) => p.status === s).length,
     nilai: projects.filter((p) => p.status === s).reduce((sum, p) => sum + (p.value ?? 0), 0),
-    color: PROJECT_COLORS[s],
+    fill: PROJECT_COLORS[s],
   }));
 
   /* Area: Monthly trend (last 6 months) */
@@ -168,8 +168,54 @@ export default function DashboardOverview() {
     .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
     .slice(0, 5);
 
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const overdueProjects = projects.filter(
+    (p) => p.status !== "Done" && p.deadline && new Date(p.deadline) < today
+  );
+  const followUpLeads = leads.filter(
+    (l) =>
+      l.status !== "Deal" &&
+      l.status !== "Lost" &&
+      l.follow_up_date &&
+      new Date(l.follow_up_date) <= today
+  );
+
   return (
     <div className="space-y-6">
+      {/* ── Alert banners ── */}
+      {(overdueProjects.length > 0 || followUpLeads.length > 0) && (
+        <div className="space-y-2">
+          {overdueProjects.length > 0 && (
+            <div className="flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm">
+              <span className="w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center text-xs flex-shrink-0">!</span>
+              <span className="text-red-800 font-medium">
+                {overdueProjects.length} proyek melewati deadline:
+              </span>
+              <span className="text-red-700 truncate">
+                {overdueProjects.slice(0, 3).map((p) => p.name).join(", ")}
+                {overdueProjects.length > 3 && ` +${overdueProjects.length - 3} lainnya`}
+              </span>
+              <Link href="/projects" className="ml-auto text-xs text-red-600 hover:underline flex-shrink-0">
+                Lihat →
+              </Link>
+            </div>
+          )}
+          {followUpLeads.length > 0 && (
+            <div className="flex items-center gap-3 px-4 py-3 bg-orange-50 border border-orange-200 rounded-xl text-sm">
+              <span className="w-5 h-5 rounded-full bg-orange-500 text-white flex items-center justify-center text-xs flex-shrink-0">!</span>
+              <span className="text-orange-800 font-medium">
+                {followUpLeads.length} lead perlu follow-up hari ini
+              </span>
+              <Link href="/leads" className="ml-auto text-xs text-orange-600 hover:underline flex-shrink-0">
+                Lihat →
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── KPI cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
@@ -217,11 +263,7 @@ export default function DashboardOverview() {
                       outerRadius="80%"
                       paddingAngle={2}
                       dataKey="value"
-                    >
-                      {leadPieData.map((entry) => (
-                        <Cell key={entry.name} fill={LEAD_COLORS[entry.name]} />
-                      ))}
-                    </Pie>
+                    />
                     <Tooltip
                       content={({ active, payload }) => {
                         if (!active || !payload?.length) return null;
@@ -269,11 +311,7 @@ export default function DashboardOverview() {
                   <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} allowDecimals={false} />
                   <Tooltip content={<CountTooltip />} cursor={{ fill: "#f9fafb" }} />
-                  <Bar dataKey="jumlah" name="Jumlah" radius={[4, 4, 0, 0]}>
-                    {projectBarData.map((entry) => (
-                      <Cell key={entry.name} fill={entry.color} />
-                    ))}
-                  </Bar>
+                  <Bar dataKey="jumlah" name="Jumlah" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -338,11 +376,7 @@ export default function DashboardOverview() {
                   tickFormatter={formatCurrencyShort}
                 />
                 <Tooltip content={<CurrencyTooltip />} cursor={{ fill: "#f9fafb" }} />
-                <Bar dataKey="nilai" name="Nilai" radius={[4, 4, 0, 0]}>
-                  {projectBarData.map((entry) => (
-                    <Cell key={entry.name} fill={entry.color} />
-                  ))}
-                </Bar>
+                <Bar dataKey="nilai" name="Nilai" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

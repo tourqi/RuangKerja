@@ -1,9 +1,16 @@
 "use client";
 import React, { useState } from "react";
+import Link from "next/link";
 import { useLeads } from "@/hooks/useLeads";
 import { useClients } from "@/hooks/useClients";
 import { addLead, updateLead, deleteLead } from "@/services/leads";
 import { Lead, LeadStatus } from "@/types/db";
+import { useToast } from "@/components/Toast";
+import { SortableHeader } from "@/components/SortableHeader";
+import { useSortable } from "@/hooks/useSortable";
+import { usePagination } from "@/hooks/usePagination";
+import Pagination from "@/components/Pagination";
+import { exportCSV } from "@/utils/csv";
 
 const statusOptions: LeadStatus[] = ["New Lead", "Contacted", "Survey", "Deal", "Lost"];
 
@@ -15,7 +22,20 @@ const statusColors: Record<string, string> = {
   Lost: "bg-red-100 text-red-800",
 };
 
+function SkeletonRow({ cols }: { cols: number }) {
+  return (
+    <tr>
+      {Array.from({ length: cols }).map((_, i) => (
+        <td key={i} className="px-4 py-3">
+          <div className="h-3 bg-gray-100 rounded animate-pulse" style={{ width: `${60 + (i % 3) * 15}%` }} />
+        </td>
+      ))}
+    </tr>
+  );
+}
+
 export default function LeadsTable() {
+  const toast = useToast();
 
   // --- MODAL AUTOCOMPLETE CLIENTS ---
   const [modalClientQuery, setModalClientQuery] = useState("");
@@ -91,6 +111,32 @@ export default function LeadsTable() {
     return true;
   });
 
+  const enrichedLeads = filteredLeads.map((l) => {
+    const c = (clients || []).find((cl) => cl.id === l.client_id);
+    return { ...l, client_name: c?.name ?? "", client_phone: c?.phone ?? "" };
+  });
+
+  const { sorted: sortedLeads, sortKey, sortDir, toggleSort } = useSortable(enrichedLeads);
+  const { paged: pagedLeads, page, goTo, pageSize, changePageSize, totalPages, from, to, total } = usePagination(sortedLeads);
+
+  const handleExport = () => {
+    exportCSV(
+      sortedLeads.map((l) => ({
+        Klien: l.client_name,
+        Telepon: l.client_phone,
+        Status: l.status,
+        Prioritas: l.priority ?? "",
+        Sumber: l.source ?? "",
+        "Follow Up": l.follow_up_date?.slice(0, 10) ?? "",
+        "Last Contact": l.last_contacted_at?.slice(0, 10) ?? "",
+        "Ditutup": l.closed_at?.slice(0, 10) ?? "",
+        "Updated": l.updated_at?.slice(0, 10) ?? "",
+        Catatan: l.notes ?? "",
+      })),
+      "leads"
+    );
+  };
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
@@ -99,7 +145,7 @@ export default function LeadsTable() {
 
   const handleAdd = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!form.client_id) { alert("Pilih client terlebih dahulu"); return; }
+    if (!form.client_id) { toast("Pilih client terlebih dahulu", "warning"); return; }
     setSaving(true);
     try {
       const LEAD_COLUMNS: (keyof Lead)[] = [
@@ -117,10 +163,10 @@ export default function LeadsTable() {
       setModalClientQuery("");
       setShowModal(false);
       refetch();
+      toast("Lead berhasil ditambahkan", "success");
     } catch (err: unknown) {
-      const pg = err as { message?: string; details?: string; hint?: string; code?: string };
-      console.error("addLead error:", pg?.message, pg?.details, pg?.hint, pg?.code);
-      alert(`Gagal menambah lead: ${pg?.message || JSON.stringify(err)}`);
+      const pg = err as { message?: string };
+      toast(`Gagal menambah lead: ${pg?.message || "Terjadi kesalahan"}`, "error");
     } finally {
       setSaving(false);
     }
@@ -137,13 +183,24 @@ export default function LeadsTable() {
     if (!editingId) return;
     setSaving(true);
     try {
-      await updateLead(editingId, form);
+      const LEAD_COLUMNS: (keyof Lead)[] = [
+        "client_id", "status", "priority", "source",
+        "follow_up_date", "last_contacted_at", "closed_at", "notes",
+      ];
+      const payload = Object.fromEntries(
+        LEAD_COLUMNS
+          .filter((k) => form[k] !== undefined)
+          .map((k) => [k, form[k] === "" ? null : form[k]])
+      ) as Partial<Lead>;
+      payload.status = (form.status || "New Lead") as LeadStatus;
+      await updateLead(editingId, payload);
       setEditingId(null);
       setForm({ status: "New Lead" });
       setShowModal(false);
       refetch();
+      toast("Lead berhasil diperbarui", "success");
     } catch {
-      alert("Gagal update lead");
+      toast("Gagal update lead", "error");
     } finally {
       setSaving(false);
     }
@@ -160,8 +217,9 @@ export default function LeadsTable() {
     try {
       await deleteLead(deletingId);
       refetch();
+      toast("Lead berhasil dihapus", "success");
     } catch {
-      alert("Gagal hapus lead");
+      toast("Gagal hapus lead", "error");
     } finally {
       setSaving(false);
       setShowDeleteModal(false);
@@ -171,8 +229,12 @@ export default function LeadsTable() {
 
   if (loading)
     return (
-      <div className="flex items-center justify-center py-16">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600" />
+      <div className="bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
+        <table className="w-full text-sm">
+          <tbody className="divide-y divide-gray-100">
+            {Array.from({ length: 7 }).map((_, i) => <SkeletonRow key={i} cols={8} />)}
+          </tbody>
+        </table>
       </div>
     );
 
@@ -295,12 +357,20 @@ export default function LeadsTable() {
       {/* Toolbar */}
       <div className="flex items-center justify-between mb-5">
         <p className="text-sm text-gray-500">{filteredLeads.length} lead</p>
-        <button
-          className="px-5 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition font-medium"
-          onClick={() => { setEditingId(null); setForm({ status: "New Lead" }); setShowModal(true); }}
-        >
-          + Tambah Lead
-        </button>
+        <div className="flex gap-2">
+          <button
+            className="px-4 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition font-medium"
+            onClick={handleExport}
+          >
+            ↓ Export CSV
+          </button>
+          <button
+            className="px-5 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition font-medium"
+            onClick={() => { setEditingId(null); setForm({ status: "New Lead" }); setShowModal(true); }}
+          >
+            + Tambah Lead
+          </button>
+        </div>
       </div>
 
       {/* Table */}
@@ -312,13 +382,20 @@ export default function LeadsTable() {
           <table className="w-full min-w-[600px] text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                {["Client", "Status", "Priority", "Source", "Follow Up", "Last Contact", "Closed At", "Updated At", "Catatan", "Aksi"].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
-                ))}
+                <SortableHeader label="Client" col="client_name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableHeader label="Status" col="status" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableHeader label="Priority" col="priority" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableHeader label="Source" col="source" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableHeader label="Follow Up" col="follow_up_date" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableHeader label="Last Contact" col="last_contacted_at" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableHeader label="Closed At" col="closed_at" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableHeader label="Updated At" col="updated_at" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Catatan</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredLeads.map((lead) => {
+              {pagedLeads.map((lead) => {
                 const client = clients.find((c) => c.id === lead.client_id);
                 const priorityColors: Record<string, string> = {
                   low: "bg-gray-100 text-gray-600",
@@ -352,6 +429,12 @@ export default function LeadsTable() {
                     <td className="px-4 py-3 text-gray-500 max-w-[160px] truncate text-sm">{lead.notes || "-"}</td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex gap-2">
+                        <Link
+                          href={`/leads/${lead.id}`}
+                          className="px-3 py-1 text-xs font-medium bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition"
+                        >
+                          Detail
+                        </Link>
                         <button
                           className="px-3 py-1 text-xs font-medium bg-gray-50 text-gray-600 rounded-md hover:bg-gray-100 transition"
                           onClick={() => setViewingLead(lead)}
@@ -384,6 +467,16 @@ export default function LeadsTable() {
               )}
             </tbody>
           </table>
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            from={from}
+            to={to}
+            total={total}
+            pageSize={pageSize}
+            onPageChange={goTo}
+            onPageSizeChange={changePageSize}
+          />
         </div>
       </div>
 

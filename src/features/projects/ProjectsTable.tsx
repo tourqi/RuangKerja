@@ -5,6 +5,24 @@ import { useClients } from "@/hooks/useClients";
 import { useLeads } from "@/hooks/useLeads";
 import { addProject, updateProject, deleteProject } from "@/services/projects";
 import { Project, ProjectStatus, projectStatusLabel } from "@/types/db";
+import { useToast } from "@/components/Toast";
+import { SortableHeader } from "@/components/SortableHeader";
+import { useSortable } from "@/hooks/useSortable";
+import { usePagination } from "@/hooks/usePagination";
+import Pagination from "@/components/Pagination";
+import { exportCSV } from "@/utils/csv";
+
+function SkeletonRow({ cols }: { cols: number }) {
+  return (
+    <tr>
+      {Array.from({ length: cols }).map((_, i) => (
+        <td key={i} className="px-4 py-3">
+          <div className="h-3 bg-gray-100 rounded animate-pulse" style={{ width: `${60 + (i % 3) * 15}%` }} />
+        </td>
+      ))}
+    </tr>
+  );
+}
 
 const statusOptions: ProjectStatus[] = ["Planning", "Design", "Production", "Installation", "Done"];
 
@@ -26,6 +44,7 @@ const PROJECT_COLUMNS: (keyof Project)[] = [
 ];
 
 export default function ProjectsTable() {
+  const toast = useToast();
   const { projects, loading, error, refetch } = useProjects();
   const { clients } = useClients();
   const { leads } = useLeads();
@@ -36,6 +55,8 @@ export default function ProjectsTable() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [viewingProject, setViewingProject] = useState<Project | null>(null);
+  const [modalClientQuery, setModalClientQuery] = useState("");
+  const [modalShowClientDropdown, setModalShowClientDropdown] = useState(false);
 
   // --- FILTER STATE ---
   const [filterName, setFilterName] = useState("");
@@ -78,7 +99,36 @@ export default function ProjectsTable() {
     return true;
   });
 
-  const resetForm = () => setForm({ status: "Planning", progress: 0 });
+  const enrichedProjects = filteredProjects.map((p) => ({
+    ...p,
+    client_name: (clients || []).find((c) => c.id === p.client_id)?.name ?? "",
+  }));
+
+  const { sorted: sortedProjects, sortKey, sortDir, toggleSort } = useSortable(enrichedProjects);
+  const { paged: pagedProjects, page, goTo, pageSize, changePageSize, totalPages, from, to, total } = usePagination(sortedProjects);
+
+  const handleExport = () => {
+    exportCSV(
+      sortedProjects.map((p) => ({
+        "Nama Project": p.name,
+        Klien: p.client_name,
+        Nilai: p.value ?? "",
+        Status: projectStatusLabel[p.status] ?? p.status,
+        "Start Date": p.start_date?.slice(0, 10) ?? "",
+        Deadline: p.deadline?.slice(0, 10) ?? "",
+        "Assigned To": p.assigned_to ?? "",
+        "Progress (%)": p.progress ?? 0,
+        Dibuat: p.created_at?.slice(0, 10) ?? "",
+      })),
+      "projects"
+    );
+  };
+
+  const resetForm = () => {
+    setForm({ status: "Planning", progress: 0 });
+    setModalClientQuery("");
+    setModalShowClientDropdown(false);
+  };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -102,17 +152,17 @@ export default function ProjectsTable() {
 
   const handleAdd = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!form.name) { alert("Nama project wajib diisi"); return; }
+    if (!form.name) { toast("Nama project wajib diisi", "warning"); return; }
     setSaving(true);
     try {
       await addProject(buildPayload());
       resetForm();
       setShowModal(false);
       refetch();
+      toast("Project berhasil ditambahkan", "success");
     } catch (err: unknown) {
       const pg = err as { message?: string };
-      console.error("addProject error:", err);
-      alert(`Gagal menambah project: ${pg?.message || JSON.stringify(err)}`);
+      toast(`Gagal menambah project: ${pg?.message || "Terjadi kesalahan"}`, "error");
     } finally {
       setSaving(false);
     }
@@ -121,6 +171,8 @@ export default function ProjectsTable() {
   const handleEdit = (project: Project) => {
     setEditingId(project.id);
     setForm(project);
+    const clientName = (clients || []).find(c => c.id === project.client_id)?.name ?? "";
+    setModalClientQuery(clientName);
     setShowModal(true);
   };
 
@@ -134,10 +186,10 @@ export default function ProjectsTable() {
       resetForm();
       setShowModal(false);
       refetch();
+      toast("Project berhasil diperbarui", "success");
     } catch (err: unknown) {
       const pg = err as { message?: string };
-      console.error("updateProject error:", err);
-      alert(`Gagal update project: ${pg?.message || JSON.stringify(err)}`);
+      toast(`Gagal update project: ${pg?.message || "Terjadi kesalahan"}`, "error");
     } finally {
       setSaving(false);
     }
@@ -154,8 +206,9 @@ export default function ProjectsTable() {
     try {
       await deleteProject(deletingId);
       refetch();
+      toast("Project berhasil dihapus", "success");
     } catch {
-      alert("Gagal hapus project");
+      toast("Gagal hapus project", "error");
     } finally {
       setSaving(false);
       setShowDeleteModal(false);
@@ -165,8 +218,12 @@ export default function ProjectsTable() {
 
   if (loading)
     return (
-      <div className="flex items-center justify-center py-16">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600" />
+      <div className="bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
+        <table className="w-full text-sm">
+          <tbody className="divide-y divide-gray-100">
+            {Array.from({ length: 7 }).map((_, i) => <SkeletonRow key={i} cols={9} />)}
+          </tbody>
+        </table>
       </div>
     );
 
@@ -183,12 +240,20 @@ export default function ProjectsTable() {
             Total: {formatRupiah(filteredProjects.reduce((sum, p) => sum + (p.value ?? 0), 0))}
           </p>
         </div>
-        <button
-          className="px-5 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition font-medium"
-          onClick={() => { setEditingId(null); resetForm(); setShowModal(true); }}
-        >
-          + Tambah Project
-        </button>
+        <div className="flex gap-2">
+          <button
+            className="px-4 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition font-medium"
+            onClick={handleExport}
+          >
+            ↓ Export CSV
+          </button>
+          <button
+            className="px-5 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition font-medium"
+            onClick={() => { setEditingId(null); resetForm(); setShowModal(true); }}
+          >
+            + Tambah Project
+          </button>
+        </div>
       </div>
 
       {/* Filter Bar */}
@@ -266,13 +331,19 @@ export default function ProjectsTable() {
           <table className="w-full min-w-[900px] text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                {["Nama Project", "Client", "Nilai Project", "Status", "Start Date", "Deadline", "Assigned To", "Progress", "Aksi"].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
-                ))}
+                <SortableHeader label="Nama Project" col="name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableHeader label="Client" col="client_name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableHeader label="Nilai Project" col="value" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableHeader label="Status" col="status" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableHeader label="Start Date" col="start_date" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableHeader label="Deadline" col="deadline" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableHeader label="Assigned To" col="assigned_to" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableHeader label="Progress" col="progress" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredProjects.map((project) => {
+              {pagedProjects.map((project) => {
                 const client = clients.find((c) => c.id === project.client_id);
                 const progress = project.progress ?? 0;
                 return (
@@ -333,6 +404,16 @@ export default function ProjectsTable() {
               )}
             </tbody>
           </table>
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            from={from}
+            to={to}
+            total={total}
+            pageSize={pageSize}
+            onPageChange={goTo}
+            onPageSizeChange={changePageSize}
+          />
         </div>
       </div>
 
@@ -365,22 +446,54 @@ export default function ProjectsTable() {
                 />
               </div>
 
-              {/* Client */}
+              {/* Client autocomplete */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Client (Lead Deal)</label>
-                <select
-                  name="client_id"
-                  value={form.client_id || ""}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500"
-                >
-                  <option value="">Pilih Client</option>
-                  {wonClients.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-                {wonClients.length === 0 && (
-                  <p className="text-xs text-gray-400 mt-1">Belum ada lead dengan status Deal.</p>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={modalClientQuery}
+                    onChange={(e) => {
+                      setModalClientQuery(e.target.value);
+                      setModalShowClientDropdown(true);
+                      setForm(prev => ({ ...prev, client_id: "" }));
+                    }}
+                    onFocus={() => setModalShowClientDropdown(true)}
+                    onBlur={() => setTimeout(() => setModalShowClientDropdown(false), 150)}
+                    placeholder="Cari nama client..."
+                    autoComplete="off"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                  {modalShowClientDropdown && (
+                    <div className="absolute z-10 left-0 right-0 bg-white border border-gray-200 rounded-b-lg shadow max-h-48 overflow-y-auto">
+                      {wonClients
+                        .filter(c => !modalClientQuery || c.name?.toLowerCase().includes(modalClientQuery.toLowerCase()))
+                        .length === 0 ? (
+                        <div className="px-3 py-2 text-gray-400 text-sm">
+                          {wonClients.length === 0 ? "Belum ada lead dengan status Deal." : "Tidak ditemukan"}
+                        </div>
+                      ) : (
+                        wonClients
+                          .filter(c => !modalClientQuery || c.name?.toLowerCase().includes(modalClientQuery.toLowerCase()))
+                          .map(c => (
+                            <div
+                              key={c.id}
+                              className={`px-3 py-2 cursor-pointer hover:bg-green-50 text-sm ${form.client_id === c.id ? "bg-green-100" : ""}`}
+                              onMouseDown={() => {
+                                setForm(prev => ({ ...prev, client_id: c.id }));
+                                setModalClientQuery(c.name ?? "");
+                                setModalShowClientDropdown(false);
+                              }}
+                            >
+                              {c.name}
+                            </div>
+                          ))
+                      )}
+                    </div>
+                  )}
+                </div>
+                {form.client_id && (
+                  <p className="text-xs text-green-600 mt-1">✓ Client dipilih</p>
                 )}
               </div>
 

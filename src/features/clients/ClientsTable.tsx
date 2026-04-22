@@ -1,8 +1,15 @@
 "use client";
 import React, { useState } from "react";
+import Link from "next/link";
 import { useClients } from "@/hooks/useClients";
 import { addClient, updateClient, deleteClient } from "@/services/clients";
 import { Client } from "@/types/db";
+import { useToast } from "@/components/Toast";
+import { SortableHeader } from "@/components/SortableHeader";
+import { useSortable } from "@/hooks/useSortable";
+import { usePagination } from "@/hooks/usePagination";
+import Pagination from "@/components/Pagination";
+import { exportCSV } from "@/utils/csv";
 
 const leadStatusColors: Record<string, string> = {
   "New Lead": "bg-blue-100 text-blue-800",
@@ -21,7 +28,20 @@ const priorityColors: Record<string, string> = {
   Urgent: "bg-red-100 text-red-700",
 };
 
+function SkeletonRow({ cols }: { cols: number }) {
+  return (
+    <tr>
+      {Array.from({ length: cols }).map((_, i) => (
+        <td key={i} className="px-4 py-3">
+          <div className="h-3 bg-gray-100 rounded animate-pulse" style={{ width: `${60 + (i % 3) * 15}%` }} />
+        </td>
+      ))}
+    </tr>
+  );
+}
+
 export default function ClientsTable() {
+  const toast = useToast();
   const { clients, loading, error, refetch } = useClients();
   const [form, setForm] = useState<Partial<Client>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -60,9 +80,10 @@ export default function ClientsTable() {
       setForm({});
       setShowModal(false);
       refetch();
+      toast("Client berhasil ditambahkan", "success");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : JSON.stringify(err);
-      alert("Gagal menambah client: " + msg);
+      toast("Gagal menambah client: " + msg, "error");
     } finally {
       setSaving(false);
     }
@@ -84,9 +105,10 @@ export default function ClientsTable() {
       setForm({});
       setShowModal(false);
       refetch();
+      toast("Client berhasil diperbarui", "success");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : JSON.stringify(err);
-      alert("Gagal update client: " + msg);
+      toast("Gagal update client: " + msg, "error");
     } finally {
       setSaving(false);
     }
@@ -103,9 +125,10 @@ export default function ClientsTable() {
     try {
       await deleteClient(deletingId);
       refetch();
+      toast("Client berhasil dihapus", "success");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : JSON.stringify(err);
-      alert("Gagal hapus client: " + msg);
+      toast("Gagal hapus client: " + msg, "error");
     } finally {
       setSaving(false);
       setShowDeleteModal(false);
@@ -123,6 +146,28 @@ export default function ClientsTable() {
     (!filter.priority || c.priority === filter.priority)
   );
 
+  const { sorted: sortedClients, sortKey, sortDir, toggleSort } = useSortable(filteredClients);
+  const { paged: pagedClients, page, goTo, pageSize, changePageSize, totalPages, from, to, total } = usePagination(sortedClients);
+
+  const handleExport = () => {
+    exportCSV(
+      sortedClients.map((c) => ({
+        Nama: c.name as string,
+        Telepon: (c.phone as string) ?? "",
+        Alamat: (c.address as string) ?? "",
+        "Nama Project": (c.project_name as string) ?? "",
+        "Tipe Properti": (c.property_type as string) ?? "",
+        Budget: (c.budget_range as string) ?? "",
+        "Status Lead": (c.lead_status as string) ?? "",
+        Sumber: (c.source as string) ?? "",
+        Prioritas: (c.priority as string) ?? "",
+        Catatan: (c.notes as string) ?? "",
+        Dibuat: (c.created_at as string)?.slice(0, 10) ?? "",
+      })),
+      "clients"
+    );
+  };
+
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFilter((prev) => ({ ...prev, [name]: value }));
@@ -134,12 +179,20 @@ export default function ClientsTable() {
       <div className="flex flex-col gap-3 mb-5">
         <div className="flex items-center justify-between">
           <p className="text-sm text-gray-500">{filteredClients.length} client ditemukan</p>
-          <button
-            className="px-5 py-2 bg-black text-white text-sm rounded-lg hover:bg-gray-800 transition font-medium"
-            onClick={() => { setEditingId(null); setForm({}); setShowModal(true); }}
-          >
-            + Tambah Client
-          </button>
+          <div className="flex gap-2">
+            <button
+              className="px-4 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition font-medium"
+              onClick={handleExport}
+            >
+              ↓ Export CSV
+            </button>
+            <button
+              className="px-5 py-2 bg-black text-white text-sm rounded-lg hover:bg-gray-800 transition font-medium"
+              onClick={() => { setEditingId(null); setForm({}); setShowModal(true); }}
+            >
+              + Tambah Client
+            </button>
+          </div>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <input
@@ -214,24 +267,38 @@ export default function ClientsTable() {
         </div>
         <div className="w-full overflow-x-auto">
           {loading ? (
-            <div className="flex items-center justify-center py-16">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
-            </div>
+            <table className="w-full min-w-[960px] text-sm">
+              <tbody className="divide-y divide-gray-100">
+                {Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} cols={11} />)}
+              </tbody>
+            </table>
           ) : error ? (
             <div className="px-6 py-8 text-center text-red-500 text-sm">{error}</div>
           ) : (
             <table className="w-full min-w-[960px] text-sm">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  {["Nama", "No. HP", "Alamat", "Nama Project", "Tipe", "Budget", "Status", "Sumber", "Prioritas", "Catatan", "Aksi"].map((h) => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
-                  ))}
+                  <SortableHeader label="Nama" col="name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                  <SortableHeader label="No. HP" col="phone" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Alamat</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Nama Project</th>
+                  <SortableHeader label="Tipe" col="property_type" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                  <SortableHeader label="Budget" col="budget_range" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                  <SortableHeader label="Status" col="lead_status" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                  <SortableHeader label="Sumber" col="source" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                  <SortableHeader label="Prioritas" col="priority" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Catatan</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filteredClients.map((client) => (
+                {pagedClients.map((client) => (
                   <tr key={client.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap max-w-[150px] truncate">{client.name}</td>
+                    <td className="px-4 py-3 whitespace-nowrap max-w-[150px] truncate">
+                      <Link href={`/clients/${client.id}`} className="font-medium text-gray-900 hover:text-blue-600 hover:underline transition-colors">
+                        {client.name}
+                      </Link>
+                    </td>
                     <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{client.phone || "-"}</td>
                     <td className="px-4 py-3 text-gray-500 max-w-[160px] truncate">{client.address || "-"}</td>
                     <td className="px-4 py-3 text-gray-500 max-w-[150px] truncate">{client.project_name || "-"}</td>
@@ -287,6 +354,16 @@ export default function ClientsTable() {
               </tbody>
             </table>
           )}
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            from={from}
+            to={to}
+            total={total}
+            pageSize={pageSize}
+            onPageChange={goTo}
+            onPageSizeChange={changePageSize}
+          />
         </div>
       </div>
 
