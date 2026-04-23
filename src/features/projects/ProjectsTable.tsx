@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from "react";
+import Link from "next/link";
 import { useProjects } from "@/hooks/useProjects";
 import { useClients } from "@/hooks/useClients";
 import { useLeads } from "@/hooks/useLeads";
@@ -11,7 +12,6 @@ import { useSortable } from "@/hooks/useSortable";
 import { usePagination } from "@/hooks/usePagination";
 import Pagination from "@/components/Pagination";
 import { exportCSV } from "@/utils/csv";
-import ActivityTimeline from "@/components/ActivityTimeline";
 
 function SkeletonRow({ cols }: { cols: number }) {
   return (
@@ -55,7 +55,7 @@ export default function ProjectsTable() {
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [viewingProject, setViewingProject] = useState<Project | null>(null);
+
   const [modalClientQuery, setModalClientQuery] = useState("");
   const [modalShowClientDropdown, setModalShowClientDropdown] = useState(false);
 
@@ -373,12 +373,12 @@ export default function ProjectsTable() {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex gap-2">
-                        <button
+                        <Link
+                          href={`/projects/${project.id}`}
                           className="px-3 py-1 text-xs font-medium bg-gray-50 text-gray-600 rounded-md hover:bg-gray-100 transition"
-                          onClick={() => setViewingProject(project)}
                         >
                           Lihat
-                        </button>
+                        </Link>
                         <button
                           className="px-3 py-1 text-xs font-medium bg-green-50 text-green-600 rounded-md hover:bg-green-100 transition"
                           onClick={() => handleEdit(project)}
@@ -608,67 +608,6 @@ export default function ProjectsTable() {
         </div>
       )}
 
-      {/* View Modal */}
-      {viewingProject && (() => {
-        const vc = clients.find(c => c.id === viewingProject.client_id);
-        const progress = viewingProject.progress ?? 0;
-        return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
-                <h2 className="text-lg font-semibold text-gray-900">Detail Project</h2>
-                <button className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition" onClick={() => setViewingProject(null)}>✕</button>
-              </div>
-              <div className="px-6 py-5 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2">
-                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-0.5">Nama Project</p>
-                    <p className="text-base font-semibold text-gray-900">{viewingProject.name}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-0.5">Client</p>
-                    <p className="text-sm text-gray-800">{vc?.name || "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Status</p>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[viewingProject.status]}`}>{projectStatusLabel[viewingProject.status]}</span>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-0.5">Nilai Project</p>
-                    <p className="text-sm font-semibold text-gray-800">{formatRupiah(viewingProject.value)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-0.5">Assigned To</p>
-                    <p className="text-sm text-gray-800">{viewingProject.assigned_to || "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-0.5">Start Date</p>
-                    <p className="text-sm text-gray-800">{viewingProject.start_date?.slice(0, 10) || "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-0.5">Deadline</p>
-                    <p className="text-sm text-gray-800">{viewingProject.deadline?.slice(0, 10) || "-"}</p>
-                  </div>
-                  <div className="col-span-2">
-                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Progress</p>
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1 bg-gray-200 rounded-full h-2">
-                        <div className="bg-green-500 h-2 rounded-full transition-all" style={{ width: `${progress}%` }} />
-                      </div>
-                      <span className="text-sm font-semibold text-gray-700 w-10 text-right">{progress}%</span>
-                    </div>
-                  </div>
-                </div>
-                <ActivityTimeline entityType="project" entityId={viewingProject.id} />
-                <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
-                  <button className="px-4 py-2 text-sm font-medium bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition" onClick={() => { setViewingProject(null); handleEdit(viewingProject); }}>Edit</button>
-                  <button className="px-4 py-2 text-sm font-medium bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition" onClick={() => setViewingProject(null)}>Tutup</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
 
       {/* Delete Modal */}
       {showDeleteModal && (

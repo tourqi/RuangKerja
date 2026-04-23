@@ -125,6 +125,20 @@ export interface Payment {
   created_at?: string;
 }
 
+export type ExpenseCategory = 'material' | 'jasa' | 'transport' | 'lainnya';
+
+export interface ProjectExpense {
+  id: string;
+  project_id: string;
+  tanggal: string;
+  deskripsi: string;
+  kategori: ExpenseCategory;
+  jumlah: number;
+  vendor?: string;
+  notes?: string;
+  created_at?: string;
+}
+
 export type NotificationType = 'follow_up_due' | 'project_overdue' | 'invoice_overdue';
 
 export interface Notification {
