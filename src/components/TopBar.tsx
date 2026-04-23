@@ -5,6 +5,10 @@ import { useEffect, useRef, useState } from "react";
 import { useClients } from "@/hooks/useClients";
 import { useLeads } from "@/hooks/useLeads";
 import { useProjects } from "@/hooks/useProjects";
+import { useInvoices } from "@/hooks/useInvoices";
+import { useAuth } from "@/context/AuthContext";
+import { useNotifications } from "@/hooks/useNotifications";
+import type { NotificationType } from "@/types/db";
 
 /* ── Route config ── */
 const ROUTE_LABELS: Record<string, string> = {
@@ -13,6 +17,8 @@ const ROUTE_LABELS: Record<string, string> = {
   leads: "Leads",
   projects: "Projects",
   reports: "Laporan",
+  invoices: "Invoice",
+  settings: "Pengaturan",
 };
 
 const formatCurrency = (v?: number) =>
@@ -62,31 +68,32 @@ function Breadcrumb({ clients }: { clients: ReturnType<typeof useClients>["clien
   );
 }
 
+const TYPE_CONFIG: Record<NotificationType, { color: string; dot: string; hover: string }> = {
+  follow_up_due: { color: "text-orange-600", dot: "bg-orange-400", hover: "hover:bg-orange-50" },
+  project_overdue: { color: "text-red-600", dot: "bg-red-400", hover: "hover:bg-red-50" },
+  invoice_overdue: { color: "text-yellow-600", dot: "bg-yellow-400", hover: "hover:bg-yellow-50" },
+};
+
+const TYPE_LABELS: Record<NotificationType, string> = {
+  follow_up_due: "Follow-up",
+  project_overdue: "Proyek Overdue",
+  invoice_overdue: "Invoice Jatuh Tempo",
+};
+
 /* ── Notification bell ── */
 function NotifBell({
   leads,
   projects,
+  invoices,
 }: {
   leads: ReturnType<typeof useLeads>["leads"];
   projects: ReturnType<typeof useProjects>["projects"];
+  invoices: ReturnType<typeof useInvoices>["invoices"];
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const overdueProjects = projects.filter(
-    (p) => p.status !== "Done" && p.deadline && new Date(p.deadline) < today
-  );
-  const followUpLeads = leads.filter(
-    (l) =>
-      l.status !== "Deal" &&
-      l.status !== "Lost" &&
-      l.follow_up_date &&
-      new Date(l.follow_up_date) <= today
-  );
-  const total = overdueProjects.length + followUpLeads.length;
+  const router = useRouter();
+  const { notifications, unreadCount, markRead, markAllRead } = useNotifications(leads, projects, invoices);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -95,6 +102,13 @@ function NotifBell({
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  // Group by type
+  const groups = notifications.reduce<Record<NotificationType, typeof notifications>>((acc, n) => {
+    if (!acc[n.type]) acc[n.type] = [];
+    acc[n.type].push(n);
+    return acc;
+  }, {} as Record<NotificationType, typeof notifications>);
 
   return (
     <div ref={ref} className="relative">
@@ -107,9 +121,9 @@ function NotifBell({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
             d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
         </svg>
-        {total > 0 && (
+        {unreadCount > 0 && (
           <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
-            {total > 9 ? "9+" : total}
+            {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
       </button>
@@ -118,60 +132,50 @@ function NotifBell({
         <div className="absolute right-0 top-11 w-80 bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
             <p className="text-sm font-semibold text-gray-800">Notifikasi</p>
-            {total === 0 && <span className="text-xs text-gray-400">Semua beres</span>}
+            {unreadCount > 0 ? (
+              <button
+                onClick={markAllRead}
+                className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                Tandai semua dibaca
+              </button>
+            ) : (
+              <span className="text-xs text-gray-400">Semua beres</span>
+            )}
           </div>
           <div className="max-h-80 overflow-y-auto divide-y divide-gray-50">
-            {total === 0 ? (
+            {notifications.length === 0 ? (
               <div className="px-4 py-8 text-center text-xs text-gray-400">
                 Tidak ada notifikasi aktif
               </div>
             ) : (
-              <>
-                {overdueProjects.length > 0 && (
-                  <div>
-                    <p className="px-4 pt-3 pb-1 text-xs font-semibold text-red-600 uppercase tracking-wide">
-                      Proyek Overdue ({overdueProjects.length})
-                    </p>
-                    {overdueProjects.map((p) => (
-                      <Link
-                        key={p.id}
-                        href="/projects"
-                        onClick={() => setOpen(false)}
-                        className="flex items-start gap-3 px-4 py-2.5 hover:bg-red-50 transition-colors"
-                      >
-                        <span className="w-2 h-2 rounded-full bg-red-400 mt-1.5 flex-shrink-0" />
-                        <div className="min-w-0">
-                          <p className="text-xs font-medium text-gray-800 truncate">{p.name}</p>
-                          <p className="text-xs text-gray-400">
-                            Deadline: {p.deadline ? new Date(p.deadline).toLocaleDateString("id-ID") : "-"}
-                          </p>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-                {followUpLeads.length > 0 && (
-                  <div>
-                    <p className="px-4 pt-3 pb-1 text-xs font-semibold text-orange-600 uppercase tracking-wide">
-                      Follow-up Hari Ini ({followUpLeads.length})
-                    </p>
-                    {followUpLeads.map((l) => (
-                      <Link
-                        key={l.id}
-                        href="/leads"
-                        onClick={() => setOpen(false)}
-                        className="flex items-start gap-3 px-4 py-2.5 hover:bg-orange-50 transition-colors"
-                      >
-                        <span className="w-2 h-2 rounded-full bg-orange-400 mt-1.5 flex-shrink-0" />
-                        <div className="min-w-0">
-                          <p className="text-xs font-medium text-gray-800 truncate">Lead #{l.id.slice(0, 8)}</p>
-                          <p className="text-xs text-gray-400">Status: {l.status}</p>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </>
+              (Object.keys(groups) as NotificationType[]).map((type) => (
+                <div key={type}>
+                  <p className={`px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide ${TYPE_CONFIG[type].color}`}>
+                    {TYPE_LABELS[type]} ({groups[type].length})
+                  </p>
+                  {groups[type].map((n) => (
+                    <button
+                      key={n.id}
+                      onClick={() => {
+                        markRead(n.id);
+                        setOpen(false);
+                        if (n.link) router.push(n.link);
+                      }}
+                      className={`w-full flex items-start gap-3 px-4 py-2.5 text-left transition-colors ${TYPE_CONFIG[type].hover} ${n.read ? "opacity-50" : ""}`}
+                    >
+                      <span className={`w-2 h-2 rounded-full ${TYPE_CONFIG[type].dot} mt-1.5 flex-shrink-0`} />
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-gray-800 truncate">{n.title}</p>
+                        {n.body && <p className="text-xs text-gray-400">{n.body}</p>}
+                      </div>
+                      {!n.read && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 flex-shrink-0" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              ))
             )}
           </div>
         </div>
@@ -346,11 +350,80 @@ function SearchModal({
   );
 }
 
-/* ── Avatar ── */
-function Avatar() {
+/* ── User menu ── */
+function UserMenu() {
+  const { user, profile, signOut } = useAuth();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const displayName = profile?.name ?? user?.email ?? "RK";
+  const initials = displayName
+    .split(" ")
+    .map((w: string) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
+  async function handleSignOut() {
+    await signOut();
+    router.push("/login");
+  }
+
   return (
-    <div className="w-8 h-8 rounded-full bg-gray-900 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 cursor-default select-none">
-      RK
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-8 h-8 rounded-full bg-gray-900 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 hover:bg-gray-700 transition-colors"
+        aria-label="Menu pengguna"
+      >
+        {initials}
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-10 w-52 bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100">
+            <p className="text-xs font-semibold text-gray-800 truncate">
+              {profile?.name ?? "Pengguna"}
+            </p>
+            <p className="text-xs text-gray-400 truncate">{user?.email}</p>
+            {profile?.role && (
+              <span className="inline-block mt-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 capitalize">
+                {profile.role}
+              </span>
+            )}
+          </div>
+          {profile?.role === "owner" && (
+            <Link
+              href="/settings/users"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2 px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Kelola Pengguna
+            </Link>
+          )}
+          <button
+            onClick={handleSignOut}
+            className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-red-600 hover:bg-red-50 transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            Keluar
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -360,6 +433,7 @@ export default function TopBar() {
   const { clients } = useClients();
   const { leads } = useLeads();
   const { projects } = useProjects();
+  const { invoices } = useInvoices();
   const [showSearch, setShowSearch] = useState(false);
 
   useEffect(() => {
@@ -398,13 +472,13 @@ export default function TopBar() {
             </button>
 
             {/* Notifications */}
-            <NotifBell leads={leads} projects={projects} />
+            <NotifBell leads={leads} projects={projects} invoices={invoices} />
 
             {/* Divider */}
             <div className="w-px h-5 bg-gray-200 mx-1" />
 
-            {/* Avatar */}
-            <Avatar />
+            {/* User menu */}
+            <UserMenu />
           </div>
         </div>
       </header>

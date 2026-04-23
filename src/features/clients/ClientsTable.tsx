@@ -176,8 +176,8 @@ export default function ClientsTable() {
   return (
     <div>
       {/* Toolbar */}
-      <div className="flex flex-col gap-3 mb-5">
-        <div className="flex items-center justify-between">
+      <div className="sticky top-0 z-10 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 bg-gray-50/95 backdrop-blur-sm py-3 mb-3 flex items-center justify-between">
+        <div className="flex items-center justify-between w-full">
           <p className="text-sm text-gray-500">{filteredClients.length} client ditemukan</p>
           <div className="flex gap-2">
             <button
@@ -194,6 +194,10 @@ export default function ClientsTable() {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Filter Bar */}
+      <div className="flex flex-col gap-3 mb-5">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <input
             name="name"

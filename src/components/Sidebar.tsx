@@ -1,19 +1,28 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import React, { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: "▦" },
   { href: "/clients", label: "Clients", icon: "⊙" },
   { href: "/leads", label: "Leads", icon: "◎" },
   { href: "/projects", label: "Projects", icon: "▣" },
+  { href: "/invoices", label: "Invoice", icon: "◧" },
   { href: "/reports", label: "Laporan", icon: "◈" },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const { signOut } = useAuth();
+  const router = useRouter();
+
+  async function handleSignOut() {
+    await signOut();
+    router.push("/login");
+  }
 
   const navContent = (
     <>
@@ -24,7 +33,7 @@ export default function Sidebar() {
       <nav className="flex-1 p-3">
         <ul className="space-y-0.5">
           {navItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
             return (
               <li key={item.href}>
                 <Link
@@ -44,7 +53,16 @@ export default function Sidebar() {
           })}
         </ul>
       </nav>
-      <div className="p-4 border-t border-white/10">
+      <div className="p-4 border-t border-white/10 space-y-2">
+        <button
+          onClick={handleSignOut}
+          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-white/10 transition-all duration-150"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          <span>Keluar</span>
+        </button>
         <p className="text-xs text-gray-600 text-center">© 2026 RuangKerja</p>
       </div>
     </>
@@ -91,7 +109,7 @@ export default function Sidebar() {
         <nav className="flex-1 p-3">
           <ul className="space-y-0.5">
             {navItems.map((item) => {
-              const isActive = pathname === item.href;
+              const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
               return (
                 <li key={item.href}>
                   <Link
@@ -111,6 +129,17 @@ export default function Sidebar() {
             })}
           </ul>
         </nav>
+        <div className="p-4 border-t border-white/10">
+          <button
+            onClick={handleSignOut}
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-white/10 transition-all duration-150"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            <span>Keluar</span>
+          </button>
+        </div>
       </aside>
 
       {/* Desktop sidebar */}

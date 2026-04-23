@@ -11,6 +11,7 @@ import { useSortable } from "@/hooks/useSortable";
 import { usePagination } from "@/hooks/usePagination";
 import Pagination from "@/components/Pagination";
 import { exportCSV } from "@/utils/csv";
+import ActivityTimeline from "@/components/ActivityTimeline";
 
 function SkeletonRow({ cols }: { cols: number }) {
   return (
@@ -233,7 +234,7 @@ export default function ProjectsTable() {
   return (
     <div>
       {/* Toolbar */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="sticky top-0 z-10 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 bg-gray-50/95 backdrop-blur-sm py-3 mb-2 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <p className="text-sm text-gray-500">{filteredProjects.length} project</p>
           <p className="text-sm font-semibold text-green-700">
@@ -658,6 +659,7 @@ export default function ProjectsTable() {
                     </div>
                   </div>
                 </div>
+                <ActivityTimeline entityType="project" entityId={viewingProject.id} />
                 <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
                   <button className="px-4 py-2 text-sm font-medium bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition" onClick={() => { setViewingProject(null); handleEdit(viewingProject); }}>Edit</button>
                   <button className="px-4 py-2 text-sm font-medium bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition" onClick={() => setViewingProject(null)}>Tutup</button>

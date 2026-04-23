@@ -243,6 +243,25 @@ export default function LeadsTable() {
 
   return (
     <div>
+      {/* Toolbar */}
+      <div className="sticky top-0 z-10 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 bg-gray-50/95 backdrop-blur-sm py-3 mb-2 flex items-center justify-between">
+        <p className="text-sm text-gray-500">{filteredLeads.length} lead</p>
+        <div className="flex gap-2">
+          <button
+            className="px-4 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition font-medium"
+            onClick={handleExport}
+          >
+            ↓ Export CSV
+          </button>
+          <button
+            className="px-5 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition font-medium"
+            onClick={() => { setEditingId(null); setForm({ status: "New Lead" }); setShowModal(true); }}
+          >
+            + Tambah Lead
+          </button>
+        </div>
+      </div>
+
       {/* FILTER BAR */}
       <div className="bg-white rounded-xl shadow border border-gray-100 p-4 mb-6 flex flex-col gap-4">
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -352,24 +371,6 @@ export default function LeadsTable() {
               />
             </div>
           </div>
-        </div>
-      </div>
-      {/* Toolbar */}
-      <div className="flex items-center justify-between mb-5">
-        <p className="text-sm text-gray-500">{filteredLeads.length} lead</p>
-        <div className="flex gap-2">
-          <button
-            className="px-4 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition font-medium"
-            onClick={handleExport}
-          >
-            ↓ Export CSV
-          </button>
-          <button
-            className="px-5 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition font-medium"
-            onClick={() => { setEditingId(null); setForm({ status: "New Lead" }); setShowModal(true); }}
-          >
-            + Tambah Lead
-          </button>
         </div>
       </div>
 

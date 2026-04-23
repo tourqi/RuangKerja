@@ -87,3 +87,54 @@ export interface RabItem {
   sort_order: number;
   created_at?: string;
 }
+
+export type UserRole = 'owner' | 'designer' | 'sales';
+
+export interface Profile {
+  id: string;
+  name?: string;
+  role: UserRole;
+  email?: string;
+  created_at?: string;
+}
+
+export type InvoiceStatus = 'draft' | 'sent' | 'partial' | 'paid' | 'overdue';
+export type PaymentMethod = 'transfer' | 'cash' | 'check';
+
+export interface Invoice {
+  id: string;
+  client_id?: string;
+  lead_id?: string;
+  invoice_number: string;
+  total_amount: number;
+  paid_amount: number;
+  status: InvoiceStatus;
+  due_date?: string;
+  notes?: string;
+  created_by?: string;
+  created_at?: string;
+}
+
+export interface Payment {
+  id: string;
+  invoice_id: string;
+  amount: number;
+  payment_date: string;
+  payment_method: PaymentMethod;
+  notes?: string;
+  created_at?: string;
+}
+
+export type NotificationType = 'follow_up_due' | 'project_overdue' | 'invoice_overdue';
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  body?: string;
+  link?: string;
+  entity_id?: string;
+  read: boolean;
+  created_at?: string;
+}

@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import ActivityTimeline from "@/components/ActivityTimeline";
 import { useLeads } from "@/hooks/useLeads";
 import { useClients } from "@/hooks/useClients";
 import { useRabList } from "@/hooks/useRab";
@@ -300,6 +301,8 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
           )}
         </div>
       )}
+
+      <ActivityTimeline entityType="lead" entityId={leadId} />
     </div>
   );
 }

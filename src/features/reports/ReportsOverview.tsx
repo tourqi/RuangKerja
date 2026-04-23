@@ -2,7 +2,9 @@
 import { useClients } from "@/hooks/useClients";
 import { useLeads } from "@/hooks/useLeads";
 import { useProjects } from "@/hooks/useProjects";
+import { useInvoices } from "@/hooks/useInvoices";
 import { useState } from "react";
+import Link from "next/link";
 
 const formatCurrency = (v?: number) =>
   v == null
@@ -55,7 +57,22 @@ const TABS = [
   { key: "lead", label: "Pipeline Lead" },
   { key: "proyek", label: "Proyek" },
   { key: "klien", label: "Klien" },
+  { key: "finansial", label: "Finansial" },
 ];
+
+const invoiceStatusColors: Record<string, string> = {
+  draft: "bg-gray-100 text-gray-600",
+  sent: "bg-blue-100 text-blue-700",
+  partial: "bg-yellow-100 text-yellow-700",
+  paid: "bg-green-100 text-green-700",
+  overdue: "bg-red-100 text-red-700",
+};
+const invoiceStatusLabels: Record<string, string> = {
+  draft: "Draft", sent: "Terkirim", partial: "Sebagian", paid: "Lunas", overdue: "Jatuh Tempo",
+};
+const invoiceStatusBarColors: Record<string, string> = {
+  draft: "bg-gray-400", sent: "bg-blue-500", partial: "bg-yellow-500", paid: "bg-green-500", overdue: "bg-red-500",
+};
 
 function StatCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
@@ -112,9 +129,10 @@ export default function ReportsOverview() {
   const { clients, loading: lc } = useClients();
   const { leads, loading: ll } = useLeads();
   const { projects, loading: lp } = useProjects();
+  const { invoices, loading: li } = useInvoices();
   const [tab, setTab] = useState("ringkasan");
 
-  const loading = lc || ll || lp;
+  const loading = lc || ll || lp || li;
 
   if (loading) {
     return (
@@ -192,6 +210,45 @@ export default function ReportsOverview() {
     .sort((a, b) => (b.value ?? 0) - (a.value ?? 0))
     .slice(0, 5);
 
+  /* ── Invoice metrics ── */
+  const totalTagihan = invoices.reduce((s, i) => s + i.total_amount, 0);
+  const totalTerkumpul = invoices.reduce((s, i) => s + i.paid_amount, 0);
+  const totalPiutang = totalTagihan - totalTerkumpul;
+  const collectionRate = totalTagihan > 0 ? Math.round((totalTerkumpul / totalTagihan) * 100) : 0;
+
+  const overdueInvoices = invoices.filter(
+    (i) => i.status !== "paid" && i.due_date && new Date(i.due_date) < today
+  );
+
+  const invoiceByStatus = ["draft", "sent", "partial", "paid", "overdue"].reduce<Record<string, number>>((acc, s) => {
+    acc[s] = invoices.filter((i) => i.status === s).length;
+    return acc;
+  }, {});
+
+  /* Monthly invoiced & collected (last 6 months) */
+  function lastNMonths(n: number) {
+    const months: { key: string; label: string }[] = [];
+    const now = new Date();
+    for (let i = n - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const label = d.toLocaleDateString("id-ID", { month: "short", year: "2-digit" });
+      months.push({ key, label });
+    }
+    return months;
+  }
+  function monthKey(dateStr?: string) {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  }
+  const months = lastNMonths(6);
+  const monthlyFinancial = months.map(({ key, label }) => ({
+    label,
+    Tagihan: invoices.filter((i) => monthKey(i.created_at) === key).reduce((s, i) => s + i.total_amount, 0),
+    Terkumpul: invoices.filter((i) => monthKey(i.created_at) === key).reduce((s, i) => s + i.paid_amount, 0),
+  }));
+
   /* Assigned to breakdown */
   const projectByAssignee = projects.reduce<Record<string, number>>((acc, p) => {
     const k = p.assigned_to || "Belum ditugaskan";
@@ -231,6 +288,13 @@ export default function ReportsOverview() {
             <StatCard label="Total Lead" value={leads.length} sub={`${leads.filter((l) => l.status === "Lost").length} lost`} />
             <StatCard label="Avg Progress Proyek" value={`${avgProgress}%`} sub="rata-rata semua proyek" />
             <StatCard label="Proyek Overdue" value={overdueProjects.length} sub={`${nearDeadline.length} mepet deadline`} />
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard label="Total Tagihan" value={formatCurrency(totalTagihan)} sub={`${invoices.length} invoice`} />
+            <StatCard label="Terkumpul" value={formatCurrency(totalTerkumpul)} sub={`${collectionRate}% collection rate`} />
+            <StatCard label="Piutang" value={formatCurrency(totalPiutang)} sub={`${overdueInvoices.length} invoice jatuh tempo`} />
+            <StatCard label="Invoice Lunas" value={invoices.filter((i) => i.status === "paid").length} sub={`dari ${invoices.length} total invoice`} />
           </div>
 
           {/* Summary table */}
@@ -630,6 +694,118 @@ export default function ReportsOverview() {
               )}
             </SectionCard>
           </div>
+        </div>
+      )}
+
+      {/* ── TAB: Finansial ── */}
+      {tab === "finansial" && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard label="Total Tagihan" value={formatCurrency(totalTagihan)} sub={`${invoices.length} invoice`} />
+            <StatCard label="Terkumpul" value={formatCurrency(totalTerkumpul)} sub={`${collectionRate}% collection rate`} />
+            <StatCard label="Piutang" value={formatCurrency(totalPiutang)} sub="belum terbayar" />
+            <StatCard label="Invoice Jatuh Tempo" value={overdueInvoices.length} sub="perlu tindakan" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <SectionCard title="Invoice berdasarkan Status">
+              {invoices.length === 0 ? (
+                <p className="text-xs text-gray-400">Belum ada invoice</p>
+              ) : (
+                <div className="space-y-2">
+                  {["paid", "partial", "sent", "overdue", "draft"].map((s) => {
+                    const cnt = invoiceByStatus[s] ?? 0;
+                    const val = invoices.filter((i) => i.status === s).reduce((sum, i) => sum + i.total_amount, 0);
+                    return (
+                      <BarRow
+                        key={s}
+                        label={invoiceStatusLabels[s]}
+                        count={cnt}
+                        total={invoices.length}
+                        colorClass={invoiceStatusBarColors[s]}
+                        badgeClass={invoiceStatusColors[s]}
+                        valueLabel={val > 0 ? formatCurrency(val) : undefined}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+            </SectionCard>
+
+            <SectionCard title="Tren Tagihan vs Terkumpul (6 Bulan)">
+              {monthlyFinancial.every((m) => m.Tagihan === 0) ? (
+                <p className="text-xs text-gray-400">Belum ada data invoice</p>
+              ) : (
+                <div className="space-y-3">
+                  {monthlyFinancial.map((m) => (
+                    <div key={m.label} className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-gray-500 w-14">{m.label}</span>
+                        <span className="text-gray-400">{formatCurrency(m.Tagihan)}</span>
+                      </div>
+                      <div className="flex gap-1 h-2">
+                        <div
+                          className="bg-blue-400 rounded-full"
+                          style={{ width: `${totalTagihan > 0 ? (m.Tagihan / totalTagihan) * 100 : 0}%`, minWidth: m.Tagihan > 0 ? "4px" : "0" }}
+                        />
+                      </div>
+                      <div className="flex gap-1 h-1.5">
+                        <div
+                          className="bg-green-400 rounded-full"
+                          style={{ width: `${totalTagihan > 0 ? (m.Terkumpul / totalTagihan) * 100 : 0}%`, minWidth: m.Terkumpul > 0 ? "4px" : "0" }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                  <div className="flex gap-4 pt-1">
+                    <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                      <span className="w-2.5 h-2.5 rounded-full bg-blue-400" /> Tagihan
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                      <span className="w-2.5 h-2.5 rounded-full bg-green-400" /> Terkumpul
+                    </div>
+                  </div>
+                </div>
+              )}
+            </SectionCard>
+          </div>
+
+          {overdueInvoices.length > 0 && (
+            <SectionCard title="Invoice Jatuh Tempo">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100">
+                      <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">No. Invoice</th>
+                      <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Jatuh Tempo</th>
+                      <th className="text-right py-2 px-3 text-xs font-semibold text-gray-500">Total</th>
+                      <th className="text-right py-2 px-3 text-xs font-semibold text-gray-500">Sisa</th>
+                      <th className="py-2 px-3" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {overdueInvoices.map((inv) => (
+                      <tr key={inv.id} className="hover:bg-red-50">
+                        <td className="py-2.5 px-3 text-xs font-medium text-gray-900">{inv.invoice_number}</td>
+                        <td className="py-2.5 px-3 text-xs text-red-600 font-medium">
+                          {inv.due_date ? new Date(inv.due_date).toLocaleDateString("id-ID") : "-"}
+                        </td>
+                        <td className="py-2.5 px-3 text-right text-xs text-gray-700">{formatCurrency(inv.total_amount)}</td>
+                        <td className="py-2.5 px-3 text-right text-xs font-semibold text-red-600">
+                          {formatCurrency(inv.total_amount - inv.paid_amount)}
+                        </td>
+                        <td className="py-2.5 px-3 text-right">
+                          <Link href={`/invoices/${inv.id}`} className="text-xs text-blue-600 hover:underline">
+                            Detail
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </SectionCard>
+          )}
         </div>
       )}
     </div>

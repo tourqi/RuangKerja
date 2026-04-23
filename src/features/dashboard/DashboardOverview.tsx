@@ -2,6 +2,7 @@
 import { useClients } from "@/hooks/useClients";
 import { useLeads } from "@/hooks/useLeads";
 import { useProjects } from "@/hooks/useProjects";
+import { useInvoices } from "@/hooks/useInvoices";
 import Link from "next/link";
 import {
   PieChart,
@@ -119,8 +120,9 @@ export default function DashboardOverview() {
   const { clients, loading: lc } = useClients();
   const { leads, loading: ll } = useLeads();
   const { projects, loading: lp } = useProjects();
+  const { invoices, loading: li } = useInvoices();
 
-  const loading = lc || ll || lp;
+  const loading = lc || ll || lp || li;
 
   if (loading) {
     return (
@@ -131,10 +133,23 @@ export default function DashboardOverview() {
   }
 
   /* ── Derived data ── */
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   const dealWon = clients.filter((c) => c.lead_status === "Deal Won").length;
   const activeProjects = projects.filter((p) => p.status !== "Done").length;
   const dealLeads = leads.filter((l) => l.status === "Deal").length;
   const totalValue = projects.reduce((s, p) => s + (p.value ?? 0), 0);
+
+  const totalTagihan = invoices.reduce((s, i) => s + i.total_amount, 0);
+  const totalTerkumpul = invoices.reduce((s, i) => s + i.paid_amount, 0);
+  const totalPiutang = totalTagihan - totalTerkumpul;
+  const overdueInvoices = invoices.filter(
+    (i) => i.status !== "paid" && i.due_date && new Date(i.due_date) < today
+  );
+  const recentInvoices = [...invoices]
+    .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+    .slice(0, 5);
 
   /* Donut: Lead pipeline */
   const leadPieData = LEAD_STATUSES.map((s) => ({
@@ -158,6 +173,7 @@ export default function DashboardOverview() {
     Klien: clients.filter((c) => monthKey(c.created_at) === key).length,
     Lead: leads.filter((l) => monthKey(l.created_at) === key).length,
     Proyek: projects.filter((p) => monthKey(p.created_at) === key).length,
+    Invoice: invoices.filter((i) => monthKey(i.created_at) === key).length,
   }));
 
   /* Recent */
@@ -167,9 +183,6 @@ export default function DashboardOverview() {
   const recentProjects = [...projects]
     .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
     .slice(0, 5);
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
 
   const overdueProjects = projects.filter(
     (p) => p.status !== "Done" && p.deadline && new Date(p.deadline) < today
@@ -213,6 +226,17 @@ export default function DashboardOverview() {
               </Link>
             </div>
           )}
+          {overdueInvoices.length > 0 && (
+            <div className="flex items-center gap-3 px-4 py-3 bg-yellow-50 border border-yellow-200 rounded-xl text-sm">
+              <span className="w-5 h-5 rounded-full bg-yellow-500 text-white flex items-center justify-center text-xs flex-shrink-0">!</span>
+              <span className="text-yellow-800 font-medium">
+                {overdueInvoices.length} invoice jatuh tempo belum terbayar
+              </span>
+              <Link href="/invoices" className="ml-auto text-xs text-yellow-700 hover:underline flex-shrink-0">
+                Lihat →
+              </Link>
+            </div>
+          )}
         </div>
       )}
 
@@ -237,6 +261,29 @@ export default function DashboardOverview() {
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Total Nilai Proyek</p>
           <p className="text-3xl font-bold text-gray-900">{formatCurrencyShort(totalValue)}</p>
           <p className="text-xs text-gray-400 mt-1">{projects.length} proyek</p>
+        </div>
+      </div>
+
+      {/* ── Financial KPI cards ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Total Tagihan</p>
+          <p className="text-2xl font-bold text-gray-900">{formatCurrencyShort(totalTagihan)}</p>
+          <p className="text-xs text-gray-400 mt-1">{invoices.length} invoice</p>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Terkumpul</p>
+          <p className="text-2xl font-bold text-green-600">{formatCurrencyShort(totalTerkumpul)}</p>
+          <p className="text-xs text-gray-400 mt-1">
+            {totalTagihan > 0 ? Math.round((totalTerkumpul / totalTagihan) * 100) : 0}% dari total tagihan
+          </p>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Piutang</p>
+          <p className={`text-2xl font-bold ${totalPiutang > 0 ? "text-red-500" : "text-gray-900"}`}>
+            {formatCurrencyShort(totalPiutang)}
+          </p>
+          <p className="text-xs text-gray-400 mt-1">{overdueInvoices.length} invoice jatuh tempo</p>
         </div>
       </div>
 
@@ -338,6 +385,10 @@ export default function DashboardOverview() {
                   <stop offset="5%" stopColor="#22c55e" stopOpacity={0.15} />
                   <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
                 </linearGradient>
+                <linearGradient id="gradInvoice" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#f97316" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+                </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
               <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
@@ -351,6 +402,7 @@ export default function DashboardOverview() {
               <Area type="monotone" dataKey="Klien" stroke="#3b82f6" strokeWidth={2} fill="url(#gradKlien)" dot={{ r: 3, fill: "#3b82f6" }} />
               <Area type="monotone" dataKey="Lead" stroke="#a855f7" strokeWidth={2} fill="url(#gradLead)" dot={{ r: 3, fill: "#a855f7" }} />
               <Area type="monotone" dataKey="Proyek" stroke="#22c55e" strokeWidth={2} fill="url(#gradProyek)" dot={{ r: 3, fill: "#22c55e" }} />
+              <Area type="monotone" dataKey="Invoice" stroke="#f97316" strokeWidth={2} fill="url(#gradInvoice)" dot={{ r: 3, fill: "#f97316" }} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -384,7 +436,7 @@ export default function DashboardOverview() {
       )}
 
       {/* ── Recent tables ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <h3 className="text-sm font-semibold text-gray-800">Client Terbaru</h3>
@@ -436,6 +488,48 @@ export default function DashboardOverview() {
               ))}
               {recentProjects.length === 0 && (
                 <tr><td colSpan={2} className="px-5 py-8 text-center text-gray-400 text-xs">Belum ada project</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+            <h3 className="text-sm font-semibold text-gray-800">Invoice Terbaru</h3>
+            <Link href="/invoices" className="text-xs text-blue-600 hover:underline">Lihat semua</Link>
+          </div>
+          <table className="w-full text-sm">
+            <tbody className="divide-y divide-gray-50">
+              {recentInvoices.map((inv) => {
+                const outstanding = inv.total_amount - inv.paid_amount;
+                const statusColors: Record<string, string> = {
+                  draft: "bg-gray-100 text-gray-600",
+                  sent: "bg-blue-100 text-blue-700",
+                  partial: "bg-yellow-100 text-yellow-700",
+                  paid: "bg-green-100 text-green-700",
+                  overdue: "bg-red-100 text-red-700",
+                };
+                const statusLabels: Record<string, string> = {
+                  draft: "Draft", sent: "Terkirim", partial: "Sebagian", paid: "Lunas", overdue: "Jatuh Tempo",
+                };
+                return (
+                  <tr key={inv.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-5 py-3">
+                      <p className="font-medium text-gray-900 text-xs">{inv.invoice_number}</p>
+                      <p className="text-gray-400 text-xs">
+                        {outstanding > 0 ? `Sisa: ${formatCurrencyShort(outstanding)}` : "Lunas"}
+                      </p>
+                    </td>
+                    <td className="px-5 py-3 text-right">
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${statusColors[inv.status] ?? "bg-gray-100 text-gray-600"}`}>
+                        {statusLabels[inv.status] ?? inv.status}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+              {recentInvoices.length === 0 && (
+                <tr><td colSpan={2} className="px-5 py-8 text-center text-gray-400 text-xs">Belum ada invoice</td></tr>
               )}
             </tbody>
           </table>
