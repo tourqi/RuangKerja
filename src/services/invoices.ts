@@ -61,6 +61,15 @@ export async function deleteInvoice(id: string): Promise<void> {
   if (error) throw error;
 }
 
+export async function getAllPayments(): Promise<Payment[]> {
+  const { data, error } = await supabase
+    .from('payments')
+    .select('*')
+    .order('payment_date', { ascending: false });
+  if (error) throw error;
+  return data as Payment[];
+}
+
 export async function getPaymentsByInvoice(invoiceId: string): Promise<Payment[]> {
   const { data, error } = await supabase
     .from('payments')

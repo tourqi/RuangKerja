@@ -85,6 +85,8 @@ export interface RabItem {
   unit: string;
   harga: number;
   sort_order: number;
+  dimensi_p?: number;
+  dimensi_l?: number;
   created_at?: string;
 }
 
@@ -105,10 +107,12 @@ export interface Invoice {
   id: string;
   client_id?: string;
   lead_id?: string;
+  project_id?: string;
   invoice_number: string;
   total_amount: number;
   paid_amount: number;
   status: InvoiceStatus;
+  invoice_date?: string;
   due_date?: string;
   notes?: string;
   created_by?: string;

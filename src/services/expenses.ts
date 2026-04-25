@@ -1,6 +1,15 @@
 import { supabase } from './supabase';
 import type { ProjectExpense } from '@/types/db';
 
+export async function getAllExpenses(): Promise<ProjectExpense[]> {
+  const { data, error } = await supabase
+    .from('project_expenses')
+    .select('*')
+    .order('tanggal', { ascending: false });
+  if (error) throw error;
+  return data as ProjectExpense[];
+}
+
 export async function getExpenses(projectId: string): Promise<ProjectExpense[]> {
   const { data, error } = await supabase
     .from('project_expenses')

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useInvoices } from "@/hooks/useInvoices";
 import { useClients } from "@/hooks/useClients";
+import { useProjects } from "@/hooks/useProjects";
 import { useToast } from "@/components/Toast";
 import type { InvoiceStatus } from "@/types/db";
 import {
@@ -42,6 +43,7 @@ const STATUS_LABELS: Record<InvoiceStatus, string> = {
 export default function InvoicesTable() {
   const { invoices, loading, refetch } = useInvoices();
   const { clients } = useClients();
+  const { projects } = useProjects();
   const { user } = useAuth();
   const toast = useToast();
 
@@ -51,14 +53,29 @@ export default function InvoicesTable() {
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  const today = new Date().toISOString().slice(0, 10);
+  const defaultDueDate = (() => {
+    const d = new Date(); d.setDate(d.getDate() + 14); return d.toISOString().slice(0, 10);
+  })();
+
   const [form, setForm] = useState({
     client_id: "",
-    lead_id: "",
+    project_id: "",
     total_amount: "",
-    due_date: "",
+    invoice_date: today,
+    due_date: defaultDueDate,
     notes: "",
     status: "draft" as InvoiceStatus,
   });
+
+  // Project belum lunas: total paid_amount semua invoice-nya < project.value
+  const paidPerProject = invoices.reduce<Record<string, number>>((acc, inv) => {
+    if (inv.project_id) acc[inv.project_id] = (acc[inv.project_id] ?? 0) + inv.paid_amount;
+    return acc;
+  }, {});
+  const unpaidProjects = projects.filter(
+    (p) => !p.value || (paidPerProject[p.id] ?? 0) < p.value
+  );
 
   const filtered = invoices.filter((inv) => {
     if (filterStatus && inv.status !== filterStatus) return false;
@@ -70,23 +87,25 @@ export default function InvoicesTable() {
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.client_id || !form.total_amount) return;
+    if (!form.total_amount) return;
     setSaving(true);
     try {
+      const selectedProject = projects.find((p) => p.id === form.project_id);
       const invoice_number = await generateInvoiceNumber();
       await addInvoice({
         invoice_number,
-        client_id: form.client_id || undefined,
-        lead_id: form.lead_id || undefined,
+        client_id: selectedProject?.client_id || form.client_id || undefined,
+        project_id: form.project_id || undefined,
         total_amount: parseFloat(form.total_amount),
         status: form.status,
+        invoice_date: form.invoice_date || undefined,
         due_date: form.due_date || undefined,
         notes: form.notes || undefined,
         created_by: user?.id,
       });
       await refetch();
       setShowAdd(false);
-      setForm({ client_id: "", lead_id: "", total_amount: "", due_date: "", notes: "", status: "draft" });
+      setForm({ client_id: "", project_id: "", total_amount: "", invoice_date: today, due_date: defaultDueDate, notes: "", status: "draft" });
       toast("Invoice berhasil dibuat", "success");
     } catch (err: unknown) {
       toast(`Gagal membuat invoice: ${(err as Error).message}`, "error");
@@ -198,7 +217,8 @@ export default function InvoicesTable() {
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">No. Invoice</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Client</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Project / Client</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell">Tgl Invoice</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Jatuh Tempo</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Total</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden sm:table-cell">Terbayar</th>
@@ -217,7 +237,16 @@ export default function InvoicesTable() {
                         {inv.invoice_number}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-gray-600">{client?.name ?? "—"}</td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {(() => {
+                        const project = projects.find((p) => p.id === inv.project_id);
+                        if (project) return <><span className="font-medium text-gray-800">{project.name}</span>{client && <span className="text-gray-400 text-xs ml-1">· {client.name}</span>}</>;
+                        return client?.name ?? "—";
+                      })()}
+                    </td>
+                    <td className="px-4 py-3 text-gray-500 hidden lg:table-cell">
+                      {inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString("id-ID") : "—"}
+                    </td>
                     <td className="px-4 py-3 text-gray-500 hidden md:table-cell">
                       {inv.due_date ? new Date(inv.due_date).toLocaleDateString("id-ID") : "—"}
                     </td>
@@ -305,18 +334,28 @@ export default function InvoicesTable() {
             </div>
             <form onSubmit={handleAdd} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">Client *</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1.5">Project *</label>
                 <select
-                  value={form.client_id}
-                  onChange={(e) => setForm((f) => ({ ...f, client_id: e.target.value }))}
+                  value={form.project_id}
+                  onChange={(e) => setForm((f) => ({ ...f, project_id: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
                   required
                 >
-                  <option value="">Pilih client…</option>
-                  {clients.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
+                  <option value="">Pilih project…</option>
+                  {unpaidProjects.map((p) => {
+                    const client = clients.find((c) => c.id === p.client_id);
+                    const paid = paidPerProject[p.id] ?? 0;
+                    const sisa = (p.value ?? 0) - paid;
+                    return (
+                      <option key={p.id} value={p.id}>
+                        {p.name}{client ? ` — ${client.name}` : ""}{p.value ? ` (sisa ${new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(sisa)})` : ""}
+                      </option>
+                    );
+                  })}
                 </select>
+                {unpaidProjects.length === 0 && (
+                  <p className="text-xs text-gray-400 mt-1">Semua project sudah lunas.</p>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1.5">Total Tagihan (IDR) *</label>
@@ -330,14 +369,30 @@ export default function InvoicesTable() {
                   min="0"
                 />
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">Jatuh Tempo</label>
-                <input
-                  type="date"
-                  value={form.due_date}
-                  onChange={(e) => setForm((f) => ({ ...f, due_date: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1.5">Tanggal Invoice *</label>
+                  <input
+                    type="date"
+                    value={form.invoice_date}
+                    onChange={(e) => {
+                      const d = new Date(e.target.value);
+                      d.setDate(d.getDate() + 14);
+                      setForm((f) => ({ ...f, invoice_date: e.target.value, due_date: d.toISOString().slice(0, 10) }));
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1.5">Jatuh Tempo (14 hari)</label>
+                  <input
+                    type="date"
+                    value={form.due_date}
+                    onChange={(e) => setForm((f) => ({ ...f, due_date: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1.5">Status</label>

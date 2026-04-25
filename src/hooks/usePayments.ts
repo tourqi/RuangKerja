@@ -1,7 +1,23 @@
 "use client";
 import { useCallback, useEffect, useState } from 'react';
 import type { Payment } from '@/types/db';
-import { getPaymentsByInvoice } from '@/services/invoices';
+import { getAllPayments, getPaymentsByInvoice } from '@/services/invoices';
+
+export function useAllPayments() {
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const refetch = useCallback(() => {
+    setLoading(true);
+    getAllPayments()
+      .then(setPayments)
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => { refetch(); }, [refetch]);
+
+  return { payments, loading, refetch };
+}
 
 export function usePayments(invoiceId: string | null) {
   const [payments, setPayments] = useState<Payment[]>([]);

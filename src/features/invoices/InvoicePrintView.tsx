@@ -65,7 +65,9 @@ export default function InvoicePrintView({ invoice, payments, client }: Props) {
           <p style={{ fontWeight: "700", fontSize: "12pt", color: "#111", margin: 0 }}>Interior ERP</p>
           <p style={{ margin: "2px 0" }}>RuangKerja</p>
           <p style={{ margin: "2px 0" }}>
-            Tanggal: {invoice.created_at ? new Date(invoice.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-"}
+            Tanggal: {(invoice.invoice_date || invoice.created_at)
+              ? new Date((invoice.invoice_date || invoice.created_at)!).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })
+              : "-"}
           </p>
           {invoice.due_date && (
             <p style={{ margin: "2px 0", color: outstanding > 0 ? "#dc2626" : "#16a34a" }}>

@@ -3,6 +3,8 @@ import { useClients } from "@/hooks/useClients";
 import { useLeads } from "@/hooks/useLeads";
 import { useProjects } from "@/hooks/useProjects";
 import { useInvoices } from "@/hooks/useInvoices";
+import { useAllPayments } from "@/hooks/usePayments";
+import { useAllExpenses } from "@/hooks/useExpenses";
 import { useState } from "react";
 import Link from "next/link";
 
@@ -58,6 +60,7 @@ const TABS = [
   { key: "proyek", label: "Proyek" },
   { key: "klien", label: "Klien" },
   { key: "finansial", label: "Finansial" },
+  { key: "labarugi", label: "Laba Rugi" },
 ];
 
 const invoiceStatusColors: Record<string, string> = {
@@ -130,6 +133,8 @@ export default function ReportsOverview() {
   const { leads, loading: ll } = useLeads();
   const { projects, loading: lp } = useProjects();
   const { invoices, loading: li } = useInvoices();
+  const { payments } = useAllPayments();
+  const { expenses } = useAllExpenses();
   const [tab, setTab] = useState("ringkasan");
 
   const loading = lc || ll || lp || li;
@@ -212,7 +217,7 @@ export default function ReportsOverview() {
 
   /* ── Invoice metrics ── */
   const totalTagihan = invoices.reduce((s, i) => s + i.total_amount, 0);
-  const totalTerkumpul = invoices.reduce((s, i) => s + i.paid_amount, 0);
+  const totalTerkumpul = payments.reduce((s, p) => s + p.amount, 0);
   const totalPiutang = totalTagihan - totalTerkumpul;
   const collectionRate = totalTagihan > 0 ? Math.round((totalTerkumpul / totalTagihan) * 100) : 0;
 
@@ -245,8 +250,12 @@ export default function ReportsOverview() {
   const months = lastNMonths(6);
   const monthlyFinancial = months.map(({ key, label }) => ({
     label,
-    Tagihan: invoices.filter((i) => monthKey(i.created_at) === key).reduce((s, i) => s + i.total_amount, 0),
-    Terkumpul: invoices.filter((i) => monthKey(i.created_at) === key).reduce((s, i) => s + i.paid_amount, 0),
+    Tagihan: invoices
+      .filter((i) => monthKey(i.invoice_date || i.created_at) === key)
+      .reduce((s, i) => s + i.total_amount, 0),
+    Terkumpul: payments
+      .filter((p) => monthKey(p.payment_date) === key)
+      .reduce((s, p) => s + p.amount, 0),
   }));
 
   /* Assigned to breakdown */
@@ -777,6 +786,7 @@ export default function ReportsOverview() {
                   <thead>
                     <tr className="border-b border-gray-100">
                       <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">No. Invoice</th>
+                      <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 hidden sm:table-cell">Project / Client</th>
                       <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Jatuh Tempo</th>
                       <th className="text-right py-2 px-3 text-xs font-semibold text-gray-500">Total</th>
                       <th className="text-right py-2 px-3 text-xs font-semibold text-gray-500">Sisa</th>
@@ -784,9 +794,15 @@ export default function ReportsOverview() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {overdueInvoices.map((inv) => (
+                    {overdueInvoices.map((inv) => {
+                      const proj = projects.find((p) => p.id === inv.project_id);
+                      const cl = clients.find((c) => c.id === inv.client_id);
+                      return (
                       <tr key={inv.id} className="hover:bg-red-50">
                         <td className="py-2.5 px-3 text-xs font-medium text-gray-900">{inv.invoice_number}</td>
+                        <td className="py-2.5 px-3 text-xs text-gray-600 hidden sm:table-cell">
+                          {proj?.name ?? cl?.name ?? "—"}
+                        </td>
                         <td className="py-2.5 px-3 text-xs text-red-600 font-medium">
                           {inv.due_date ? new Date(inv.due_date).toLocaleDateString("id-ID") : "-"}
                         </td>
@@ -800,7 +816,8 @@ export default function ReportsOverview() {
                           </Link>
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -808,6 +825,158 @@ export default function ReportsOverview() {
           )}
         </div>
       )}
+
+      {/* ── TAB: Laba Rugi ── */}
+      {tab === "labarugi" && (() => {
+        const expenseByProject = expenses.reduce<Record<string, number>>((acc, e) => {
+          acc[e.project_id] = (acc[e.project_id] ?? 0) + e.jumlah;
+          return acc;
+        }, {});
+
+        const expenseByCategory = expenses.reduce<Record<string, number>>((acc, e) => {
+          acc[e.kategori] = (acc[e.kategori] ?? 0) + e.jumlah;
+          return acc;
+        }, {});
+
+        const paidByProject = invoices.reduce<Record<string, number>>((acc, inv) => {
+          if (inv.project_id) acc[inv.project_id] = (acc[inv.project_id] ?? 0) + inv.paid_amount;
+          return acc;
+        }, {});
+
+        const billedByProject = invoices.reduce<Record<string, number>>((acc, inv) => {
+          if (inv.project_id) acc[inv.project_id] = (acc[inv.project_id] ?? 0) + inv.total_amount;
+          return acc;
+        }, {});
+
+        const rows = projects
+          .filter((p) => (expenseByProject[p.id] ?? 0) > 0 || (paidByProject[p.id] ?? 0) > 0)
+          .map((p) => {
+            const nilai = p.value ?? 0;
+            const tagihan = billedByProject[p.id] ?? 0;
+            const terkumpul = paidByProject[p.id] ?? 0;
+            const pengeluaran = expenseByProject[p.id] ?? 0;
+            const laba = terkumpul - pengeluaran;
+            const margin = terkumpul > 0 ? Math.round((laba / terkumpul) * 100) : null;
+            return { p, nilai, tagihan, terkumpul, pengeluaran, laba, margin };
+          })
+          .sort((a, b) => b.laba - a.laba);
+
+        const totalNilai = rows.reduce((s, r) => s + r.nilai, 0);
+        const totalTerkumpul = rows.reduce((s, r) => s + r.terkumpul, 0);
+        const totalPengeluaran = rows.reduce((s, r) => s + r.pengeluaran, 0);
+        const totalLaba = totalTerkumpul - totalPengeluaran;
+        const totalMargin = totalTerkumpul > 0 ? Math.round((totalLaba / totalTerkumpul) * 100) : 0;
+
+        const KATEGORI_LABELS: Record<string, string> = {
+          material: "Material", jasa: "Jasa", transport: "Transport", lainnya: "Lainnya",
+        };
+
+        return (
+          <div className="space-y-4">
+            {/* Summary cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatCard label="Total Terkumpul" value={formatCurrency(totalTerkumpul)} sub={`dari ${formatCurrency(totalNilai)} nilai kontrak`} />
+              <StatCard label="Total Pengeluaran" value={formatCurrency(totalPengeluaran)} sub={`${rows.length} project`} />
+              <StatCard
+                label="Laba Bersih"
+                value={formatCurrency(totalLaba)}
+                sub={`margin ${totalMargin}%`}
+              />
+              <StatCard label="Project Merugi" value={rows.filter((r) => r.laba < 0).length} sub="perlu perhatian" />
+            </div>
+
+            {/* Breakdown pengeluaran per kategori */}
+            {expenses.length > 0 && (
+              <SectionCard title="Pengeluaran per Kategori">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {(["material", "jasa", "transport", "lainnya"] as const).map((k) => {
+                    const jumlah = expenseByCategory[k] ?? 0;
+                    const pct = totalPengeluaran > 0 ? Math.round((jumlah / totalPengeluaran) * 100) : 0;
+                    return (
+                      <div key={k} className="bg-gray-50 rounded-xl p-3">
+                        <p className="text-xs text-gray-500 mb-0.5">{KATEGORI_LABELS[k]}</p>
+                        <p className="text-sm font-bold text-gray-900">{formatCurrency(jumlah)}</p>
+                        <div className="mt-2 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                          <div className="h-full bg-orange-400 rounded-full" style={{ width: `${pct}%` }} />
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1">{pct}% dari total</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </SectionCard>
+            )}
+
+            {/* Tabel per project */}
+            <SectionCard title="Laba Rugi per Project">
+              {rows.length === 0 ? (
+                <p className="text-xs text-gray-400">Belum ada data pengeluaran atau pembayaran yang terhubung ke project.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-100">
+                        <th className="text-left py-2.5 px-3 text-xs font-semibold text-gray-500">Project</th>
+                        <th className="text-left py-2.5 px-3 text-xs font-semibold text-gray-500 hidden sm:table-cell">Status</th>
+                        <th className="text-right py-2.5 px-3 text-xs font-semibold text-gray-500">Terkumpul</th>
+                        <th className="text-right py-2.5 px-3 text-xs font-semibold text-gray-500">Pengeluaran</th>
+                        <th className="text-right py-2.5 px-3 text-xs font-semibold text-gray-500">Laba</th>
+                        <th className="text-right py-2.5 px-3 text-xs font-semibold text-gray-500 hidden md:table-cell">Margin</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {rows.map(({ p, terkumpul, pengeluaran, laba, margin }) => {
+                        const cl = clients.find((c) => c.id === p.client_id);
+                        const isRugi = laba < 0;
+                        return (
+                          <tr key={p.id} className={`hover:bg-gray-50 ${isRugi ? "bg-red-50/40" : ""}`}>
+                            <td className="py-2.5 px-3">
+                              <p className="text-xs font-medium text-gray-900">{p.name}</p>
+                              {cl && <p className="text-xs text-gray-400">{cl.name}</p>}
+                            </td>
+                            <td className="py-2.5 px-3 hidden sm:table-cell">
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${projectBadge[p.status] ?? "bg-gray-100 text-gray-600"}`}>
+                                {p.status}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 text-right text-xs text-gray-700">{formatCurrency(terkumpul)}</td>
+                            <td className="py-2.5 px-3 text-right text-xs text-orange-600">{formatCurrency(pengeluaran)}</td>
+                            <td className={`py-2.5 px-3 text-right text-xs font-semibold ${isRugi ? "text-red-600" : "text-green-600"}`}>
+                              {formatCurrency(laba)}
+                            </td>
+                            <td className="py-2.5 px-3 text-right text-xs hidden md:table-cell">
+                              {margin !== null ? (
+                                <span className={`font-semibold ${margin < 0 ? "text-red-600" : margin < 20 ? "text-yellow-600" : "text-green-600"}`}>
+                                  {margin}%
+                                </span>
+                              ) : "—"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t-2 border-gray-200 bg-gray-50">
+                        <td className="py-2.5 px-3 text-xs font-bold text-gray-900" colSpan={2}>Total</td>
+                        <td className="py-2.5 px-3 text-right text-xs font-bold text-gray-900">{formatCurrency(totalTerkumpul)}</td>
+                        <td className="py-2.5 px-3 text-right text-xs font-bold text-orange-600">{formatCurrency(totalPengeluaran)}</td>
+                        <td className={`py-2.5 px-3 text-right text-xs font-bold ${totalLaba < 0 ? "text-red-600" : "text-green-600"}`}>
+                          {formatCurrency(totalLaba)}
+                        </td>
+                        <td className="py-2.5 px-3 text-right text-xs font-bold hidden md:table-cell">
+                          <span className={totalMargin < 0 ? "text-red-600" : totalMargin < 20 ? "text-yellow-600" : "text-green-600"}>
+                            {totalMargin}%
+                          </span>
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
+            </SectionCard>
+          </div>
+        );
+      })()}
     </div>
   );
 }

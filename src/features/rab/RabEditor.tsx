@@ -16,6 +16,9 @@ import {
 import { getRabByLead } from "@/services/rab";
 import { Rab, RabGroup, RabItem } from "@/types/db";
 import RabPrintView from "@/features/rab/RabPrintView";
+import SphPrintView, { SphConfig } from "@/features/rab/SphPrintView";
+import { generateSphDocx } from "@/features/rab/generateSph";
+import { supabase } from "@/services/supabase";
 
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat("id-ID", { minimumFractionDigits: 0 }).format(v);
@@ -41,7 +44,18 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showPrint, setShowPrint] = useState(false);
+  const [showSph, setShowSph] = useState(false);
+  const [showSphDialog, setShowSphDialog] = useState(false);
+  const [sphMode, setSphMode] = useState<"print" | "word">("print");
   const [rabName, setRabName] = useState("");
+  const [sphConfig, setSphConfig] = useState<SphConfig>({
+    nomorSph: "",
+    kota: "Bogor",
+    tanggal: "",
+    greeting: "Bapak",
+    clientName: "",
+    penandatangan: "M. Tourqi",
+  });
   const [editingName, setEditingName] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
@@ -63,6 +77,23 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
           items: (g.items ?? []).map((item) => ({ ...item })),
         }))
       );
+
+      // Load client name for SPH
+      const { data: leadData } = await supabase
+        .from("leads")
+        .select("client_id")
+        .eq("id", leadId)
+        .single();
+      if (leadData?.client_id) {
+        const { data: clientData } = await supabase
+          .from("clients")
+          .select("name")
+          .eq("id", leadData.client_id)
+          .single();
+        if (clientData?.name) {
+          setSphConfig((prev) => ({ ...prev, clientName: clientData.name }));
+        }
+      }
     } catch {
       toast("Gagal memuat data RAB", "error");
     } finally {
@@ -216,8 +247,33 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
 
   // --- PRINT ---
   function handlePrint() {
+    setShowSph(false);
     setShowPrint(true);
     setTimeout(() => window.print(), 300);
+  }
+
+  function openSphDialog(mode: "print" | "word") {
+    setSphMode(mode);
+    const now = new Date();
+    const ROMAN = ["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII"];
+    const ID_MONTHS = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+    setSphConfig((prev) => ({
+      ...prev,
+      nomorSph: prev.nomorSph || `001/SPH/${ROMAN[now.getMonth()]}/${now.getFullYear()}`,
+      tanggal: prev.tanggal || `${String(now.getDate()).padStart(2, "0")} ${ID_MONTHS[now.getMonth()]} ${now.getFullYear()}`,
+    }));
+    setShowSphDialog(true);
+  }
+
+  async function handleConfirmSph() {
+    setShowSphDialog(false);
+    if (sphMode === "word") {
+      await generateSphDocx(rab!, groups, sphConfig);
+    } else {
+      setShowPrint(false);
+      setShowSph(true);
+      setTimeout(() => window.print(), 300);
+    }
   }
 
   if (loading) {
@@ -247,6 +303,14 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
           rab={rab}
           groups={groups}
           onClose={() => setShowPrint(false)}
+        />
+      )}
+      {showSph && (
+        <SphPrintView
+          rab={rab}
+          groups={groups}
+          config={sphConfig}
+          onClose={() => setShowSph(false)}
         />
       )}
 
@@ -299,7 +363,19 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                 onClick={handlePrint}
                 className="px-4 py-2 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition font-medium"
               >
-                ⎙ Print / PDF
+                ⎙ Print RAB
+              </button>
+              <button
+                onClick={() => openSphDialog("print")}
+                className="px-4 py-2 bg-amber-600 text-white text-sm rounded-lg hover:bg-amber-700 transition font-medium"
+              >
+                ⎙ Print SPH
+              </button>
+              <button
+                onClick={() => openSphDialog("word")}
+                className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition font-medium"
+              >
+                ↓ Word SPH
               </button>
             </div>
           </div>
@@ -313,6 +389,8 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                 <tr>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase w-10">No</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase w-36">Deskripsi</th>
+                  <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase w-14">P (m)</th>
+                  <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase w-14">L (m)</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Spesifikasi</th>
                   <th className="px-3 py-3 text-right text-xs font-semibold text-gray-500 uppercase w-20">QTY</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase w-16">Unit</th>
@@ -334,7 +412,7 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                     {/* Group Header Row */}
                     <tr key={`group-${group.id}`} className="bg-gray-50 border-t border-gray-200">
                       <td className="px-3 py-2 font-semibold text-gray-700 text-sm">{group.no}</td>
-                      <td colSpan={5} className="px-3 py-2">
+                      <td colSpan={7} className="px-3 py-2">
                         <input
                           type="text"
                           value={group.deskripsi}
@@ -361,6 +439,30 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                       <tr key={item.id} className="border-t border-gray-100 hover:bg-gray-50 transition-colors group/row">
                         <td className="px-3 py-2" />
                         <td className="px-3 py-2" />
+                        {/* Dimensi P */}
+                        <td className="px-1 py-2">
+                          <input
+                            type="number"
+                            value={item.dimensi_p || ""}
+                            onChange={(e) => updateItemLocal(group.id, item.id, "dimensi_p", parseFloat(e.target.value) || 0)}
+                            onBlur={() => handleBlurItem(item, "dimensi_p")}
+                            className="w-full text-center bg-transparent outline-none text-gray-600 focus:bg-white focus:px-1 focus:rounded transition text-xs"
+                            placeholder="—"
+                            step="0.01"
+                          />
+                        </td>
+                        {/* Dimensi L */}
+                        <td className="px-1 py-2">
+                          <input
+                            type="number"
+                            value={item.dimensi_l || ""}
+                            onChange={(e) => updateItemLocal(group.id, item.id, "dimensi_l", parseFloat(e.target.value) || 0)}
+                            onBlur={() => handleBlurItem(item, "dimensi_l")}
+                            className="w-full text-center bg-transparent outline-none text-gray-600 focus:bg-white focus:px-1 focus:rounded transition text-xs"
+                            placeholder="—"
+                            step="0.01"
+                          />
+                        </td>
                         <td className="px-3 py-2">
                           <input
                             type="text"
@@ -421,7 +523,7 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                     <tr key={`add-item-${group.id}`} className="border-t border-dashed border-gray-200">
                       <td />
                       <td />
-                      <td colSpan={4} className="px-3 py-1.5">
+                      <td colSpan={6} className="px-3 py-1.5">
                         <button
                           onClick={() => handleAddItem(group.id)}
                           disabled={saving}
@@ -444,7 +546,7 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
               {groups.length > 0 && (
                 <tfoot>
                   <tr className="border-t-2 border-gray-300 bg-gray-50">
-                    <td colSpan={6} className="px-4 py-3 text-sm font-bold text-gray-800 uppercase tracking-wide text-right">
+                    <td colSpan={8} className="px-4 py-3 text-sm font-bold text-gray-800 uppercase tracking-wide text-right">
                       TOTAL
                     </td>
                     <td className="px-3 py-3 text-right text-sm font-bold text-gray-900">
@@ -469,6 +571,64 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
           </div>
         </div>
       </div>
+
+      {/* SPH Config Dialog */}
+      {showSphDialog && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 print:hidden">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
+            <h2 className="text-lg font-bold text-gray-900 mb-4">Konfigurasi SPH</h2>
+            <div className="space-y-3">
+              {[
+                { label: "Nomor SPH", key: "nomorSph", placeholder: "001/SPH/XII/2025" },
+                { label: "Kota", key: "kota", placeholder: "Bogor" },
+                { label: "Tanggal", key: "tanggal", placeholder: "03 Desember 2025" },
+                { label: "Nama Klien", key: "clientName", placeholder: "Nama lengkap klien" },
+                { label: "Penandatangan", key: "penandatangan", placeholder: "M. Tourqi" },
+              ].map(({ label, key, placeholder }) => (
+                <div key={key}>
+                  <label className="block text-xs text-gray-500 mb-1">{label}</label>
+                  <input
+                    type="text"
+                    value={sphConfig[key as keyof SphConfig]}
+                    onChange={(e) => setSphConfig((prev) => ({ ...prev, [key]: e.target.value }))}
+                    placeholder={placeholder}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-gray-500"
+                  />
+                </div>
+              ))}
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Sapaan</label>
+                <select
+                  value={sphConfig.greeting}
+                  onChange={(e) => setSphConfig((prev) => ({ ...prev, greeting: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-gray-500"
+                >
+                  <option value="Bapak">Bapak</option>
+                  <option value="Ibu">Ibu</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowSphDialog(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleConfirmSph}
+                className={`flex-1 px-4 py-2 text-white text-sm rounded-lg transition font-medium ${
+                  sphMode === "word"
+                    ? "bg-blue-600 hover:bg-blue-700"
+                    : "bg-amber-600 hover:bg-amber-700"
+                }`}
+              >
+                {sphMode === "word" ? "↓ Download Word" : "⎙ Print SPH"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

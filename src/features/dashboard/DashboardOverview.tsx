@@ -3,6 +3,7 @@ import { useClients } from "@/hooks/useClients";
 import { useLeads } from "@/hooks/useLeads";
 import { useProjects } from "@/hooks/useProjects";
 import { useInvoices } from "@/hooks/useInvoices";
+import { useAllPayments } from "@/hooks/usePayments";
 import Link from "next/link";
 import {
   PieChart,
@@ -121,6 +122,7 @@ export default function DashboardOverview() {
   const { leads, loading: ll } = useLeads();
   const { projects, loading: lp } = useProjects();
   const { invoices, loading: li } = useInvoices();
+  const { payments } = useAllPayments();
 
   const loading = lc || ll || lp || li;
 
@@ -142,13 +144,17 @@ export default function DashboardOverview() {
   const totalValue = projects.reduce((s, p) => s + (p.value ?? 0), 0);
 
   const totalTagihan = invoices.reduce((s, i) => s + i.total_amount, 0);
-  const totalTerkumpul = invoices.reduce((s, i) => s + i.paid_amount, 0);
+  const totalTerkumpul = payments.reduce((s, p) => s + p.amount, 0);
   const totalPiutang = totalTagihan - totalTerkumpul;
   const overdueInvoices = invoices.filter(
     (i) => i.status !== "paid" && i.due_date && new Date(i.due_date) < today
   );
   const recentInvoices = [...invoices]
-    .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+    .sort((a, b) => {
+      const da = new Date(b.invoice_date || b.created_at || 0).getTime();
+      const db = new Date(a.invoice_date || a.created_at || 0).getTime();
+      return da - db;
+    })
     .slice(0, 5);
 
   /* Donut: Lead pipeline */
@@ -173,7 +179,7 @@ export default function DashboardOverview() {
     Klien: clients.filter((c) => monthKey(c.created_at) === key).length,
     Lead: leads.filter((l) => monthKey(l.created_at) === key).length,
     Proyek: projects.filter((p) => monthKey(p.created_at) === key).length,
-    Invoice: invoices.filter((i) => monthKey(i.created_at) === key).length,
+    Invoice: invoices.filter((i) => monthKey(i.invoice_date || i.created_at) === key).length,
   }));
 
   /* Recent */
@@ -198,7 +204,7 @@ export default function DashboardOverview() {
   return (
     <div className="space-y-6">
       {/* ── Alert banners ── */}
-      {(overdueProjects.length > 0 || followUpLeads.length > 0) && (
+      {(overdueProjects.length > 0 || followUpLeads.length > 0 || overdueInvoices.length > 0) && (
         <div className="space-y-2">
           {overdueProjects.length > 0 && (
             <div className="flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm">
@@ -502,6 +508,8 @@ export default function DashboardOverview() {
             <tbody className="divide-y divide-gray-50">
               {recentInvoices.map((inv) => {
                 const outstanding = inv.total_amount - inv.paid_amount;
+                const proj = projects.find((p) => p.id === inv.project_id);
+                const cl = clients.find((c) => c.id === inv.client_id);
                 const statusColors: Record<string, string> = {
                   draft: "bg-gray-100 text-gray-600",
                   sent: "bg-blue-100 text-blue-700",
@@ -515,9 +523,12 @@ export default function DashboardOverview() {
                 return (
                   <tr key={inv.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-5 py-3">
-                      <p className="font-medium text-gray-900 text-xs">{inv.invoice_number}</p>
-                      <p className="text-gray-400 text-xs">
-                        {outstanding > 0 ? `Sisa: ${formatCurrencyShort(outstanding)}` : "Lunas"}
+                      <Link href={`/invoices/${inv.id}`} className="font-medium text-gray-900 text-xs hover:underline">
+                        {inv.invoice_number}
+                      </Link>
+                      <p className="text-gray-400 text-xs truncate">
+                        {proj?.name ?? cl?.name ?? "—"}
+                        {outstanding > 0 && <span className="ml-1">· sisa {formatCurrencyShort(outstanding)}</span>}
                       </p>
                     </td>
                     <td className="px-5 py-3 text-right">

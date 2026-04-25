@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useInvoices } from "@/hooks/useInvoices";
 import { usePayments } from "@/hooks/usePayments";
 import { useClients } from "@/hooks/useClients";
+import { useProjects } from "@/hooks/useProjects";
 import { useToast } from "@/components/Toast";
 import type { InvoiceStatus, PaymentMethod } from "@/types/db";
 import ActivityTimeline from "@/components/ActivityTimeline";
@@ -44,9 +45,11 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
   const { invoices, loading: loadingInvoices, refetch: refetchInvoices } = useInvoices();
   const { payments, loading: loadingPayments, refetch: refetchPayments } = usePayments(invoiceId);
   const { clients } = useClients();
+  const { projects } = useProjects();
   const toast = useToast();
 
   const [showAddPayment, setShowAddPayment] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null);
   const [paymentForm, setPaymentForm] = useState({
@@ -58,6 +61,64 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
 
   const invoice = invoices.find((i) => i.id === invoiceId);
   const client = clients.find((c) => c.id === invoice?.client_id);
+  const project = projects.find((p) => p.id === invoice?.project_id);
+
+  const [editForm, setEditForm] = useState({
+    project_id: invoice?.project_id ?? "",
+    client_id: invoice?.client_id ?? "",
+    total_amount: String(invoice?.total_amount ?? ""),
+    invoice_date: invoice?.invoice_date ?? invoice?.created_at?.slice(0, 10) ?? "",
+    due_date: invoice?.due_date ?? "",
+    notes: invoice?.notes ?? "",
+    status: (invoice?.status ?? "draft") as InvoiceStatus,
+  });
+
+  function openEdit() {
+    setEditForm({
+      project_id: invoice?.project_id ?? "",
+      client_id: invoice?.client_id ?? "",
+      total_amount: String(invoice?.total_amount ?? ""),
+      invoice_date: invoice?.invoice_date ?? invoice?.created_at?.slice(0, 10) ?? "",
+      due_date: invoice?.due_date ?? "",
+      notes: invoice?.notes ?? "",
+      status: (invoice?.status ?? "draft") as InvoiceStatus,
+    });
+    setShowEdit(true);
+  }
+
+  async function handleEdit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!invoice) return;
+    setSaving(true);
+    try {
+      const selectedProject = projects.find((p) => p.id === editForm.project_id);
+      await updateInvoice(invoiceId, {
+        project_id: editForm.project_id || undefined,
+        client_id: selectedProject?.client_id || editForm.client_id || undefined,
+        total_amount: parseFloat(editForm.total_amount),
+        invoice_date: editForm.invoice_date || undefined,
+        due_date: editForm.due_date || undefined,
+        notes: editForm.notes || undefined,
+        status: editForm.status,
+      });
+      await refetchInvoices();
+      setShowEdit(false);
+      toast("Invoice diperbarui", "success");
+    } catch (err: unknown) {
+      toast(`Gagal: ${(err as Error).message}`, "error");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // Project yang belum lunas (untuk dropdown) — sertakan project invoice ini sendiri meski sudah lunas
+  const paidPerProject = invoices.reduce<Record<string, number>>((acc, inv) => {
+    if (inv.project_id) acc[inv.project_id] = (acc[inv.project_id] ?? 0) + inv.paid_amount;
+    return acc;
+  }, {});
+  const editableProjects = projects.filter(
+    (p) => p.id === invoice?.project_id || !p.value || (paidPerProject[p.id] ?? 0) < p.value
+  );
 
   const loading = loadingInvoices;
 
@@ -142,9 +203,20 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
             </Link>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">{invoice.invoice_number}</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{client?.name ?? "—"}</p>
+          <p className="text-sm text-gray-500 mt-0.5">
+            {project ? <><span className="font-medium text-gray-700">{project.name}</span>{client && <span className="text-gray-400"> · {client.name}</span>}</> : (client?.name ?? "—")}
+          </p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={openEdit}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Edit
+          </button>
           <Link
             href={`/invoices/${invoiceId}/print`}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
@@ -168,7 +240,7 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
 
       {/* Info card */}
       <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
           <div>
             <p className="text-xs text-gray-500 mb-0.5">Total Tagihan</p>
             <p className="text-sm font-bold text-gray-900">{formatCurrency(invoice.total_amount)}</p>
@@ -183,10 +255,22 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
               {formatCurrency(outstanding)}
             </p>
           </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4 mb-4 pt-3 border-t border-gray-50">
+          <div>
+            <p className="text-xs text-gray-500 mb-0.5">Tanggal Invoice</p>
+            <p className="text-sm font-medium text-gray-700">
+              {invoice.invoice_date
+                ? new Date(invoice.invoice_date).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })
+                : invoice.created_at
+                ? new Date(invoice.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })
+                : "—"}
+            </p>
+          </div>
           <div>
             <p className="text-xs text-gray-500 mb-0.5">Jatuh Tempo</p>
             <p className="text-sm font-medium text-gray-700">
-              {invoice.due_date ? new Date(invoice.due_date).toLocaleDateString("id-ID") : "—"}
+              {invoice.due_date ? new Date(invoice.due_date).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "—"}
             </p>
           </div>
         </div>
@@ -350,6 +434,121 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
                   className="flex-1 px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 disabled:opacity-50 transition-colors"
                 >
                   {saving ? "Menyimpan…" : "Catat Pembayaran"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit invoice modal */}
+      {showEdit && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+          onClick={() => setShowEdit(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-base font-semibold text-gray-900">Edit Invoice</h2>
+              <button onClick={() => setShowEdit(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <form onSubmit={handleEdit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1.5">Project</label>
+                <select
+                  value={editForm.project_id}
+                  onChange={(e) => setEditForm((f) => ({ ...f, project_id: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
+                >
+                  <option value="">Tidak terhubung ke project</option>
+                  {editableProjects.map((p) => {
+                    const c = clients.find((cl) => cl.id === p.client_id);
+                    return (
+                      <option key={p.id} value={p.id}>
+                        {p.name}{c ? ` — ${c.name}` : ""}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1.5">Total Tagihan (IDR) *</label>
+                <input
+                  type="number"
+                  value={editForm.total_amount}
+                  onChange={(e) => setEditForm((f) => ({ ...f, total_amount: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
+                  required
+                  min="0"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1.5">Tanggal Invoice</label>
+                  <input
+                    type="date"
+                    value={editForm.invoice_date}
+                    onChange={(e) => {
+                      const d = new Date(e.target.value);
+                      d.setDate(d.getDate() + 14);
+                      setEditForm((f) => ({ ...f, invoice_date: e.target.value, due_date: d.toISOString().slice(0, 10) }));
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1.5">Jatuh Tempo</label>
+                  <input
+                    type="date"
+                    value={editForm.due_date}
+                    onChange={(e) => setEditForm((f) => ({ ...f, due_date: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1.5">Status</label>
+                <select
+                  value={editForm.status}
+                  onChange={(e) => setEditForm((f) => ({ ...f, status: e.target.value as InvoiceStatus }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
+                >
+                  {(Object.keys(STATUS_LABELS) as InvoiceStatus[]).map((s) => (
+                    <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1.5">Catatan</label>
+                <textarea
+                  value={editForm.notes}
+                  onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))}
+                  rows={2}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 resize-none"
+                  placeholder="Catatan tambahan…"
+                />
+              </div>
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowEdit(false)}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 disabled:opacity-50 transition-colors"
+                >
+                  {saving ? "Menyimpan…" : "Simpan"}
                 </button>
               </div>
             </form>
