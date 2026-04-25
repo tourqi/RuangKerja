@@ -99,7 +99,7 @@ export default function ActivityTimeline({ entityType, entityId }: Props) {
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="Tambah catatan aktivitas…"
-              className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-gray-900"
+              className="flex-1 px-3 py-2 text-sm text-gray-900 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-gray-900"
             />
             <button
               type="submit"

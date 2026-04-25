@@ -204,23 +204,23 @@ export default function ClientsTable() {
             value={filter.name}
             onChange={handleFilterChange}
             placeholder="Cari Nama..."
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-500 focus:ring-2 focus:ring-black focus:border-black outline-none"
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-black focus:border-black outline-none"
           />
           <input
             name="project_name"
             value={filter.project_name}
             onChange={handleFilterChange}
             placeholder="Cari Project..."
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-500 focus:ring-2 focus:ring-black focus:border-black outline-none"
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-black focus:border-black outline-none"
           />
-          <select name="property_type" value={filter.property_type} onChange={handleFilterChange} className="px-3 py-2 border border-gray-300 rounded-lg text-sm  text-gray-500 outline-none">
+          <select name="property_type" value={filter.property_type} onChange={handleFilterChange} className="px-3 py-2 border border-gray-300 rounded-lg text-sm  text-gray-900 outline-none">
             <option value="">Semua Tipe</option>
             <option value="Rumah">Rumah</option>
             <option value="Ruko">Ruko</option>
             <option value="Apartemen">Apartemen</option>
             <option value="Tanah">Tanah</option>
           </select>
-          <select name="budget_range" value={filter.budget_range} onChange={handleFilterChange} className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-500 outline-none">
+          <select name="budget_range" value={filter.budget_range} onChange={handleFilterChange} className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none">
             <option value="">Semua Budget</option>
             <option value="< 500jt">{"< 500jt"}</option>
             <option value="500jt - 1M">500jt - 1M</option>
@@ -228,7 +228,7 @@ export default function ClientsTable() {
           </select>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <select name="lead_status" value={filter.lead_status} onChange={handleFilterChange} className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-500 outline-none">
+          <select name="lead_status" value={filter.lead_status} onChange={handleFilterChange} className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none">
             <option value="">Semua Status</option>
             <option value="New Lead">New Lead</option>
             <option value="Contacted">Contacted</option>
@@ -238,7 +238,7 @@ export default function ClientsTable() {
             <option value="Deal Won">Deal Won</option>
             <option value="Deal Lost">Deal Lost</option>
           </select>
-          <select name="source" value={filter.source} onChange={handleFilterChange} className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-500 outline-none">
+          <select name="source" value={filter.source} onChange={handleFilterChange} className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none">
             <option value="">Semua Sumber</option>
             <option value="Instagram">Instagram</option>
             <option value="TikTok">TikTok</option>
@@ -248,7 +248,7 @@ export default function ClientsTable() {
             <option value="Marketplace">Marketplace</option>
             <option value="Ads (Google/Facebook)">Ads (Google/Facebook)</option>
           </select>
-          <select name="priority" value={filter.priority} onChange={handleFilterChange} className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-500 outline-none">
+          <select name="priority" value={filter.priority} onChange={handleFilterChange} className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none">
             <option value="">Semua Prioritas</option>
             <option value="Low">Low</option>
             <option value="Medium">Medium</option>
@@ -257,7 +257,7 @@ export default function ClientsTable() {
           </select>
           <button
             onClick={() => setFilter({ name: "", project_name: "", property_type: "", budget_range: "", lead_status: "", source: "", priority: "" })}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-500 hover:bg-gray-50 transition outline-none"
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 hover:bg-gray-50 transition outline-none"
           >
             Reset Filter
           </button>
@@ -390,23 +390,23 @@ export default function ClientsTable() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Nama <span className="text-red-500">*</span></label>
-                  <input name="name" value={form.name || ""} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-black focus:border-black outline-none" />
+                  <input name="name" value={form.name || ""} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-black focus:border-black outline-none" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">No. HP <span className="text-red-500">*</span></label>
-                  <input name="phone" value={form.phone || ""} onChange={handleChange} required maxLength={13} pattern="[0-9]*" placeholder="08xxxxxxxxxx" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-black focus:border-black outline-none" />
+                  <input name="phone" value={form.phone || ""} onChange={handleChange} required maxLength={13} pattern="[0-9]*" placeholder="08xxxxxxxxxx" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-black focus:border-black outline-none" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Alamat</label>
-                  <input name="address" value={form.address || ""} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-black focus:border-black outline-none" />
+                  <input name="address" value={form.address || ""} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-black focus:border-black outline-none" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Nama Project</label>
-                  <input name="project_name" value={form.project_name || ""} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-black focus:border-black outline-none" />
+                  <input name="project_name" value={form.project_name || ""} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-black focus:border-black outline-none" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Tipe Properti</label>
-                  <select name="property_type" value={form.property_type || ""} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none">
+                  <select name="property_type" value={form.property_type || ""} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none">
                     <option value="">Pilih tipe</option>
                     <option value="Rumah">Rumah</option>
                     <option value="Ruko">Ruko</option>
@@ -416,7 +416,7 @@ export default function ClientsTable() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Budget</label>
-                  <select name="budget_range" value={form.budget_range || ""} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none">
+                  <select name="budget_range" value={form.budget_range || ""} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none">
                     <option value="">Pilih budget</option>
                     <option value="< 500jt">{"< 500jt"}</option>
                     <option value="500jt - 1M">500jt - 1M</option>
@@ -425,7 +425,7 @@ export default function ClientsTable() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Status Lead</label>
-                  <select name="lead_status" value={form.lead_status || ""} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none">
+                  <select name="lead_status" value={form.lead_status || ""} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none">
                     <option value="">Pilih status</option>
                     <option value="New Lead">New Lead</option>
                     <option value="Contacted">Contacted</option>
@@ -438,7 +438,7 @@ export default function ClientsTable() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Sumber</label>
-                  <select name="source" value={form.source || ""} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none">
+                  <select name="source" value={form.source || ""} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none">
                     <option value="">Pilih sumber</option>
                     <option value="Instagram">Instagram</option>
                     <option value="TikTok">TikTok</option>
@@ -451,7 +451,7 @@ export default function ClientsTable() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Prioritas</label>
-                  <select name="priority" value={form.priority || ""} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none">
+                  <select name="priority" value={form.priority || ""} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none">
                     <option value="">Pilih prioritas</option>
                     <option value="Low">Low</option>
                     <option value="Medium">Medium</option>
@@ -462,7 +462,7 @@ export default function ClientsTable() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Catatan</label>
-                <textarea name="notes" value={form.notes || ""} onChange={handleChange} rows={3} placeholder="Catatan tambahan..." className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-black focus:border-black outline-none resize-none" />
+                <textarea name="notes" value={form.notes || ""} onChange={handleChange} rows={3} placeholder="Catatan tambahan..." className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-black focus:border-black outline-none resize-none" />
               </div>
               <div className="flex gap-2 pt-1">
                 <button

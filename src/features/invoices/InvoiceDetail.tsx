@@ -382,7 +382,7 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
                   type="number"
                   value={paymentForm.amount}
                   onChange={(e) => setPaymentForm((f) => ({ ...f, amount: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900"
                   placeholder={`Max: ${formatCurrency(outstanding)}`}
                   required
                   min="1"
@@ -394,7 +394,7 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
                   type="date"
                   value={paymentForm.payment_date}
                   onChange={(e) => setPaymentForm((f) => ({ ...f, payment_date: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900"
                   required
                 />
               </div>
@@ -403,7 +403,7 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
                 <select
                   value={paymentForm.payment_method}
                   onChange={(e) => setPaymentForm((f) => ({ ...f, payment_method: e.target.value as PaymentMethod }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900"
                 >
                   {(Object.keys(METHOD_LABELS) as PaymentMethod[]).map((m) => (
                     <option key={m} value={m}>{METHOD_LABELS[m]}</option>
@@ -416,7 +416,7 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
                   type="text"
                   value={paymentForm.notes}
                   onChange={(e) => setPaymentForm((f) => ({ ...f, notes: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900"
                   placeholder="Misal: DP 30%, Termin 1…"
                 />
               </div>
@@ -465,7 +465,7 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
                 <select
                   value={editForm.project_id}
                   onChange={(e) => setEditForm((f) => ({ ...f, project_id: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900"
                 >
                   <option value="">Tidak terhubung ke project</option>
                   {editableProjects.map((p) => {
@@ -484,7 +484,7 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
                   type="number"
                   value={editForm.total_amount}
                   onChange={(e) => setEditForm((f) => ({ ...f, total_amount: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900"
                   required
                   min="0"
                 />
@@ -500,7 +500,7 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
                       d.setDate(d.getDate() + 14);
                       setEditForm((f) => ({ ...f, invoice_date: e.target.value, due_date: d.toISOString().slice(0, 10) }));
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900"
                   />
                 </div>
                 <div>
@@ -509,7 +509,7 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
                     type="date"
                     value={editForm.due_date}
                     onChange={(e) => setEditForm((f) => ({ ...f, due_date: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900"
                   />
                 </div>
               </div>
@@ -518,7 +518,7 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
                 <select
                   value={editForm.status}
                   onChange={(e) => setEditForm((f) => ({ ...f, status: e.target.value as InvoiceStatus }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900"
                 >
                   {(Object.keys(STATUS_LABELS) as InvoiceStatus[]).map((s) => (
                     <option key={s} value={s}>{STATUS_LABELS[s]}</option>
@@ -531,7 +531,7 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
                   value={editForm.notes}
                   onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))}
                   rows={2}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 resize-none"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900 resize-none"
                   placeholder="Catatan tambahan…"
                 />
               </div>

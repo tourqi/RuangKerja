@@ -592,7 +592,7 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                     value={sphConfig[key as keyof SphConfig]}
                     onChange={(e) => setSphConfig((prev) => ({ ...prev, [key]: e.target.value }))}
                     placeholder={placeholder}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-gray-500"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none focus:border-gray-500"
                   />
                 </div>
               ))}
@@ -601,7 +601,7 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                 <select
                   value={sphConfig.greeting}
                   onChange={(e) => setSphConfig((prev) => ({ ...prev, greeting: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-gray-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none focus:border-gray-500"
                 >
                   <option value="Bapak">Bapak</option>
                   <option value="Ibu">Ibu</option>

@@ -166,7 +166,7 @@ export default function InvoicesTable() {
         <select
           value={filterStatus}
           onChange={(e) => { setFilterStatus(e.target.value as InvoiceStatus | ""); goTo(1); }}
-          className="px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
+          className="px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900"
         >
           <option value="">Semua Status</option>
           {(Object.keys(STATUS_LABELS) as InvoiceStatus[]).map((s) => (
@@ -176,7 +176,7 @@ export default function InvoicesTable() {
         <select
           value={filterClientId}
           onChange={(e) => { setFilterClientId(e.target.value); goTo(1); }}
-          className="px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
+          className="px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900"
         >
           <option value="">Semua Client</option>
           {clients.map((c) => (
@@ -338,7 +338,7 @@ export default function InvoicesTable() {
                 <select
                   value={form.project_id}
                   onChange={(e) => setForm((f) => ({ ...f, project_id: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900"
                   required
                 >
                   <option value="">Pilih project…</option>
@@ -363,7 +363,7 @@ export default function InvoicesTable() {
                   type="number"
                   value={form.total_amount}
                   onChange={(e) => setForm((f) => ({ ...f, total_amount: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900"
                   placeholder="0"
                   required
                   min="0"
@@ -380,7 +380,7 @@ export default function InvoicesTable() {
                       d.setDate(d.getDate() + 14);
                       setForm((f) => ({ ...f, invoice_date: e.target.value, due_date: d.toISOString().slice(0, 10) }));
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900"
                     required
                   />
                 </div>
@@ -390,7 +390,7 @@ export default function InvoicesTable() {
                     type="date"
                     value={form.due_date}
                     onChange={(e) => setForm((f) => ({ ...f, due_date: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900"
                   />
                 </div>
               </div>
@@ -399,7 +399,7 @@ export default function InvoicesTable() {
                 <select
                   value={form.status}
                   onChange={(e) => setForm((f) => ({ ...f, status: e.target.value as InvoiceStatus }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900"
                 >
                   {(Object.keys(STATUS_LABELS) as InvoiceStatus[]).map((s) => (
                     <option key={s} value={s}>{STATUS_LABELS[s]}</option>
@@ -412,7 +412,7 @@ export default function InvoicesTable() {
                   value={form.notes}
                   onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
                   rows={2}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 resize-none"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900 resize-none"
                   placeholder="Catatan tambahan…"
                 />
               </div>

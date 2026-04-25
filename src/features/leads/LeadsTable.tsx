@@ -275,7 +275,7 @@ export default function LeadsTable() {
                 setSelectedClient("");
               }}
               placeholder="Cari Client (nama/telepon)"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black placeholder:text-gray-900 focus:ring-2 focus:ring-purple-500"
               autoComplete="off"
             />
             {clientQuery && (
@@ -509,7 +509,7 @@ export default function LeadsTable() {
                   }}
                   onFocus={() => setModalShowClientDropdown(true)}
                   placeholder="Cari nama/telepon client"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
                   autoComplete="off"
                 />
                 {modalShowClientDropdown && modalClientQuery && (
@@ -540,7 +540,7 @@ export default function LeadsTable() {
                   name="status"
                   value={form.status || "New Lead"}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
                 >
                   {statusOptions.map((s) => (
                     <option key={s} value={s}>{s}</option>
@@ -554,7 +554,7 @@ export default function LeadsTable() {
                   name="priority"
                   value={form.priority || ""}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
                 >
                   <option value="">Pilih Prioritas</option>
                   {priorityOptionsModal.map((p) => (
@@ -569,7 +569,7 @@ export default function LeadsTable() {
                   name="source"
                   value={form.source || ""}
                   disabled
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100 text-gray-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100 text-gray-900"
                 >
                   <option value="">Pilih Source</option>
                   {sourceOptions.map((s) => (
@@ -586,7 +586,7 @@ export default function LeadsTable() {
                     name="follow_up_date"
                     value={form.follow_up_date || ""}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
                 <div>
@@ -596,7 +596,7 @@ export default function LeadsTable() {
                     name="last_contacted_at"
                     value={form.last_contacted_at || ""}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
                 <div>
@@ -606,7 +606,7 @@ export default function LeadsTable() {
                     name="closed_at"
                     value={form.closed_at || ""}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
               </div>
@@ -619,7 +619,7 @@ export default function LeadsTable() {
                   onChange={handleChange}
                   rows={3}
                   placeholder="Catatan tentang lead ini..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-purple-500 resize-none"
                 />
               </div>
               <div className="flex gap-2 pt-1">
