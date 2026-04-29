@@ -15,7 +15,8 @@ export async function getExpenses(projectId: string): Promise<ProjectExpense[]> 
     .from('project_expenses')
     .select('*')
     .eq('project_id', projectId)
-    .order('tanggal', { ascending: false });
+    .order('tanggal', { ascending: false })
+    .order('created_at', { ascending: false });
   if (error) throw error;
   return data as ProjectExpense[];
 }

@@ -175,6 +175,8 @@ export default function LeadsTable() {
   const handleEdit = (lead: Lead) => {
     setEditingId(lead.id);
     setForm(lead);
+    const c = (clients || []).find((cl) => cl.id === lead.client_id);
+    setModalClientQuery(c ? c.name + (c.phone ? ` (${c.phone})` : "") : "");
     setShowModal(true);
   };
 

@@ -30,5 +30,6 @@ export async function getActivityLogs(
 export async function logActivity(
   entry: Omit<ActivityLog, 'id' | 'created_at'>
 ): Promise<void> {
-  await supabase.from('activity_logs').insert([entry]);
+  const { error } = await supabase.from('activity_logs').insert([entry]);
+  if (error) throw error;
 }

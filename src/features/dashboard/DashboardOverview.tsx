@@ -322,9 +322,9 @@ export default function DashboardOverview() {
                         if (!active || !payload?.length) return null;
                         const d = payload[0].payload as { name: string; value: number };
                         return (
-                          <div className="bg-white border border-gray-100 shadow-lg rounded-lg p-2 text-xs">
-                            <p className="font-semibold">{d.name}</p>
-                            <p>{d.value} lead</p>
+                          <div className="bg-white border border-gray-100 shadow-lg rounded-lg p-3 text-xs">
+                            <p className="font-semibold text-gray-700 mb-1">{d.name}</p>
+                            <p className="text-gray-600">{d.value} lead</p>
                           </div>
                         );
                       }}
