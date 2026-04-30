@@ -266,6 +266,17 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
 
           {/* Inline table */}
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+            {/* Add row button */}
+            <div className="px-3 py-2 border-b border-gray-100">
+              <button
+                onClick={handleAddRow}
+                disabled={addingRow}
+                className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-800 transition disabled:opacity-50"
+              >
+                <span className="text-base leading-none">+</span>
+                {addingRow ? "Menambahkan..." : "Tambah Baris"}
+              </button>
+            </div>
             {loadingExp ? (
               <div className="py-10 text-center text-xs text-gray-400">Memuat...</div>
             ) : (
@@ -284,7 +295,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                   {expenses.length === 0 && (
                     <tr>
                       <td colSpan={6} className="px-3 py-10 text-center text-sm text-gray-400">
-                        Belum ada pengeluaran. Klik "+ Tambah Baris" di bawah.
+                        Belum ada pengeluaran. Klik "+ Tambah Baris" di atas.
                       </td>
                     </tr>
                   )}
@@ -383,18 +394,6 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                 )}
               </table>
             )}
-
-            {/* Add row button */}
-            <div className="px-3 py-2 border-t border-gray-100">
-              <button
-                onClick={handleAddRow}
-                disabled={addingRow}
-                className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-800 transition disabled:opacity-50"
-              >
-                <span className="text-base leading-none">+</span>
-                {addingRow ? "Menambahkan..." : "Tambah Baris"}
-              </button>
-            </div>
           </div>
         </div>
       )}
