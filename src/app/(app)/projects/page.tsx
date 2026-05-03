@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import ProjectsTable from "@/features/projects/ProjectsTable";
 
 export default function ProjectsPage() {
@@ -7,7 +8,9 @@ export default function ProjectsPage() {
         <h1 className="text-2xl font-bold text-gray-900">Projects</h1>
         <p className="text-sm text-gray-500 mt-1">Kelola proyek interior dan progres pengerjaannya</p>
       </div>
-      <ProjectsTable />
+      <Suspense>
+        <ProjectsTable />
+      </Suspense>
     </div>
   );
 }

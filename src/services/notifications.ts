@@ -31,6 +31,6 @@ export async function upsertNotification(
 ): Promise<void> {
   await supabase.from('notifications').upsert(
     [notif],
-    { onConflict: 'user_id,type,entity_id', ignoreDuplicates: true }
+    { onConflict: 'user_id,type,entity_id', ignoreDuplicates: false }
   );
 }

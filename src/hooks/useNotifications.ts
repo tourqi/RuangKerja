@@ -3,13 +3,14 @@ import { useCallback, useEffect, useState } from 'react';
 import type { Notification } from '@/types/db';
 import { getNotifications, markAllRead, markRead, upsertNotification } from '@/services/notifications';
 import { useAuth } from '@/context/AuthContext';
-import type { Lead, Project, Invoice } from '@/types/db';
+import type { Lead, Project, Invoice, Client } from '@/types/db';
 
 async function generateNotifications(
   userId: string,
   leads: Lead[],
   projects: Project[],
-  invoices: Invoice[]
+  invoices: Invoice[],
+  clients: Client[]
 ) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -20,11 +21,13 @@ async function generateNotifications(
     if (l.status !== 'Deal' && l.status !== 'Lost' && l.follow_up_date) {
       const due = new Date(l.follow_up_date);
       if (due <= today) {
+        const client = clients.find(c => c.id === l.client_id);
+        const clientName = client?.name ?? `Lead #${l.id.slice(0, 8)}`;
         tasks.push(upsertNotification({
           user_id: userId,
           type: 'follow_up_due',
-          title: `Follow-up: Lead #${l.id.slice(0, 8)}`,
-          body: `Status: ${l.status}`,
+          title: `Follow-up: ${clientName}`,
+          body: `Status: ${l.status} · ${new Date(l.follow_up_date).toLocaleDateString('id-ID')}`,
           link: `/leads/${l.id}`,
           entity_id: l.id,
           read: false,
@@ -42,7 +45,7 @@ async function generateNotifications(
           type: 'project_overdue',
           title: `Proyek Overdue: ${p.name}`,
           body: `Deadline: ${new Date(p.deadline).toLocaleDateString('id-ID')}`,
-          link: `/projects`,
+          link: `/projects/${p.id}`,
           entity_id: p.id,
           read: false,
         }));
@@ -73,7 +76,8 @@ async function generateNotifications(
 export function useNotifications(
   leads: Lead[],
   projects: Project[],
-  invoices: Invoice[]
+  invoices: Invoice[],
+  clients: Client[]
 ) {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -89,8 +93,8 @@ export function useNotifications(
     if (!user || generated) return;
     if (leads.length === 0 && projects.length === 0 && invoices.length === 0) return;
     setGenerated(true);
-    generateNotifications(user.id, leads, projects, invoices).then(refetch);
-  }, [user, leads, projects, invoices, generated, refetch]);
+    generateNotifications(user.id, leads, projects, invoices, clients).then(refetch);
+  }, [user, leads, projects, invoices, clients, generated, refetch]);
 
   useEffect(() => {
     refetch();

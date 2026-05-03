@@ -85,15 +85,17 @@ function NotifBell({
   leads,
   projects,
   invoices,
+  clients,
 }: {
   leads: ReturnType<typeof useLeads>["leads"];
   projects: ReturnType<typeof useProjects>["projects"];
   invoices: ReturnType<typeof useInvoices>["invoices"];
+  clients: ReturnType<typeof useClients>["clients"];
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
-  const { notifications, unreadCount, markRead, markAllRead } = useNotifications(leads, projects, invoices);
+  const { notifications, unreadCount, markRead, markAllRead } = useNotifications(leads, projects, invoices, clients);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -472,7 +474,7 @@ export default function TopBar() {
             </button>
 
             {/* Notifications */}
-            <NotifBell leads={leads} projects={projects} invoices={invoices} />
+            <NotifBell leads={leads} projects={projects} invoices={invoices} clients={clients} />
 
             {/* Divider */}
             <div className="w-px h-5 bg-gray-200 mx-1" />

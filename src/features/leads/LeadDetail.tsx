@@ -163,17 +163,28 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
               )}
             </div>
           </div>
-          <div className="flex gap-6 flex-shrink-0 text-center">
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{rabList.length}</p>
-              <p className="text-xs text-gray-400 mt-0.5">RAB</p>
+          <div className="flex items-start gap-4 flex-shrink-0">
+            <div className="flex gap-6 text-center">
+              <div>
+                <p className="text-2xl font-bold text-gray-900">{rabList.length}</p>
+                <p className="text-xs text-gray-400 mt-0.5">RAB</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900">
+                  {rabList.filter((r) => r.status === "approved").length}
+                </p>
+                <p className="text-xs text-gray-400 mt-0.5">Disetujui</p>
+              </div>
             </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">
-                {rabList.filter((r) => r.status === "approved").length}
-              </p>
-              <p className="text-xs text-gray-400 mt-0.5">Disetujui</p>
-            </div>
+            {lead.status === "Deal" && (
+              <Link
+                href={`/projects?client_id=${lead.client_id}`}
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                Buat Project
+              </Link>
+            )}
           </div>
         </div>
       </div>
