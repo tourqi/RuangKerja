@@ -64,6 +64,8 @@ export interface Rab {
   lead_id: string;
   nama: string;
   status: RabStatus;
+  diskon_persen?: number;
+  diskon_nilai?: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -115,6 +117,8 @@ export interface Invoice {
   invoice_date?: string;
   due_date?: string;
   notes?: string;
+  diskon_persen?: number;
+  diskon_nilai?: number;
   created_by?: string;
   created_at?: string;
 }

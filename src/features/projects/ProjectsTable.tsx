@@ -6,6 +6,7 @@ import { useProjects } from "@/hooks/useProjects";
 import { useClients } from "@/hooks/useClients";
 import { useLeads } from "@/hooks/useLeads";
 import { addProject, updateProject, deleteProject } from "@/services/projects";
+import { getRabByLead, getRabWithGroups } from "@/services/rab";
 import { Project, ProjectStatus, projectStatusLabel } from "@/types/db";
 import { useToast } from "@/components/Toast";
 import { SortableHeader } from "@/components/SortableHeader";
@@ -135,13 +136,37 @@ export default function ProjectsTable() {
 
   useEffect(() => {
     const clientId = searchParams.get("client_id");
+    const leadId = searchParams.get("lead_id");
     if (!clientId || clients.length === 0) return;
     const client = clients.find((c) => c.id === clientId);
-    if (client) {
-      setForm({ status: "Planning", progress: 0, client_id: client.id });
-      setModalClientQuery(client.name ?? "");
-      setEditingId(null);
-      setShowModal(true);
+    if (!client) return;
+
+    setForm({ status: "Planning", progress: 0, client_id: client.id });
+    setModalClientQuery(client.name ?? "");
+    setEditingId(null);
+    setShowModal(true);
+
+    if (leadId) {
+      (async () => {
+        try {
+          const rabs = await getRabByLead(leadId);
+          const approvedRabs = rabs.filter((r) => r.status === "approved");
+          let total = 0;
+          for (const rab of approvedRabs) {
+            const groups = await getRabWithGroups(rab.id);
+            const gross = groups.reduce(
+              (s, g) => s + (g.items ?? []).reduce((gs, item) => gs + item.qty * item.harga, 0),
+              0
+            );
+            total += gross - (rab.diskon_nilai ?? 0);
+          }
+          if (total > 0) {
+            setForm((prev) => ({ ...prev, value: total }));
+          }
+        } catch {
+          // silently ignore; user can fill value manually
+        }
+      })();
     }
   }, [searchParams, clients]);
 

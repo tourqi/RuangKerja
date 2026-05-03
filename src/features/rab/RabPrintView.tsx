@@ -89,12 +89,32 @@ export default function RabPrintView({ rab, groups, onClose }: Props) {
           ))}
         </tbody>
         <tfoot>
+          {(rab.diskon_nilai ?? 0) > 0 && (
+            <tr>
+              <td colSpan={6} className="text-right bg-gray-50">
+                Subtotal
+              </td>
+              <td className="text-right bg-gray-50">
+                {formatCurrency(grandTotal)}
+              </td>
+            </tr>
+          )}
+          {(rab.diskon_nilai ?? 0) > 0 && (
+            <tr>
+              <td colSpan={6} className="text-right bg-gray-50">
+                Diskon {(rab.diskon_persen ?? 0) > 0 ? `(${rab.diskon_persen}%)` : ""}
+              </td>
+              <td className="text-right bg-gray-50">
+                ({formatCurrency(rab.diskon_nilai ?? 0)})
+              </td>
+            </tr>
+          )}
           <tr>
             <td colSpan={6} className="text-center font-bold uppercase tracking-wide bg-gray-100">
               TOTAL
             </td>
             <td className="text-right font-bold bg-gray-100">
-              {formatCurrency(grandTotal)}
+              {formatCurrency(grandTotal - (rab.diskon_nilai ?? 0))}
             </td>
           </tr>
         </tfoot>

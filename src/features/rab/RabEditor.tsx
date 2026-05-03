@@ -43,6 +43,7 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
   const [groups, setGroups] = useState<LocalGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [diskon, setDiskon] = useState({ persen: "", nilai: "" });
   const [showPrint, setShowPrint] = useState(false);
   const [showSph, setShowSph] = useState(false);
   const [showSphDialog, setShowSphDialog] = useState(false);
@@ -68,6 +69,10 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
       ]);
       setRab(rabData);
       setRabName(rabData?.nama ?? "");
+      setDiskon({
+        persen: rabData?.diskon_persen ? String(rabData.diskon_persen) : "",
+        nilai: rabData?.diskon_nilai ? String(rabData.diskon_nilai) : "",
+      });
       setGroups(
         rawGroups.map((g) => ({
           id: g.id,
@@ -112,6 +117,32 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
     group.items.reduce((s, item) => s + item.qty * item.harga, 0);
 
   const grandTotal = groups.reduce((s, g) => s + groupSubtotal(g), 0);
+  const diskonNilaiNum = parseFloat(diskon.nilai) || 0;
+  const netTotal = grandTotal - diskonNilaiNum;
+
+  function handleDiskonPersenChange(value: string) {
+    const persen = parseFloat(value) || 0;
+    const nilai = grandTotal > 0 ? Math.round(grandTotal * persen / 100) : 0;
+    setDiskon({ persen: value, nilai: nilai > 0 ? String(nilai) : "" });
+  }
+
+  function handleDiskonNilaiChange(value: string) {
+    const nilai = parseFloat(value) || 0;
+    const persen = grandTotal > 0 ? ((nilai / grandTotal) * 100).toFixed(2) : "";
+    setDiskon({ nilai: value, persen: persen });
+  }
+
+  async function handleSaveDiskon() {
+    if (!rab) return;
+    try {
+      await updateRab(rab.id, {
+        diskon_persen: parseFloat(diskon.persen) || 0,
+        diskon_nilai: parseFloat(diskon.nilai) || 0,
+      });
+    } catch {
+      toast("Gagal menyimpan diskon", "error");
+    }
+  }
 
   // --- RAB NAME ---
   async function handleSaveName() {
@@ -357,7 +388,10 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
             <div className="flex items-center gap-3">
               <div className="text-right">
                 <p className="text-xs text-gray-400">Total RAB</p>
-                <p className="text-xl font-bold text-gray-900">Rp {formatCurrency(grandTotal)}</p>
+                <p className="text-xl font-bold text-gray-900">Rp {formatCurrency(netTotal)}</p>
+                {diskonNilaiNum > 0 && (
+                  <p className="text-xs text-gray-400 line-through">Rp {formatCurrency(grandTotal)}</p>
+                )}
               </div>
               <button
                 onClick={handlePrint}
@@ -545,12 +579,54 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
               {/* Grand Total */}
               {groups.length > 0 && (
                 <tfoot>
+                  <tr className="border-t-2 border-gray-300">
+                    <td colSpan={8} className="px-4 py-2.5 text-sm font-semibold text-gray-700 text-right">
+                      Subtotal
+                    </td>
+                    <td className="px-3 py-2.5 text-right text-sm font-semibold text-gray-700">
+                      Rp {formatCurrency(grandTotal)}
+                    </td>
+                    <td />
+                  </tr>
+                  <tr className="border-t border-gray-200">
+                    <td colSpan={7} className="px-4 py-2 text-sm text-gray-600 text-right">
+                      Diskon
+                    </td>
+                    <td className="px-2 py-2">
+                      <div className="relative">
+                        <input
+                          type="number"
+                          value={diskon.persen}
+                          onChange={(e) => handleDiskonPersenChange(e.target.value)}
+                          onBlur={handleSaveDiskon}
+                          placeholder="0"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          className="w-full text-right bg-white border border-gray-200 rounded px-2 py-1 text-sm outline-none focus:ring-1 focus:ring-gray-400 pr-6"
+                        />
+                        <span className="absolute right-2 top-1.5 text-xs text-gray-400">%</span>
+                      </div>
+                    </td>
+                    <td className="px-2 py-2">
+                      <input
+                        type="number"
+                        value={diskon.nilai}
+                        onChange={(e) => handleDiskonNilaiChange(e.target.value)}
+                        onBlur={handleSaveDiskon}
+                        placeholder="0"
+                        min="0"
+                        className="w-full text-right bg-white border border-gray-200 rounded px-2 py-1 text-sm outline-none focus:ring-1 focus:ring-gray-400"
+                      />
+                    </td>
+                    <td />
+                  </tr>
                   <tr className="border-t-2 border-gray-300 bg-gray-50">
                     <td colSpan={8} className="px-4 py-3 text-sm font-bold text-gray-800 uppercase tracking-wide text-right">
                       TOTAL
                     </td>
                     <td className="px-3 py-3 text-right text-sm font-bold text-gray-900">
-                      Rp {formatCurrency(grandTotal)}
+                      Rp {formatCurrency(netTotal)}
                     </td>
                     <td />
                   </tr>

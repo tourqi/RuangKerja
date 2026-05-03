@@ -77,6 +77,7 @@ export default function InvoicesTable() {
   const [rabTotal, setRabTotal] = useState<number | null>(null);
   const [loadingRabs, setLoadingRabs] = useState(false);
   const [termins, setTermins] = useState<Termin[]>([newTermin(0)]);
+  const [diskon, setDiskon] = useState({ persen: "", nilai: "" });
 
   // Project belum lunas: total paid_amount semua invoice-nya < project.value
   const paidPerProject = invoices.reduce<Record<string, number>>((acc, inv) => {
@@ -139,25 +140,41 @@ export default function InvoicesTable() {
     setTermins((prev) => prev.map((t) => {
       if (t.id !== id) return t;
       const updated = { ...t, [field]: value };
-      if (rabTotal && rabTotal > 0) {
+      const base = effectiveRabTotal ?? rabTotal;
+      if (base && base > 0) {
         if (field === "persen" && value !== "") {
-          updated.jumlah = Math.round((parseFloat(value) / 100) * rabTotal).toString();
+          updated.jumlah = Math.round((parseFloat(value) / 100) * base).toString();
         } else if (field === "jumlah" && value !== "") {
-          updated.persen = ((parseFloat(value) / rabTotal) * 100).toFixed(1);
+          updated.persen = ((parseFloat(value) / base) * 100).toFixed(1);
         }
       }
       return updated;
     }));
   }
 
+  const diskonNilaiNum = parseFloat(diskon.nilai) || 0;
+  const effectiveRabTotal = rabTotal != null ? rabTotal - diskonNilaiNum : null;
   const totalTermin = termins.reduce((s, t) => s + (parseFloat(t.jumlah) || 0), 0);
-  const sisaTagihan = rabTotal != null ? rabTotal - totalTermin : null;
+  const sisaTagihan = effectiveRabTotal != null ? effectiveRabTotal - totalTermin : null;
+
+  function handleDiskonPersenChange(value: string) {
+    const persen = parseFloat(value) || 0;
+    const nilai = rabTotal && rabTotal > 0 ? Math.round(rabTotal * persen / 100) : 0;
+    setDiskon({ persen: value, nilai: nilai > 0 ? String(nilai) : "" });
+  }
+
+  function handleDiskonNilaiChange(value: string) {
+    const nilai = parseFloat(value) || 0;
+    const persen = rabTotal && rabTotal > 0 ? ((nilai / rabTotal) * 100).toFixed(1) : "";
+    setDiskon({ nilai: value, persen: persen });
+  }
 
   function resetAdd() {
     setForm({ project_id: "", invoice_date: today, notes: "" });
     setAvailableRabs([]);
     setSelectedRabId("");
     setRabTotal(null);
+    setDiskon({ persen: "", nilai: "" });
     setTermins([newTermin(0)]);
   }
 
@@ -182,6 +199,8 @@ export default function InvoicesTable() {
           due_date: termin.due_date || undefined,
           notes: [termin.nama, form.notes].filter(Boolean).join(" · ") || undefined,
           created_by: user?.id,
+          diskon_persen: parseFloat(diskon.persen) || undefined,
+          diskon_nilai: parseFloat(diskon.nilai) || undefined,
         });
       }
       await refetch();
@@ -467,9 +486,41 @@ export default function InvoicesTable() {
                     </select>
                   )}
                   {rabTotal != null && (
-                    <div className="mt-2 flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
-                      <span className="text-xs text-gray-500">Total RAB</span>
-                      <span className="text-sm font-semibold text-gray-900">{formatCurrency(rabTotal)}</span>
+                    <div className="mt-2 space-y-2">
+                      <div className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
+                        <span className="text-xs text-gray-500">Total RAB</span>
+                        <span className="text-sm font-semibold text-gray-900">{formatCurrency(rabTotal)}</span>
+                      </div>
+                      <div className="flex items-center gap-2 px-1">
+                        <span className="text-xs text-gray-500 shrink-0">Diskon</span>
+                        <div className="relative w-24">
+                          <input
+                            type="number"
+                            value={diskon.persen}
+                            onChange={(e) => handleDiskonPersenChange(e.target.value)}
+                            placeholder="0"
+                            min="0"
+                            max="100"
+                            step="0.1"
+                            className="w-full pl-2.5 pr-7 py-1.5 border border-gray-300 rounded-md text-xs text-gray-900 outline-none focus:ring-1 focus:ring-gray-900"
+                          />
+                          <span className="absolute right-2 top-1.5 text-xs text-gray-400">%</span>
+                        </div>
+                        <input
+                          type="number"
+                          value={diskon.nilai}
+                          onChange={(e) => handleDiskonNilaiChange(e.target.value)}
+                          placeholder="Rp"
+                          min="0"
+                          className="flex-1 px-2.5 py-1.5 border border-gray-300 rounded-md text-xs text-gray-900 outline-none focus:ring-1 focus:ring-gray-900"
+                        />
+                      </div>
+                      {diskonNilaiNum > 0 && (
+                        <div className="flex items-center justify-between bg-blue-50 rounded-lg px-3 py-2">
+                          <span className="text-xs text-blue-700">Total setelah diskon</span>
+                          <span className="text-sm font-semibold text-blue-900">{formatCurrency(effectiveRabTotal ?? 0)}</span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

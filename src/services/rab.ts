@@ -34,7 +34,7 @@ export async function addRab(leadId: string, nama: string): Promise<Rab> {
   return data as Rab;
 }
 
-export async function updateRab(id: string, updates: Partial<Pick<Rab, 'nama' | 'status'>>): Promise<Rab> {
+export async function updateRab(id: string, updates: Partial<Pick<Rab, 'nama' | 'status' | 'diskon_persen' | 'diskon_nilai'>>): Promise<Rab> {
   const { data, error } = await supabase
     .from('rab')
     .update(updates)
