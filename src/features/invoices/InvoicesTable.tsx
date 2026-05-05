@@ -6,6 +6,7 @@ import { useClients } from "@/hooks/useClients";
 import { useProjects } from "@/hooks/useProjects";
 import { useLeads } from "@/hooks/useLeads";
 import { useToast } from "@/components/Toast";
+import { MultiSelect } from "@/components/MultiSelect";
 import type { InvoiceStatus, Rab } from "@/types/db";
 import {
   addInvoice,
@@ -63,8 +64,8 @@ export default function InvoicesTable() {
   const { user } = useAuth();
   const toast = useToast();
 
-  const [filterStatus, setFilterStatus] = useState<InvoiceStatus | "">("");
-  const [filterClientId, setFilterClientId] = useState("");
+  const [filterStatus, setFilterStatus] = useState<string[]>([]);
+  const [filterClientId, setFilterClientId] = useState<string[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -89,8 +90,8 @@ export default function InvoicesTable() {
   );
 
   const filtered = invoices.filter((inv) => {
-    if (filterStatus && inv.status !== filterStatus) return false;
-    if (filterClientId && inv.client_id !== filterClientId) return false;
+    if (filterStatus.length > 0 && !filterStatus.includes(inv.status)) return false;
+    if (filterClientId.length > 0 && !filterClientId.includes(inv.client_id ?? "")) return false;
     return true;
   });
 
@@ -263,26 +264,20 @@ export default function InvoicesTable() {
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        <select
+        <MultiSelect
+          placeholder="Semua Status"
+          options={(Object.keys(STATUS_LABELS) as InvoiceStatus[]).map((s) => ({ value: s, label: STATUS_LABELS[s] }))}
           value={filterStatus}
-          onChange={(e) => { setFilterStatus(e.target.value as InvoiceStatus | ""); goTo(1); }}
-          className="px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900"
-        >
-          <option value="">Semua Status</option>
-          {(Object.keys(STATUS_LABELS) as InvoiceStatus[]).map((s) => (
-            <option key={s} value={s}>{STATUS_LABELS[s]}</option>
-          ))}
-        </select>
-        <select
+          onChange={(v) => { setFilterStatus(v); goTo(1); }}
+          className="w-44"
+        />
+        <MultiSelect
+          placeholder="Semua Client"
+          options={clients.map((c) => ({ value: c.id, label: c.name ?? c.id }))}
           value={filterClientId}
-          onChange={(e) => { setFilterClientId(e.target.value); goTo(1); }}
-          className="px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900"
-        >
-          <option value="">Semua Client</option>
-          {clients.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
+          onChange={(v) => { setFilterClientId(v); goTo(1); }}
+          className="w-52"
+        />
         <div className="ml-auto">
           <button
             onClick={() => setShowAdd(true)}

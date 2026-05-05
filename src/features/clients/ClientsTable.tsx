@@ -10,6 +10,7 @@ import { useSortable } from "@/hooks/useSortable";
 import { usePagination } from "@/hooks/usePagination";
 import Pagination from "@/components/Pagination";
 import { exportCSV } from "@/utils/csv";
+import { MultiSelect } from "@/components/MultiSelect";
 
 const leadStatusColors: Record<string, string> = {
   "New Lead": "bg-blue-100 text-blue-800",
@@ -54,11 +55,11 @@ export default function ClientsTable() {
   const [filter, setFilter] = useState({
     name: "",
     project_name: "",
-    property_type: "",
-    budget_range: "",
-    lead_status: "",
-    source: "",
-    priority: "",
+    property_type: [] as string[],
+    budget_range: [] as string[],
+    lead_status: [] as string[],
+    source: [] as string[],
+    priority: [] as string[],
   });
 
   const handleChange = (
@@ -139,11 +140,11 @@ export default function ClientsTable() {
   const filteredClients = clients.filter((c) =>
     (!filter.name || c.name?.toLowerCase().includes(filter.name.toLowerCase())) &&
     (!filter.project_name || c.project_name?.toLowerCase().includes(filter.project_name.toLowerCase())) &&
-    (!filter.property_type || c.property_type === filter.property_type) &&
-    (!filter.budget_range || c.budget_range === filter.budget_range) &&
-    (!filter.lead_status || c.lead_status === filter.lead_status) &&
-    (!filter.source || c.source === filter.source) &&
-    (!filter.priority || c.priority === filter.priority)
+    (filter.property_type.length === 0 || filter.property_type.includes(c.property_type ?? "")) &&
+    (filter.budget_range.length === 0 || filter.budget_range.includes(c.budget_range ?? "")) &&
+    (filter.lead_status.length === 0 || filter.lead_status.includes(c.lead_status ?? "")) &&
+    (filter.source.length === 0 || filter.source.includes(c.source ?? "")) &&
+    (filter.priority.length === 0 || filter.priority.includes(c.priority ?? ""))
   );
 
   const { sorted: sortedClients, sortKey, sortDir, toggleSort } = useSortable(filteredClients);
@@ -213,50 +214,70 @@ export default function ClientsTable() {
             placeholder="Cari Project..."
             className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-black focus:border-black outline-none"
           />
-          <select name="property_type" value={filter.property_type} onChange={handleFilterChange} className="px-3 py-2 border border-gray-300 rounded-lg text-sm  text-gray-900 outline-none">
-            <option value="">Semua Tipe</option>
-            <option value="Rumah">Rumah</option>
-            <option value="Ruko">Ruko</option>
-            <option value="Apartemen">Apartemen</option>
-            <option value="Tanah">Tanah</option>
-          </select>
-          <select name="budget_range" value={filter.budget_range} onChange={handleFilterChange} className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none">
-            <option value="">Semua Budget</option>
-            <option value="< 500jt">{"< 500jt"}</option>
-            <option value="500jt - 1M">500jt - 1M</option>
-            <option value="> 1M">{"> 1M"}</option>
-          </select>
+          <MultiSelect
+            placeholder="Semua Tipe"
+            options={[
+              { value: "Rumah", label: "Rumah" },
+              { value: "Ruko", label: "Ruko" },
+              { value: "Apartemen", label: "Apartemen" },
+              { value: "Tanah", label: "Tanah" },
+            ]}
+            value={filter.property_type}
+            onChange={(v) => setFilter((prev) => ({ ...prev, property_type: v }))}
+          />
+          <MultiSelect
+            placeholder="Semua Budget"
+            options={[
+              { value: "< 500jt", label: "< 500jt" },
+              { value: "500jt - 1M", label: "500jt - 1M" },
+              { value: "> 1M", label: "> 1M" },
+            ]}
+            value={filter.budget_range}
+            onChange={(v) => setFilter((prev) => ({ ...prev, budget_range: v }))}
+          />
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <select name="lead_status" value={filter.lead_status} onChange={handleFilterChange} className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none">
-            <option value="">Semua Status</option>
-            <option value="New Lead">New Lead</option>
-            <option value="Contacted">Contacted</option>
-            <option value="Meeting Scheduled">Meeting Scheduled</option>
-            <option value="Proposal Sent">Proposal Sent</option>
-            <option value="Negotiation">Negotiation</option>
-            <option value="Deal Won">Deal Won</option>
-            <option value="Deal Lost">Deal Lost</option>
-          </select>
-          <select name="source" value={filter.source} onChange={handleFilterChange} className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none">
-            <option value="">Semua Sumber</option>
-            <option value="Instagram">Instagram</option>
-            <option value="TikTok">TikTok</option>
-            <option value="Website">Website</option>
-            <option value="Referral">Referral</option>
-            <option value="Walk-in">Walk-in</option>
-            <option value="Marketplace">Marketplace</option>
-            <option value="Ads (Google/Facebook)">Ads (Google/Facebook)</option>
-          </select>
-          <select name="priority" value={filter.priority} onChange={handleFilterChange} className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none">
-            <option value="">Semua Prioritas</option>
-            <option value="Low">Low</option>
-            <option value="Medium">Medium</option>
-            <option value="High">High</option>
-            <option value="Urgent">Urgent</option>
-          </select>
+          <MultiSelect
+            placeholder="Semua Status"
+            options={[
+              { value: "New Lead", label: "New Lead" },
+              { value: "Contacted", label: "Contacted" },
+              { value: "Meeting Scheduled", label: "Meeting Scheduled" },
+              { value: "Proposal Sent", label: "Proposal Sent" },
+              { value: "Negotiation", label: "Negotiation" },
+              { value: "Deal Won", label: "Deal Won" },
+              { value: "Deal Lost", label: "Deal Lost" },
+            ]}
+            value={filter.lead_status}
+            onChange={(v) => setFilter((prev) => ({ ...prev, lead_status: v }))}
+          />
+          <MultiSelect
+            placeholder="Semua Sumber"
+            options={[
+              { value: "Instagram", label: "Instagram" },
+              { value: "TikTok", label: "TikTok" },
+              { value: "Website", label: "Website" },
+              { value: "Referral", label: "Referral" },
+              { value: "Walk-in", label: "Walk-in" },
+              { value: "Marketplace", label: "Marketplace" },
+              { value: "Ads (Google/Facebook)", label: "Ads (Google/Facebook)" },
+            ]}
+            value={filter.source}
+            onChange={(v) => setFilter((prev) => ({ ...prev, source: v }))}
+          />
+          <MultiSelect
+            placeholder="Semua Prioritas"
+            options={[
+              { value: "Low", label: "Low" },
+              { value: "Medium", label: "Medium" },
+              { value: "High", label: "High" },
+              { value: "Urgent", label: "Urgent" },
+            ]}
+            value={filter.priority}
+            onChange={(v) => setFilter((prev) => ({ ...prev, priority: v }))}
+          />
           <button
-            onClick={() => setFilter({ name: "", project_name: "", property_type: "", budget_range: "", lead_status: "", source: "", priority: "" })}
+            onClick={() => setFilter({ name: "", project_name: "", property_type: [], budget_range: [], lead_status: [], source: [], priority: [] })}
             className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 hover:bg-gray-50 transition outline-none"
           >
             Reset Filter

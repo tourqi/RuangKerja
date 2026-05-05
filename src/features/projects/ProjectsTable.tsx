@@ -14,6 +14,7 @@ import { useSortable } from "@/hooks/useSortable";
 import { usePagination } from "@/hooks/usePagination";
 import Pagination from "@/components/Pagination";
 import { exportCSV } from "@/utils/csv";
+import { MultiSelect } from "@/components/MultiSelect";
 
 function SkeletonRow({ cols }: { cols: number }) {
   return (
@@ -65,7 +66,7 @@ export default function ProjectsTable() {
   // --- FILTER STATE ---
   const [filterName, setFilterName] = useState("");
   const [filterClient, setFilterClient] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
+  const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [filterAssigned, setFilterAssigned] = useState("");
   const [filterStartFrom, setFilterStartFrom] = useState("");
   const [filterStartTo, setFilterStartTo] = useState("");
@@ -75,7 +76,7 @@ export default function ProjectsTable() {
   const [filterProgressMax, setFilterProgressMax] = useState("");
 
   const resetFilters = () => {
-    setFilterName(""); setFilterClient(""); setFilterStatus("");
+    setFilterName(""); setFilterClient(""); setFilterStatus([]);
     setFilterAssigned(""); setFilterStartFrom(""); setFilterStartTo("");
     setFilterDeadlineFrom(""); setFilterDeadlineTo("");
     setFilterProgressMin(""); setFilterProgressMax("");
@@ -92,7 +93,7 @@ export default function ProjectsTable() {
       const c = (clients || []).find(cl => cl.id === p.client_id);
       if (!c?.name?.toLowerCase().includes(filterClient.toLowerCase())) return false;
     }
-    if (filterStatus && p.status !== filterStatus) return false;
+    if (filterStatus.length > 0 && !filterStatus.includes(p.status)) return false;
     if (filterAssigned && !p.assigned_to?.toLowerCase().includes(filterAssigned.toLowerCase())) return false;
     if (filterStartFrom && p.start_date && p.start_date < filterStartFrom) return false;
     if (filterStartTo && p.start_date && p.start_date > filterStartTo) return false;
@@ -313,14 +314,12 @@ export default function ProjectsTable() {
             placeholder="Cari nama client..."
             className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black placeholder:text-gray-400 focus:ring-2 focus:ring-green-500 outline-none"
           />
-          <select
+          <MultiSelect
+            placeholder="Semua Status"
+            options={statusOptions.map(s => ({ value: s, label: projectStatusLabel[s] }))}
             value={filterStatus}
-            onChange={e => setFilterStatus(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-green-500 outline-none"
-          >
-            <option value="">Semua Status</option>
-            {statusOptions.map(s => <option key={s} value={s}>{projectStatusLabel[s]}</option>)}
-          </select>
+            onChange={setFilterStatus}
+          />
           <input
             type="text"
             value={filterAssigned}

@@ -11,6 +11,7 @@ import { useSortable } from "@/hooks/useSortable";
 import { usePagination } from "@/hooks/usePagination";
 import Pagination from "@/components/Pagination";
 import { exportCSV } from "@/utils/csv";
+import { MultiSelect } from "@/components/MultiSelect";
 
 const statusOptions: LeadStatus[] = ["New Lead", "Contacted", "Survey", "Deal", "Lost"];
 
@@ -57,9 +58,9 @@ export default function LeadsTable() {
   // --- FILTER STATE ---
   const [clientQuery, setClientQuery] = useState("");
   const [selectedClient, setSelectedClient] = useState<string>("");
-  const [status, setStatus] = useState<string>("");
-  const [source, setSource] = useState<string>("");
-  const [priority, setPriority] = useState<string>("");
+  const [status, setStatus] = useState<string[]>([]);
+  const [source, setSource] = useState<string[]>([]);
+  const [priority, setPriority] = useState<string[]>([]);
   const [followUpStart, setFollowUpStart] = useState("");
   const [followUpEnd, setFollowUpEnd] = useState("");
   const [updatedStart, setUpdatedStart] = useState("");
@@ -101,9 +102,9 @@ export default function LeadsTable() {
         (digits.length > 0 && client?.phone?.replace(/\D/g, "").includes(digits));
       if (!match) return false;
     }
-    if (status && lead.status !== status) return false;
-    if (source && (client?.source || lead.source) !== source) return false;
-    if (priority && lead.priority !== priority) return false;
+    if (status.length > 0 && !status.includes(lead.status)) return false;
+    if (source.length > 0 && !source.includes(client?.source ?? lead.source ?? "")) return false;
+    if (priority.length > 0 && !priority.includes(lead.priority ?? "")) return false;
     if (followUpStart && lead.follow_up_date && lead.follow_up_date < followUpStart) return false;
     if (followUpEnd && lead.follow_up_date && lead.follow_up_date > followUpEnd) return false;
     if (updatedStart && lead.updated_at && lead.updated_at < updatedStart) return false;
@@ -301,38 +302,26 @@ export default function LeadsTable() {
             )}
           </div>
           {/* Status dropdown */}
-          <select
+          <MultiSelect
+            placeholder="Status"
+            options={statusOptions.map(s => ({ value: s, label: s }))}
             value={status}
-            onChange={e => setStatus(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-purple-500"
-          >
-            <option value="">Status</option>
-            {statusOptions.map(s => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
+            onChange={setStatus}
+          />
           {/* Source dropdown */}
-          <select
+          <MultiSelect
+            placeholder="Sumber"
+            options={sourceOptions.map(s => ({ value: s as string, label: s as string }))}
             value={source}
-            onChange={e => setSource(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-purple-500"
-          >
-            <option value="">Sumber</option>
-            {sourceOptions.map(s => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
+            onChange={setSource}
+          />
           {/* Priority dropdown */}
-          <select
+          <MultiSelect
+            placeholder="Prioritas"
+            options={priorityOptions.map(p => ({ value: p as string, label: p as string }))}
             value={priority}
-            onChange={e => setPriority(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-purple-500"
-          >
-            <option value="">Prioritas</option>
-            {priorityOptions.map(p => (
-              <option key={p} value={p}>{p}</option>
-            ))}
-          </select>
+            onChange={setPriority}
+          />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Follow Up Date Range */}
