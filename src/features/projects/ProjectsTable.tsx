@@ -1,13 +1,12 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useProjects } from "@/hooks/useProjects";
 import { useClients } from "@/hooks/useClients";
 import { useLeads } from "@/hooks/useLeads";
-import { addProject, updateProject, deleteProject } from "@/services/projects";
-import { getRabByLead, getRabWithGroups } from "@/services/rab";
-import { Project, ProjectStatus, projectStatusLabel } from "@/types/db";
+import { deleteProject } from "@/services/projects";
+import { Project } from "@/types/db";
 import { useToast } from "@/components/Toast";
 import { SortableHeader } from "@/components/SortableHeader";
 import { useSortable } from "@/hooks/useSortable";
@@ -15,6 +14,15 @@ import { usePagination } from "@/hooks/usePagination";
 import Pagination from "@/components/Pagination";
 import { exportCSV } from "@/utils/csv";
 import { MultiSelect } from "@/components/MultiSelect";
+import {
+  PROJECT_STATUSES,
+  PROJECT_STATUS_LABELS,
+  PROJECT_STATUS_COLORS,
+  toOptions,
+} from "@/constants/options";
+import { formatRupiah, formatDate } from "@/utils/format";
+import { ProjectFormModal } from "./ProjectFormModal";
+import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
 
 function SkeletonRow({ cols }: { cols: number }) {
   return (
@@ -28,24 +36,6 @@ function SkeletonRow({ cols }: { cols: number }) {
   );
 }
 
-const statusOptions: ProjectStatus[] = ["Planning", "Design", "Production", "Installation", "Done"];
-
-const statusColors: Record<ProjectStatus, string> = {
-  Planning: "bg-gray-100 text-gray-700",
-  Design: "bg-blue-100 text-blue-800",
-  Production: "bg-yellow-100 text-yellow-800",
-  Installation: "bg-purple-100 text-purple-800",
-  Done: "bg-green-100 text-green-800",
-};
-
-const formatRupiah = (value?: number) => {
-  if (!value) return "-";
-  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(value);
-};
-
-const PROJECT_COLUMNS: (keyof Project)[] = [
-  "client_id", "name", "value", "status", "start_date", "deadline", "assigned_to", "progress",
-];
 
 export default function ProjectsTable() {
   const toast = useToast();
@@ -53,15 +43,13 @@ export default function ProjectsTable() {
   const { projects, loading, error, refetch } = useProjects();
   const { clients } = useClients();
   const { leads } = useLeads();
-  const [form, setForm] = useState<Partial<Project>>({ status: "Planning", progress: 0 });
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingProject, setEditingProject] = useState<Project | null | undefined>(undefined);
   const [saving, setSaving] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-
-  const [modalClientQuery, setModalClientQuery] = useState("");
-  const [modalShowClientDropdown, setModalShowClientDropdown] = useState(false);
+  const [autoClientId, setAutoClientId] = useState<string | null>(null);
+  const [autoLeadId, setAutoLeadId] = useState<string | null>(null);
 
   // --- FILTER STATE ---
   const [filterName, setFilterName] = useState("");
@@ -118,21 +106,15 @@ export default function ProjectsTable() {
         "Nama Project": p.name,
         Klien: p.client_name,
         Nilai: p.value ?? "",
-        Status: projectStatusLabel[p.status] ?? p.status,
-        "Start Date": p.start_date?.slice(0, 10) ?? "",
-        Deadline: p.deadline?.slice(0, 10) ?? "",
+        Status: PROJECT_STATUS_LABELS[p.status] ?? p.status,
+        "Start Date": formatDate(p.start_date),
+        Deadline: formatDate(p.deadline),
         "Assigned To": p.assigned_to ?? "",
         "Progress (%)": p.progress ?? 0,
-        Dibuat: p.created_at?.slice(0, 10) ?? "",
+        Dibuat: formatDate(p.created_at),
       })),
       "projects"
     );
-  };
-
-  const resetForm = () => {
-    setForm({ status: "Planning", progress: 0 });
-    setModalClientQuery("");
-    setModalShowClientDropdown(false);
   };
 
   useEffect(() => {
@@ -141,99 +123,17 @@ export default function ProjectsTable() {
     if (!clientId || clients.length === 0) return;
     const client = clients.find((c) => c.id === clientId);
     if (!client) return;
-
-    setForm({ status: "Planning", progress: 0, client_id: client.id });
-    setModalClientQuery(client.name ?? "");
-    setEditingId(null);
+    setAutoClientId(clientId);
+    setAutoLeadId(leadId);
+    setEditingProject(null);
     setShowModal(true);
-
-    if (leadId) {
-      (async () => {
-        try {
-          const rabs = await getRabByLead(leadId);
-          const approvedRabs = rabs.filter((r) => r.status === "approved");
-          let total = 0;
-          for (const rab of approvedRabs) {
-            const groups = await getRabWithGroups(rab.id);
-            const gross = groups.reduce(
-              (s, g) => s + (g.items ?? []).reduce((gs, item) => gs + item.qty * item.harga, 0),
-              0
-            );
-            total += gross - (rab.diskon_nilai ?? 0);
-          }
-          if (total > 0) {
-            setForm((prev) => ({ ...prev, value: total }));
-          }
-        } catch {
-          // silently ignore; user can fill value manually
-        }
-      })();
-    }
   }, [searchParams, clients]);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setForm(prev => ({
-      ...prev,
-      [name]: name === "value" || name === "progress" ? (value === "" ? undefined : Number(value)) : value,
-    }));
-  };
-
-  const buildPayload = () => {
-    const payload = Object.fromEntries(
-      PROJECT_COLUMNS
-        .filter(k => form[k] !== undefined && form[k] !== "")
-        .map(k => [k, form[k]])
-    ) as Omit<Project, "id" | "created_at">;
-    payload.status = (form.status || "Planning") as ProjectStatus;
-    return payload;
-  };
-
-  const handleAdd = async (e: React.SyntheticEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!form.name) { toast("Nama project wajib diisi", "warning"); return; }
-    setSaving(true);
-    try {
-      await addProject(buildPayload());
-      resetForm();
-      setShowModal(false);
-      refetch();
-      toast("Project berhasil ditambahkan", "success");
-    } catch (err: unknown) {
-      const pg = err as { message?: string };
-      toast(`Gagal menambah project: ${pg?.message || "Terjadi kesalahan"}`, "error");
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const handleEdit = (project: Project) => {
-    setEditingId(project.id);
-    setForm(project);
-    const clientName = (clients || []).find(c => c.id === project.client_id)?.name ?? "";
-    setModalClientQuery(clientName);
+    setEditingProject(project);
+    setAutoClientId(null);
+    setAutoLeadId(null);
     setShowModal(true);
-  };
-
-  const handleUpdate = async (e: React.SyntheticEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!editingId) return;
-    setSaving(true);
-    try {
-      await updateProject(editingId, buildPayload());
-      setEditingId(null);
-      resetForm();
-      setShowModal(false);
-      refetch();
-      toast("Project berhasil diperbarui", "success");
-    } catch (err: unknown) {
-      const pg = err as { message?: string };
-      toast(`Gagal update project: ${pg?.message || "Terjadi kesalahan"}`, "error");
-    } finally {
-      setSaving(false);
-    }
   };
 
   const confirmDelete = (id: string) => {
@@ -248,8 +148,8 @@ export default function ProjectsTable() {
       await deleteProject(deletingId);
       refetch();
       toast("Project berhasil dihapus", "success");
-    } catch {
-      toast("Gagal hapus project", "error");
+    } catch (err: unknown) {
+      toast(`Gagal hapus project: ${(err as Error).message ?? "Terjadi kesalahan"}`, "error");
     } finally {
       setSaving(false);
       setShowDeleteModal(false);
@@ -290,7 +190,7 @@ export default function ProjectsTable() {
           </button>
           <button
             className="px-5 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition font-medium"
-            onClick={() => { setEditingId(null); resetForm(); setShowModal(true); }}
+            onClick={() => { setEditingProject(null); setAutoClientId(null); setAutoLeadId(null); setShowModal(true); }}
           >
             + Tambah Project
           </button>
@@ -316,7 +216,7 @@ export default function ProjectsTable() {
           />
           <MultiSelect
             placeholder="Semua Status"
-            options={statusOptions.map(s => ({ value: s, label: projectStatusLabel[s] }))}
+            options={toOptions(PROJECT_STATUSES, PROJECT_STATUS_LABELS)}
             value={filterStatus}
             onChange={setFilterStatus}
           />
@@ -391,12 +291,12 @@ export default function ProjectsTable() {
                     <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{client?.name || "-"}</td>
                     <td className="px-4 py-3 text-gray-700 font-medium whitespace-nowrap">{formatRupiah(project.value)}</td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[project.status]}`}>
-                        {projectStatusLabel[project.status]}
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${PROJECT_STATUS_COLORS[project.status]}`}>
+                        {PROJECT_STATUS_LABELS[project.status]}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{project.start_date ? project.start_date.slice(0, 10) : "-"}</td>
-                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{project.deadline ? project.deadline.slice(0, 10) : "-"}</td>
+                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{formatDate(project.start_date)}</td>
+                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{formatDate(project.deadline)}</td>
                     <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{project.assigned_to || "-"}</td>
                     <td className="px-4 py-3 whitespace-nowrap min-w-[120px]">
                       <div className="flex items-center gap-2">
@@ -459,213 +359,25 @@ export default function ProjectsTable() {
         </div>
       </div>
 
-      {/* Modal Form */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
-              <h2 className="text-lg font-semibold text-gray-900">
-                {editingId ? "Edit Project" : "Tambah Project Baru"}
-              </h2>
-              <button
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition"
-                onClick={() => { setShowModal(false); setEditingId(null); resetForm(); }}
-              >
-                ✕
-              </button>
-            </div>
-            <form onSubmit={editingId ? handleUpdate : handleAdd} className="px-6 py-5 space-y-4">
-              {/* Nama Project */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nama Project <span className="text-red-500">*</span></label>
-                <input
-                  name="name"
-                  value={form.name || ""}
-                  onChange={handleChange}
-                  required
-                  placeholder="Nama project"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500"
-                />
-              </div>
-
-              {/* Client autocomplete */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Client (Lead Deal)</label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={modalClientQuery}
-                    onChange={(e) => {
-                      setModalClientQuery(e.target.value);
-                      setModalShowClientDropdown(true);
-                      setForm(prev => ({ ...prev, client_id: "" }));
-                    }}
-                    onFocus={() => setModalShowClientDropdown(true)}
-                    onBlur={() => setTimeout(() => setModalShowClientDropdown(false), 150)}
-                    placeholder="Cari nama client..."
-                    autoComplete="off"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500"
-                  />
-                  {modalShowClientDropdown && (
-                    <div className="absolute z-10 left-0 right-0 bg-white border border-gray-200 rounded-b-lg shadow max-h-48 overflow-y-auto">
-                      {wonClients
-                        .filter(c => !modalClientQuery || c.name?.toLowerCase().includes(modalClientQuery.toLowerCase()))
-                        .length === 0 ? (
-                        <div className="px-3 py-2 text-gray-400 text-sm">
-                          {wonClients.length === 0 ? "Belum ada lead dengan status Deal." : "Tidak ditemukan"}
-                        </div>
-                      ) : (
-                        wonClients
-                          .filter(c => !modalClientQuery || c.name?.toLowerCase().includes(modalClientQuery.toLowerCase()))
-                          .map(c => (
-                            <div
-                              key={c.id}
-                              className={`px-3 py-2 cursor-pointer hover:bg-green-50 text-sm ${form.client_id === c.id ? "bg-green-100" : ""}`}
-                              onMouseDown={() => {
-                                setForm(prev => ({ ...prev, client_id: c.id }));
-                                setModalClientQuery(c.name ?? "");
-                                setModalShowClientDropdown(false);
-                              }}
-                            >
-                              {c.name}
-                            </div>
-                          ))
-                      )}
-                    </div>
-                  )}
-                </div>
-                {form.client_id && (
-                  <p className="text-xs text-green-600 mt-1">✓ Client dipilih</p>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Nilai Project */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nilai Project (Rp)</label>
-                  <input
-                    name="value"
-                    value={form.value ?? ""}
-                    onChange={handleChange}
-                    type="number"
-                    min={0}
-                    placeholder="0"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500"
-                  />
-                </div>
-
-                {/* Status */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Status <span className="text-red-500">*</span></label>
-                  <select
-                    name="status"
-                    value={form.status || "Planning"}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500"
-                  >
-                    {statusOptions.map((s) => (
-                      <option key={s} value={s}>{projectStatusLabel[s]}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Start Date */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-                  <input
-                    name="start_date"
-                    value={form.start_date || ""}
-                    onChange={handleChange}
-                    type="date"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500"
-                  />
-                </div>
-
-                {/* Deadline */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Deadline</label>
-                  <input
-                    name="deadline"
-                    value={form.deadline || ""}
-                    onChange={handleChange}
-                    type="date"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500"
-                  />
-                </div>
-
-                {/* Assigned To */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
-                  <input
-                    name="assigned_to"
-                    value={form.assigned_to || ""}
-                    onChange={handleChange}
-                    placeholder="Nama tim / PIC"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500"
-                  />
-                </div>
-
-                {/* Progress */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Progress <span className="text-gray-400 font-normal">({form.progress ?? 0}%)</span>
-                  </label>
-                  <input
-                    name="progress"
-                    value={form.progress ?? 0}
-                    onChange={handleChange}
-                    type="range"
-                    min={0}
-                    max={100}
-                    step={5}
-                    className="w-full accent-green-600"
-                  />
-                  <div className="flex justify-between text-xs text-gray-400 mt-0.5">
-                    <span>0%</span>
-                    <span>50%</span>
-                    <span>100%</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-2 pt-1">
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-6 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition disabled:opacity-50"
-                >
-                  {saving ? "Menyimpan..." : editingId ? "Simpan Perubahan" : "Tambah Project"}
-                </button>
-                <button
-                  type="button"
-                  className="px-6 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition"
-                  onClick={() => { setShowModal(false); setEditingId(null); resetForm(); }}
-                >
-                  Batal
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <ProjectFormModal
+          project={editingProject}
+          wonClients={wonClients}
+          autoClientId={autoClientId}
+          autoLeadId={autoLeadId}
+          onSaved={() => { setShowModal(false); setEditingProject(undefined); refetch(); }}
+          onClose={() => { setShowModal(false); setEditingProject(undefined); }}
+        />
       )}
 
-
-      {/* Delete Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
-            <h3 className="text-base font-semibold text-gray-900 mb-2">Hapus Project?</h3>
-            <p className="text-sm text-gray-500 mb-5">Data project ini akan dihapus permanen.</p>
-            <div className="flex gap-2">
-              <button onClick={handleDelete} disabled={saving} className="flex-1 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition disabled:opacity-50">
-                {saving ? "Menghapus..." : "Ya, Hapus"}
-              </button>
-              <button onClick={() => { setShowDeleteModal(false); setDeletingId(null); }} className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition">
-                Batal
-              </button>
-            </div>
-          </div>
-        </div>
+        <DeleteConfirmModal
+          title="Hapus Project?"
+          description="Data project ini akan dihapus permanen."
+          saving={saving}
+          onConfirm={handleDelete}
+          onClose={() => { setShowDeleteModal(false); setDeletingId(null); }}
+        />
       )}
     </div>
   );

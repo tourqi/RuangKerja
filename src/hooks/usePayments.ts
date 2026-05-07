@@ -1,22 +1,12 @@
 "use client";
-import { useCallback, useEffect, useState } from 'react';
-import type { Payment } from '@/types/db';
-import { getAllPayments, getPaymentsByInvoice } from '@/services/invoices';
+import { useCallback, useEffect, useState } from "react";
+import type { Payment } from "@/types/db";
+import { getAllPayments, getPaymentsByInvoice } from "@/services/invoices";
+import { useFetch } from "./useFetch";
 
 export function useAllPayments() {
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const refetch = useCallback(() => {
-    setLoading(true);
-    getAllPayments()
-      .then(setPayments)
-      .finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => { refetch(); }, [refetch]);
-
-  return { payments, loading, refetch };
+  const { data: payments, loading, error, refetch } = useFetch<Payment[]>(getAllPayments, []);
+  return { payments, loading, error, refetch };
 }
 
 export function usePayments(invoiceId: string | null) {
@@ -27,9 +17,12 @@ export function usePayments(invoiceId: string | null) {
   const refetch = useCallback(() => {
     if (!invoiceId) return;
     setLoading(true);
+    setError(null);
     getPaymentsByInvoice(invoiceId)
       .then(setPayments)
-      .catch((err) => setError(err.message))
+      .catch((err: unknown) =>
+        setError(err instanceof Error ? err.message : String(err))
+      )
       .finally(() => setLoading(false));
   }, [invoiceId]);
 

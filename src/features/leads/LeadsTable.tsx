@@ -1,10 +1,10 @@
 "use client";
-import React, { useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useLeads } from "@/hooks/useLeads";
 import { useClients } from "@/hooks/useClients";
-import { addLead, updateLead, deleteLead } from "@/services/leads";
-import { Lead, LeadStatus } from "@/types/db";
+import { deleteLead } from "@/services/leads";
+import { Lead } from "@/types/db";
 import { useToast } from "@/components/Toast";
 import { SortableHeader } from "@/components/SortableHeader";
 import { useSortable } from "@/hooks/useSortable";
@@ -12,16 +12,20 @@ import { usePagination } from "@/hooks/usePagination";
 import Pagination from "@/components/Pagination";
 import { exportCSV } from "@/utils/csv";
 import { MultiSelect } from "@/components/MultiSelect";
-
-const statusOptions: LeadStatus[] = ["New Lead", "Contacted", "Survey", "Deal", "Lost"];
-
-const statusColors: Record<string, string> = {
-  "New Lead": "bg-blue-100 text-blue-800",
-  Contacted: "bg-yellow-100 text-yellow-800",
-  Survey: "bg-purple-100 text-purple-800",
-  Deal: "bg-green-100 text-green-800",
-  Lost: "bg-red-100 text-red-800",
-};
+import {
+  LEAD_STATUSES,
+  LEAD_STATUS_COLORS,
+  PRIORITIES,
+  PRIORITY_LABELS,
+  PRIORITY_COLORS,
+  SOURCES,
+  toOptions,
+} from "@/constants/options";
+import { formatDate } from "@/utils/format";
+import { LeadFormModal } from "./LeadFormModal";
+import { LeadViewModal } from "./LeadViewModal";
+import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
+import { ProjectFormModal } from "@/features/projects/ProjectFormModal";
 
 function SkeletonRow({ cols }: { cols: number }) {
   return (
@@ -38,22 +42,22 @@ function SkeletonRow({ cols }: { cols: number }) {
 export default function LeadsTable() {
   const toast = useToast();
 
-  // --- MODAL AUTOCOMPLETE CLIENTS ---
-  const [modalClientQuery, setModalClientQuery] = useState("");
-  const [modalShowClientDropdown, setModalShowClientDropdown] = useState(false);
-
-  const priorityOptionsModal = ["low", "medium", "high", "urgent"];
-
-  // --- HOOKS ---
   const { leads, loading, error, refetch } = useLeads();
   const { clients } = useClients();
-  const [form, setForm] = useState<Partial<Lead>>({ status: "New Lead" });
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingLead, setEditingLead] = useState<Lead | null | undefined>(undefined);
   const [saving, setSaving] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [viewingLead, setViewingLead] = useState<Lead | null>(null);
+
+  // flow: lead → project
+  const [projectFlowClientId, setProjectFlowClientId] = useState<string | null>(null);
+  const [projectFlowLeadId, setProjectFlowLeadId] = useState<string | null>(null);
+  const [showProjectFlow, setShowProjectFlow] = useState(false);
+
+  const wonClientIds = new Set((leads ?? []).filter((l) => l.status === "Deal").map((l) => l.client_id));
+  const wonClients = (clients ?? []).filter((c) => wonClientIds.has(c.id));
 
   // --- FILTER STATE ---
   const [clientQuery, setClientQuery] = useState("");
@@ -66,18 +70,6 @@ export default function LeadsTable() {
   const [updatedStart, setUpdatedStart] = useState("");
   const [updatedEnd, setUpdatedEnd] = useState("");
 
-  // --- DERIVED FILTER OPTIONS ---
-  const sourceOptions = Array.from(new Set((clients || []).map(c => c.source).filter(Boolean)));
-  const priorityOptions = Array.from(new Set((clients || []).map(c => c.priority).filter(Boolean)));
-
-  // --- MODAL AUTOCOMPLETE ---
-  const modalFilteredClients = modalClientQuery
-    ? (clients || []).filter(c => {
-        const digits = modalClientQuery.replace(/\D/g, "");
-        return c.name?.toLowerCase().includes(modalClientQuery.toLowerCase()) ||
-          (digits.length > 0 && c.phone?.replace(/\D/g, "").includes(digits));
-      })
-    : (clients || []);
 
   // --- AUTOCOMPLETE CLIENT LIST (only clients present in leads) ---
   const clientIdsInLeads = new Set((leads || []).map(l => l.client_id));
@@ -128,85 +120,19 @@ export default function LeadsTable() {
         Status: l.status,
         Prioritas: l.priority ?? "",
         Sumber: l.source ?? "",
-        "Follow Up": l.follow_up_date?.slice(0, 10) ?? "",
-        "Last Contact": l.last_contacted_at?.slice(0, 10) ?? "",
-        "Ditutup": l.closed_at?.slice(0, 10) ?? "",
-        "Updated": l.updated_at?.slice(0, 10) ?? "",
+        "Follow Up": formatDate(l.follow_up_date),
+        "Last Contact": formatDate(l.last_contacted_at),
+        "Ditutup": formatDate(l.closed_at),
+        "Updated": formatDate(l.updated_at),
         Catatan: l.notes ?? "",
       })),
       "leads"
     );
   };
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
-  ) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const handleAdd = async (e: React.SyntheticEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!form.client_id) { toast("Pilih client terlebih dahulu", "warning"); return; }
-    setSaving(true);
-    try {
-      const LEAD_COLUMNS: (keyof Lead)[] = [
-        "client_id", "status", "priority", "source",
-        "follow_up_date", "last_contacted_at", "closed_at", "notes",
-      ];
-      const payload = Object.fromEntries(
-        LEAD_COLUMNS
-          .filter(k => form[k] !== undefined && form[k] !== "")
-          .map(k => [k, form[k]])
-      ) as Omit<Lead, "id" | "created_at">;
-      payload.status = (form.status || "New Lead") as LeadStatus;
-      await addLead(payload);
-      setForm({ status: "New Lead" });
-      setModalClientQuery("");
-      setShowModal(false);
-      refetch();
-      toast("Lead berhasil ditambahkan", "success");
-    } catch (err: unknown) {
-      const pg = err as { message?: string };
-      toast(`Gagal menambah lead: ${pg?.message || "Terjadi kesalahan"}`, "error");
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const handleEdit = (lead: Lead) => {
-    setEditingId(lead.id);
-    setForm(lead);
-    const c = (clients || []).find((cl) => cl.id === lead.client_id);
-    setModalClientQuery(c ? c.name + (c.phone ? ` (${c.phone})` : "") : "");
+    setEditingLead(lead);
     setShowModal(true);
-  };
-
-  const handleUpdate = async (e: React.SyntheticEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!editingId) return;
-    setSaving(true);
-    try {
-      const LEAD_COLUMNS: (keyof Lead)[] = [
-        "client_id", "status", "priority", "source",
-        "follow_up_date", "last_contacted_at", "closed_at", "notes",
-      ];
-      const payload = Object.fromEntries(
-        LEAD_COLUMNS
-          .filter((k) => form[k] !== undefined)
-          .map((k) => [k, form[k] === "" ? null : form[k]])
-      ) as Partial<Lead>;
-      payload.status = (form.status || "New Lead") as LeadStatus;
-      await updateLead(editingId, payload);
-      setEditingId(null);
-      setForm({ status: "New Lead" });
-      setShowModal(false);
-      refetch();
-      toast("Lead berhasil diperbarui", "success");
-    } catch {
-      toast("Gagal update lead", "error");
-    } finally {
-      setSaving(false);
-    }
   };
 
   const confirmDelete = (id: string) => {
@@ -258,7 +184,7 @@ export default function LeadsTable() {
           </button>
           <button
             className="px-5 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition font-medium"
-            onClick={() => { setEditingId(null); setForm({ status: "New Lead" }); setShowModal(true); }}
+            onClick={() => { setEditingLead(null); setShowModal(true); }}
           >
             + Tambah Lead
           </button>
@@ -304,21 +230,21 @@ export default function LeadsTable() {
           {/* Status dropdown */}
           <MultiSelect
             placeholder="Status"
-            options={statusOptions.map(s => ({ value: s, label: s }))}
+            options={LEAD_STATUSES.map(s => ({ value: s, label: s }))}
             value={status}
             onChange={setStatus}
           />
           {/* Source dropdown */}
           <MultiSelect
             placeholder="Sumber"
-            options={sourceOptions.map(s => ({ value: s as string, label: s as string }))}
+            options={toOptions(SOURCES)}
             value={source}
             onChange={setSource}
           />
           {/* Priority dropdown */}
           <MultiSelect
             placeholder="Prioritas"
-            options={priorityOptions.map(p => ({ value: p as string, label: p as string }))}
+            options={toOptions(PRIORITIES, PRIORITY_LABELS)}
             value={priority}
             onChange={setPriority}
           />
@@ -389,12 +315,6 @@ export default function LeadsTable() {
             <tbody className="divide-y divide-gray-100">
               {pagedLeads.map((lead) => {
                 const client = clients.find((c) => c.id === lead.client_id);
-                const priorityColors: Record<string, string> = {
-                  low: "bg-gray-100 text-gray-600",
-                  medium: "bg-blue-100 text-blue-700",
-                  high: "bg-orange-100 text-orange-700",
-                  urgent: "bg-red-100 text-red-700",
-                };
                 return (
                   <tr key={lead.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">
@@ -402,22 +322,22 @@ export default function LeadsTable() {
                       {client?.phone && <div className="text-xs text-gray-400">{client.phone}</div>}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[lead.status] || "bg-gray-100 text-gray-700"}`}>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${LEAD_STATUS_COLORS[lead.status] || "bg-gray-100 text-gray-700"}`}>
                         {lead.status}
                       </span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       {lead.priority ? (
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${priorityColors[lead.priority] || "bg-gray-100 text-gray-600"}`}>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${PRIORITY_COLORS[lead.priority] || "bg-gray-100 text-gray-600"}`}>
                           {lead.priority}
                         </span>
                       ) : <span className="text-gray-400">-</span>}
                     </td>
                     <td className="px-4 py-3 text-gray-600 whitespace-nowrap text-sm">{lead.source || client?.source || "-"}</td>
-                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap text-sm">{lead.follow_up_date ? lead.follow_up_date.slice(0, 10) : "-"}</td>
-                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap text-sm">{lead.last_contacted_at ? lead.last_contacted_at.slice(0, 10) : "-"}</td>
-                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap text-sm">{lead.closed_at ? lead.closed_at.slice(0, 10) : "-"}</td>
-                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap text-sm">{lead.updated_at ? lead.updated_at.slice(0, 10) : "-"}</td>
+                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap text-sm">{formatDate(lead.follow_up_date)}</td>
+                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap text-sm">{formatDate(lead.last_contacted_at)}</td>
+                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap text-sm">{formatDate(lead.closed_at)}</td>
+                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap text-sm">{formatDate(lead.updated_at)}</td>
                     <td className="px-4 py-3 text-gray-500 max-w-[160px] truncate text-sm">{lead.notes || "-"}</td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex gap-1.5">
@@ -476,242 +396,51 @@ export default function LeadsTable() {
         </div>
       </div>
 
-      {/* Modal Form */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
-              <h2 className="text-lg font-semibold text-gray-900">
-                {editingId ? "Edit Lead" : "Tambah Lead Baru"}
-              </h2>
-              <button
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition"
-                onClick={() => { setShowModal(false); setEditingId(null); setForm({ status: "New Lead" }); setModalClientQuery(""); setModalShowClientDropdown(false); }}
-              >
-                ✕
-              </button>
-            </div>
-            <form onSubmit={editingId ? handleUpdate : handleAdd} className="px-6 py-5 space-y-4">
-              {/* Client Autocomplete */}
-              <div className="relative">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Client <span className="text-red-500">*</span></label>
-                <input
-                  type="text"
-                  value={modalClientQuery}
-                  onChange={e => {
-                    setModalClientQuery(e.target.value);
-                    setModalShowClientDropdown(true);
-                  }}
-                  onFocus={() => setModalShowClientDropdown(true)}
-                  placeholder="Cari nama/telepon client"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
-                  autoComplete="off"
-                />
-                {modalShowClientDropdown && modalClientQuery && (
-                  <div className="absolute z-10 left-0 right-0 bg-white border border-gray-200 rounded-b-lg shadow max-h-48 overflow-y-auto">
-                    {modalFilteredClients.length === 0 && (
-                      <div className="px-3 py-2 text-gray-400 text-sm">Tidak ditemukan</div>
-                    )}
-                    {modalFilteredClients.map(c => (
-                      <div
-                        key={c.id}
-                        className={`px-3 py-2 cursor-pointer hover:bg-purple-50 text-sm ${form.client_id === c.id ? "bg-purple-100" : ""}`}
-                        onClick={() => {
-                          setForm({ ...form, client_id: c.id, source: c.source || form.source });
-                          setModalClientQuery(c.name + (c.phone ? ` (${c.phone})` : ""));
-                          setModalShowClientDropdown(false);
-                        }}
-                      >
-                        {c.name} {c.phone && <span className="text-xs text-gray-400">({c.phone})</span>}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-              {/* Status Dropdown */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status <span className="text-red-500">*</span></label>
-                <select
-                  name="status"
-                  value={form.status || "New Lead"}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
-                >
-                  {statusOptions.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </div>
-              {/* Priority Dropdown */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                <select
-                  name="priority"
-                  value={form.priority || ""}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
-                >
-                  <option value="">Pilih Prioritas</option>
-                  {priorityOptionsModal.map((p) => (
-                    <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
-                  ))}
-                </select>
-              </div>
-              {/* Source Dropdown */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Source</label>
-                <select
-                  name="source"
-                  value={form.source || ""}
-                  disabled
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100 text-gray-900"
-                >
-                  <option value="">Pilih Source</option>
-                  {sourceOptions.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </div>
-              {/* Date Fields */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Follow Up Date</label>
-                  <input
-                    type="date"
-                    name="follow_up_date"
-                    value={form.follow_up_date || ""}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Last Contacted At</label>
-                  <input
-                    type="date"
-                    name="last_contacted_at"
-                    value={form.last_contacted_at || ""}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Closed At</label>
-                  <input
-                    type="date"
-                    name="closed_at"
-                    value={form.closed_at || ""}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
-              </div>
-              {/* Notes */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Catatan</label>
-                <textarea
-                  name="notes"
-                  value={form.notes || ""}
-                  onChange={handleChange}
-                  rows={3}
-                  placeholder="Catatan tentang lead ini..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-purple-500 resize-none"
-                />
-              </div>
-              <div className="flex gap-2 pt-1">
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-6 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition disabled:opacity-50"
-                >
-                  {saving ? "Menyimpan..." : editingId ? "Simpan Perubahan" : "Tambah Lead"}
-                </button>
-                <button
-                  type="button"
-                  className="px-6 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition"
-                  onClick={() => { setShowModal(false); setEditingId(null); setForm({ status: "New Lead" }); setModalClientQuery(""); setModalShowClientDropdown(false); }}
-                >
-                  Batal
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <LeadFormModal
+          lead={editingLead}
+          clients={clients || []}
+          onSaved={() => { setShowModal(false); setEditingLead(undefined); refetch(); }}
+          onClose={() => { setShowModal(false); setEditingLead(undefined); }}
+          onSavedAndAddProject={(lead) => {
+            setShowModal(false);
+            setEditingLead(undefined);
+            refetch();
+            setProjectFlowClientId(lead.client_id ?? null);
+            setProjectFlowLeadId(lead.id);
+            setShowProjectFlow(true);
+          }}
+        />
       )}
 
-      {/* View Modal */}
-      {viewingLead && (() => {
-        const vc = clients.find(c => c.id === viewingLead.client_id);
-        const priorityColors: Record<string, string> = {
-          low: "bg-gray-100 text-gray-600", medium: "bg-blue-100 text-blue-700",
-          high: "bg-orange-100 text-orange-700", urgent: "bg-red-100 text-red-700",
-        };
-        return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
-                <h2 className="text-lg font-semibold text-gray-900">Detail Lead</h2>
-                <button className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition" onClick={() => setViewingLead(null)}>✕</button>
-              </div>
-              <div className="px-6 py-5 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2">
-                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-0.5">Client</p>
-                    <p className="text-sm font-semibold text-gray-900">{vc?.name || "-"}</p>
-                    {vc?.phone && <p className="text-xs text-gray-400">{vc.phone}</p>}
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Status</p>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[viewingLead.status] || "bg-gray-100 text-gray-700"}`}>{viewingLead.status}</span>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Priority</p>
-                    {viewingLead.priority
-                      ? <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${priorityColors[viewingLead.priority] || "bg-gray-100 text-gray-600"}`}>{viewingLead.priority}</span>
-                      : <p className="text-sm text-gray-800">-</p>}
-                  </div>
-                  {[
-                    { label: "Source", value: viewingLead.source || vc?.source },
-                    { label: "Follow Up Date", value: viewingLead.follow_up_date?.slice(0, 10) },
-                    { label: "Last Contacted At", value: viewingLead.last_contacted_at?.slice(0, 10) },
-                    { label: "Closed At", value: viewingLead.closed_at?.slice(0, 10) },
-                    { label: "Updated At", value: viewingLead.updated_at?.slice(0, 10) },
-                  ].map(({ label, value }) => (
-                    <div key={label}>
-                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-0.5">{label}</p>
-                      <p className="text-sm text-gray-800">{value || "-"}</p>
-                    </div>
-                  ))}
-                  <div className="col-span-2">
-                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-0.5">Catatan</p>
-                    <p className="text-sm text-gray-800 whitespace-pre-wrap">{viewingLead.notes || "-"}</p>
-                  </div>
-                </div>
-                <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
-                  <button className="px-4 py-2 text-sm font-medium bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition" onClick={() => { setViewingLead(null); handleEdit(viewingLead); }}>Edit</button>
-                  <button className="px-4 py-2 text-sm font-medium bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition" onClick={() => setViewingLead(null)}>Tutup</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+      {showProjectFlow && (
+        <ProjectFormModal
+          wonClients={wonClients}
+          allClients={clients ?? []}
+          autoClientId={projectFlowClientId}
+          autoLeadId={projectFlowLeadId}
+          onSaved={() => { setShowProjectFlow(false); setProjectFlowClientId(null); setProjectFlowLeadId(null); }}
+          onClose={() => { setShowProjectFlow(false); setProjectFlowClientId(null); setProjectFlowLeadId(null); }}
+        />
+      )}
 
-      {/* Delete Modal */}
+      {viewingLead && (
+        <LeadViewModal
+          lead={viewingLead}
+          client={clients.find((c) => c.id === viewingLead.client_id)}
+          onClose={() => setViewingLead(null)}
+          onEdit={(l) => { setViewingLead(null); handleEdit(l); }}
+        />
+      )}
+
       {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
-            <h3 className="text-base font-semibold text-gray-900 mb-2">Hapus Lead?</h3>
-            <p className="text-sm text-gray-500 mb-5">Data lead ini akan dihapus permanen.</p>
-            <div className="flex gap-2">
-              <button onClick={handleDelete} disabled={saving} className="flex-1 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition disabled:opacity-50">
-                {saving ? "Menghapus..." : "Ya, Hapus"}
-              </button>
-              <button onClick={() => { setShowDeleteModal(false); setDeletingId(null); }} className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition">
-                Batal
-              </button>
-            </div>
-          </div>
-        </div>
+        <DeleteConfirmModal
+          title="Hapus Lead?"
+          description="Data lead ini akan dihapus permanen."
+          saving={saving}
+          onConfirm={handleDelete}
+          onClose={() => { setShowDeleteModal(false); setDeletingId(null); }}
+        />
       )}
     </div>
   );

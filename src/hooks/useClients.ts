@@ -1,24 +1,9 @@
 "use client";
-import { useEffect, useState, useCallback } from 'react';
-import { getClients } from '@/services/clients';
-import { Client } from '@/types/db';
+import { getClients } from "@/services/clients";
+import { Client } from "@/types/db";
+import { useFetch } from "./useFetch";
 
 export function useClients() {
-  const [clients, setClients] = useState<Client[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const refetch = useCallback(() => {
-    setLoading(true);
-    getClients()
-      .then(setClients)
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    refetch();
-  }, [refetch]);
-
+  const { data: clients, loading, error, refetch } = useFetch<Client[]>(getClients, []);
   return { clients, loading, error, refetch };
 }

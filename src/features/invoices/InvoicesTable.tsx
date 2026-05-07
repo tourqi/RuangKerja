@@ -7,54 +7,19 @@ import { useProjects } from "@/hooks/useProjects";
 import { useLeads } from "@/hooks/useLeads";
 import { useToast } from "@/components/Toast";
 import { MultiSelect } from "@/components/MultiSelect";
-import type { InvoiceStatus, Rab } from "@/types/db";
-import {
-  addInvoice,
-  deleteInvoice,
-  generateInvoiceNumber,
-  updateInvoice,
-} from "@/services/invoices";
-import { getRabByLead, getRabWithGroups } from "@/services/rab";
+import type { InvoiceStatus } from "@/types/db";
+import { deleteInvoice, updateInvoice } from "@/services/invoices";
 import { useAuth } from "@/context/AuthContext";
 import { usePagination } from "@/hooks/usePagination";
-
-const formatCurrency = (v?: number) =>
-  v == null
-    ? "—"
-    : new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-        minimumFractionDigits: 0,
-      }).format(v);
-
-const STATUS_COLORS: Record<InvoiceStatus, string> = {
-  draft: "bg-gray-100 text-gray-600",
-  sent: "bg-blue-100 text-blue-700",
-  partial: "bg-yellow-100 text-yellow-700",
-  paid: "bg-green-100 text-green-700",
-  overdue: "bg-red-100 text-red-700",
-};
-
-const STATUS_LABELS: Record<InvoiceStatus, string> = {
-  draft: "Draft",
-  sent: "Terkirim",
-  partial: "Sebagian",
-  paid: "Lunas",
-  overdue: "Jatuh Tempo",
-};
-
-type Termin = {
-  id: string;
-  nama: string;
-  persen: string;
-  jumlah: string;
-  due_date: string;
-};
-
-function newTermin(idx: number): Termin {
-  const d = new Date(); d.setDate(d.getDate() + 14 * (idx + 1));
-  return { id: crypto.randomUUID(), nama: "", persen: "", jumlah: "", due_date: d.toISOString().slice(0, 10) };
-}
+import {
+  INVOICE_STATUS_COLORS,
+  INVOICE_STATUS_LABELS,
+  INVOICE_STATUSES,
+  toOptions,
+} from "@/constants/options";
+import { formatRupiah } from "@/utils/format";
+import { InvoiceFormModal } from "./InvoiceFormModal";
+import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
 
 export default function InvoicesTable() {
   const { invoices, loading, refetch } = useInvoices();
@@ -67,20 +32,9 @@ export default function InvoicesTable() {
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [filterClientId, setFilterClientId] = useState<string[]>([]);
   const [showAdd, setShowAdd] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
-  const today = new Date().toISOString().slice(0, 10);
-
-  const [form, setForm] = useState({ project_id: "", invoice_date: today, notes: "" });
-  const [availableRabs, setAvailableRabs] = useState<Rab[]>([]);
-  const [selectedRabId, setSelectedRabId] = useState("");
-  const [rabTotal, setRabTotal] = useState<number | null>(null);
-  const [loadingRabs, setLoadingRabs] = useState(false);
-  const [termins, setTermins] = useState<Termin[]>([newTermin(0)]);
-  const [diskon, setDiskon] = useState({ persen: "", nilai: "" });
-
-  // Project belum lunas: total paid_amount semua invoice-nya < project.value
   const paidPerProject = invoices.reduce<Record<string, number>>((acc, inv) => {
     if (inv.project_id) acc[inv.project_id] = (acc[inv.project_id] ?? 0) + inv.paid_amount;
     return acc;
@@ -97,124 +51,6 @@ export default function InvoicesTable() {
 
   const { page, totalPages, paged, goTo } = usePagination(filtered, 20);
 
-  async function handleProjectChange(projectId: string) {
-    setForm((f) => ({ ...f, project_id: projectId }));
-    setSelectedRabId("");
-    setRabTotal(null);
-    setAvailableRabs([]);
-    if (!projectId) return;
-
-    const project = projects.find((p) => p.id === projectId);
-    if (!project?.client_id) return;
-
-    setLoadingRabs(true);
-    try {
-      const dealLeads = leads.filter((l) => l.client_id === project.client_id && l.status === "Deal");
-      const allRabs: Rab[] = [];
-      for (const lead of dealLeads) {
-        const rabs = await getRabByLead(lead.id);
-        allRabs.push(...rabs.filter((r) => r.status === "approved"));
-      }
-      setAvailableRabs(allRabs);
-    } catch {
-      toast("Gagal memuat RAB", "error");
-    } finally {
-      setLoadingRabs(false);
-    }
-  }
-
-  async function handleRabChange(rabId: string) {
-    setSelectedRabId(rabId);
-    setRabTotal(null);
-    if (!rabId) return;
-    try {
-      const groups = await getRabWithGroups(rabId);
-      const total = groups.reduce((sum, g) => sum + (g.items ?? []).reduce((s, item) => s + item.qty * item.harga, 0), 0);
-      setRabTotal(total);
-      setTermins((prev) => prev.map((t) => ({ ...t, jumlah: "", persen: "" })));
-    } catch {
-      toast("Gagal memuat total RAB", "error");
-    }
-  }
-
-  function updateTermin(id: string, field: keyof Termin, value: string) {
-    setTermins((prev) => prev.map((t) => {
-      if (t.id !== id) return t;
-      const updated = { ...t, [field]: value };
-      const base = effectiveRabTotal ?? rabTotal;
-      if (base && base > 0) {
-        if (field === "persen" && value !== "") {
-          updated.jumlah = Math.round((parseFloat(value) / 100) * base).toString();
-        } else if (field === "jumlah" && value !== "") {
-          updated.persen = ((parseFloat(value) / base) * 100).toFixed(1);
-        }
-      }
-      return updated;
-    }));
-  }
-
-  const diskonNilaiNum = parseFloat(diskon.nilai) || 0;
-  const effectiveRabTotal = rabTotal != null ? rabTotal - diskonNilaiNum : null;
-  const totalTermin = termins.reduce((s, t) => s + (parseFloat(t.jumlah) || 0), 0);
-  const sisaTagihan = effectiveRabTotal != null ? effectiveRabTotal - totalTermin : null;
-
-  function handleDiskonPersenChange(value: string) {
-    const persen = parseFloat(value) || 0;
-    const nilai = rabTotal && rabTotal > 0 ? Math.round(rabTotal * persen / 100) : 0;
-    setDiskon({ persen: value, nilai: nilai > 0 ? String(nilai) : "" });
-  }
-
-  function handleDiskonNilaiChange(value: string) {
-    const nilai = parseFloat(value) || 0;
-    const persen = rabTotal && rabTotal > 0 ? ((nilai / rabTotal) * 100).toFixed(1) : "";
-    setDiskon({ nilai: value, persen: persen });
-  }
-
-  function resetAdd() {
-    setForm({ project_id: "", invoice_date: today, notes: "" });
-    setAvailableRabs([]);
-    setSelectedRabId("");
-    setRabTotal(null);
-    setDiskon({ persen: "", nilai: "" });
-    setTermins([newTermin(0)]);
-  }
-
-  async function handleAdd(e: React.FormEvent) {
-    e.preventDefault();
-    if (!form.project_id) { toast("Pilih project terlebih dahulu", "warning"); return; }
-    const validTermins = termins.filter((t) => t.nama && parseFloat(t.jumlah) > 0);
-    if (validTermins.length === 0) { toast("Tambahkan minimal 1 termin dengan nama dan jumlah", "warning"); return; }
-
-    setSaving(true);
-    try {
-      const project = projects.find((p) => p.id === form.project_id);
-      for (const termin of validTermins) {
-        const invoice_number = await generateInvoiceNumber();
-        await addInvoice({
-          invoice_number,
-          client_id: project?.client_id || undefined,
-          project_id: form.project_id,
-          total_amount: parseFloat(termin.jumlah),
-          status: "draft",
-          invoice_date: form.invoice_date || undefined,
-          due_date: termin.due_date || undefined,
-          notes: [termin.nama, form.notes].filter(Boolean).join(" · ") || undefined,
-          created_by: user?.id,
-          diskon_persen: parseFloat(diskon.persen) || undefined,
-          diskon_nilai: parseFloat(diskon.nilai) || undefined,
-        });
-      }
-      await refetch();
-      setShowAdd(false);
-      resetAdd();
-      toast(`${validTermins.length} invoice berhasil dibuat`, "success");
-    } catch (err: unknown) {
-      toast(`Gagal membuat invoice: ${(err as Error).message}`, "error");
-    } finally {
-      setSaving(false);
-    }
-  }
-
   async function handleStatusChange(id: string, status: InvoiceStatus) {
     try {
       await updateInvoice(id, { status });
@@ -225,14 +61,17 @@ export default function InvoicesTable() {
     }
   }
 
-  async function handleDelete(id: string) {
+  async function handleDelete() {
+    if (!deletingId) return;
+    setDeleting(true);
     try {
-      await deleteInvoice(id);
+      await deleteInvoice(deletingId);
       await refetch();
       toast("Invoice dihapus", "success");
     } catch (err: unknown) {
       toast(`Gagal menghapus: ${(err as Error).message}`, "error");
     } finally {
+      setDeleting(false);
       setDeletingId(null);
     }
   }
@@ -257,7 +96,7 @@ export default function InvoicesTable() {
         ].map((c) => (
           <div key={c.label} className="bg-white rounded-xl border border-gray-100 px-4 py-3">
             <p className="text-xs text-gray-500">{c.label}</p>
-            <p className={`text-base font-bold mt-0.5 ${c.color}`}>{formatCurrency(c.value)}</p>
+            <p className={`text-base font-bold mt-0.5 ${c.color}`}>{formatRupiah(c.value)}</p>
           </div>
         ))}
       </div>
@@ -266,7 +105,7 @@ export default function InvoicesTable() {
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <MultiSelect
           placeholder="Semua Status"
-          options={(Object.keys(STATUS_LABELS) as InvoiceStatus[]).map((s) => ({ value: s, label: STATUS_LABELS[s] }))}
+          options={toOptions(INVOICE_STATUSES, INVOICE_STATUS_LABELS)}
           value={filterStatus}
           onChange={(v) => { setFilterStatus(v); goTo(1); }}
           className="w-44"
@@ -346,21 +185,21 @@ export default function InvoicesTable() {
                       {inv.due_date ? new Date(inv.due_date).toLocaleDateString("id-ID") : "—"}
                     </td>
                     <td className="px-4 py-3 text-right font-medium text-gray-900">
-                      {formatCurrency(inv.total_amount)}
+                      {formatRupiah(inv.total_amount)}
                     </td>
                     <td className="px-4 py-3 text-right hidden sm:table-cell">
                       <span className={outstanding > 0 ? "text-red-600" : "text-green-600"}>
-                        {formatCurrency(inv.paid_amount)}
+                        {formatRupiah(inv.paid_amount)}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       <select
                         value={inv.status}
                         onChange={(e) => handleStatusChange(inv.id, e.target.value as InvoiceStatus)}
-                        className={`text-xs font-medium px-2 py-1 rounded-full border-0 outline-none cursor-pointer ${STATUS_COLORS[inv.status]}`}
+                        className={`text-xs font-medium px-2 py-1 rounded-full border-0 outline-none cursor-pointer ${INVOICE_STATUS_COLORS[inv.status]}`}
                       >
-                        {(Object.keys(STATUS_LABELS) as InvoiceStatus[]).map((s) => (
-                          <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+                        {INVOICE_STATUSES.map((s) => (
+                          <option key={s} value={s}>{INVOICE_STATUS_LABELS[s]}</option>
                         ))}
                       </select>
                     </td>
@@ -400,280 +239,69 @@ export default function InvoicesTable() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4 text-sm text-gray-500">
-          <span>{filtered.length} invoice</span>
+        <div className="flex items-center justify-between mt-4 text-xs text-gray-500">
+          <span>Halaman {page} dari {totalPages} · {filtered.length} invoice</span>
           <div className="flex gap-1">
-            {[...Array(totalPages)].map((_, i) => (
-              <button
-                key={i}
-                onClick={() => goTo(i + 1)}
-                className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors ${
-                  page === i + 1 ? "bg-gray-900 text-white" : "hover:bg-gray-100"
-                }`}
-              >
-                {i + 1}
-              </button>
-            ))}
-          </div>
-          <span>Hal. {page} / {totalPages}</span>
-        </div>
-      )}
-
-      {/* Add modal */}
-      {showAdd && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
-          onClick={() => { setShowAdd(false); resetAdd(); }}
-        >
-          <div
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
-              <h2 className="text-base font-semibold text-gray-900">Buat Invoice</h2>
-              <button onClick={() => { setShowAdd(false); resetAdd(); }} className="text-gray-400 hover:text-gray-600 transition-colors">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <form onSubmit={handleAdd} className="px-6 py-5 space-y-5">
-              {/* Step 1: Pilih Project */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">Project *</label>
-                <select
-                  value={form.project_id}
-                  onChange={(e) => handleProjectChange(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900"
-                  required
-                >
-                  <option value="">Pilih project…</option>
-                  {unpaidProjects.map((p) => {
-                    const client = clients.find((c) => c.id === p.client_id);
-                    return (
-                      <option key={p.id} value={p.id}>
-                        {p.name}{client ? ` — ${client.name}` : ""}
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-
-              {/* Step 2: Pilih RAB (opsional) */}
-              {form.project_id && (
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                    RAB (opsional)
-                    {loadingRabs && <span className="ml-2 text-gray-400">Memuat…</span>}
-                  </label>
-                  {availableRabs.length === 0 && !loadingRabs ? (
-                    <p className="text-xs text-gray-400 py-2">Tidak ada RAB disetujui untuk project ini.</p>
-                  ) : (
-                    <select
-                      value={selectedRabId}
-                      onChange={(e) => handleRabChange(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900"
-                    >
-                      <option value="">— Tanpa RAB —</option>
-                      {availableRabs.map((r) => (
-                        <option key={r.id} value={r.id}>{r.nama}</option>
-                      ))}
-                    </select>
-                  )}
-                  {rabTotal != null && (
-                    <div className="mt-2 space-y-2">
-                      <div className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
-                        <span className="text-xs text-gray-500">Total RAB</span>
-                        <span className="text-sm font-semibold text-gray-900">{formatCurrency(rabTotal)}</span>
-                      </div>
-                      <div className="flex items-center gap-2 px-1">
-                        <span className="text-xs text-gray-500 shrink-0">Diskon</span>
-                        <div className="relative w-24">
-                          <input
-                            type="number"
-                            value={diskon.persen}
-                            onChange={(e) => handleDiskonPersenChange(e.target.value)}
-                            placeholder="0"
-                            min="0"
-                            max="100"
-                            step="0.1"
-                            className="w-full pl-2.5 pr-7 py-1.5 border border-gray-300 rounded-md text-xs text-gray-900 outline-none focus:ring-1 focus:ring-gray-900"
-                          />
-                          <span className="absolute right-2 top-1.5 text-xs text-gray-400">%</span>
-                        </div>
-                        <input
-                          type="number"
-                          value={diskon.nilai}
-                          onChange={(e) => handleDiskonNilaiChange(e.target.value)}
-                          placeholder="Rp"
-                          min="0"
-                          className="flex-1 px-2.5 py-1.5 border border-gray-300 rounded-md text-xs text-gray-900 outline-none focus:ring-1 focus:ring-gray-900"
-                        />
-                      </div>
-                      {diskonNilaiNum > 0 && (
-                        <div className="flex items-center justify-between bg-blue-50 rounded-lg px-3 py-2">
-                          <span className="text-xs text-blue-700">Total setelah diskon</span>
-                          <span className="text-sm font-semibold text-blue-900">{formatCurrency(effectiveRabTotal ?? 0)}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Tanggal Invoice */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">Tanggal Invoice *</label>
-                <input
-                  type="date"
-                  value={form.invoice_date}
-                  onChange={(e) => setForm((f) => ({ ...f, invoice_date: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900"
-                  required
-                />
-              </div>
-
-              {/* Termin Builder */}
-              {form.project_id && (
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-xs font-medium text-gray-700">Termin Pembayaran *</label>
-                    {rabTotal != null && sisaTagihan != null && (
-                      <span className={`text-xs font-medium ${Math.abs(sisaTagihan) < 1 ? "text-green-600" : sisaTagihan < 0 ? "text-red-500" : "text-orange-500"}`}>
-                        Sisa: {formatCurrency(sisaTagihan)}
-                      </span>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    {termins.map((t, idx) => (
-                      <div key={t.id} className="flex items-start gap-2 p-3 border border-gray-200 rounded-lg bg-gray-50">
-                        <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-2">
-                          <div className="col-span-2 md:col-span-1">
-                            <input
-                              type="text"
-                              value={t.nama}
-                              onChange={(e) => updateTermin(t.id, "nama", e.target.value)}
-                              placeholder={idx === 0 ? "DP" : idx === termins.length - 1 ? "Pelunasan" : `Termin ${idx + 1}`}
-                              className="w-full px-2.5 py-1.5 border border-gray-300 rounded-md text-xs text-gray-900 outline-none focus:ring-1 focus:ring-gray-900"
-                            />
-                          </div>
-                          <div>
-                            <div className="relative">
-                              <input
-                                type="number"
-                                value={t.persen}
-                                onChange={(e) => updateTermin(t.id, "persen", e.target.value)}
-                                placeholder="0"
-                                min="0"
-                                max="100"
-                                step="0.1"
-                                className="w-full pl-2.5 pr-7 py-1.5 border border-gray-300 rounded-md text-xs text-gray-900 outline-none focus:ring-1 focus:ring-gray-900"
-                              />
-                              <span className="absolute right-2 top-1.5 text-xs text-gray-400">%</span>
-                            </div>
-                          </div>
-                          <div>
-                            <input
-                              type="number"
-                              value={t.jumlah}
-                              onChange={(e) => updateTermin(t.id, "jumlah", e.target.value)}
-                              placeholder="Rp"
-                              min="0"
-                              className="w-full px-2.5 py-1.5 border border-gray-300 rounded-md text-xs text-gray-900 outline-none focus:ring-1 focus:ring-gray-900"
-                            />
-                          </div>
-                          <div>
-                            <input
-                              type="date"
-                              value={t.due_date}
-                              onChange={(e) => updateTermin(t.id, "due_date", e.target.value)}
-                              className="w-full px-2.5 py-1.5 border border-gray-300 rounded-md text-xs text-gray-900 outline-none focus:ring-1 focus:ring-gray-900"
-                            />
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setTermins((prev) => prev.filter((x) => x.id !== t.id))}
-                          disabled={termins.length === 1}
-                          className="mt-1 text-gray-300 hover:text-red-400 transition-colors disabled:opacity-20"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+            <button
+              onClick={() => goTo(Math.max(1, page - 1))}
+              disabled={page === 1}
+              className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+            >
+              ← Prev
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+              .reduce<(number | "…")[]>((acc, p, i, arr) => {
+                if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push("…");
+                acc.push(p);
+                return acc;
+              }, [])
+              .map((p, i) =>
+                p === "…" ? (
+                  <span key={`e${i}`} className="px-2 py-1.5">…</span>
+                ) : (
                   <button
-                    type="button"
-                    onClick={() => setTermins((prev) => [...prev, newTermin(prev.length)])}
-                    className="mt-2 flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-800 transition-colors"
+                    key={p}
+                    onClick={() => goTo(p as number)}
+                    className={`px-3 py-1.5 rounded-lg border transition ${
+                      page === p ? "bg-gray-900 text-white border-gray-900" : "border-gray-200 hover:bg-gray-50"
+                    }`}
                   >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                    Tambah Termin
+                    {p}
                   </button>
-                  <div className="mt-2 text-xs text-gray-400">
-                    <span className="font-medium text-gray-600">Kolom: </span> Nama · % · Jumlah (Rp) · Jatuh Tempo
-                  </div>
-                </div>
+                )
               )}
-
-              {/* Catatan */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">Catatan</label>
-                <textarea
-                  value={form.notes}
-                  onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                  rows={2}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900 resize-none"
-                  placeholder="Catatan tambahan…"
-                />
-              </div>
-
-              <div className="flex gap-3 pt-1">
-                <button
-                  type="button"
-                  onClick={() => { setShowAdd(false); resetAdd(); }}
-                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 disabled:opacity-50 transition-colors"
-                >
-                  {saving ? "Menyimpan…" : `Buat ${termins.filter((t) => t.nama && parseFloat(t.jumlah) > 0).length || ""} Invoice`}
-                </button>
-              </div>
-            </form>
+            <button
+              onClick={() => goTo(Math.min(totalPages, page + 1))}
+              disabled={page === totalPages}
+              className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+            >
+              Next →
+            </button>
           </div>
         </div>
       )}
 
-      {/* Delete confirm */}
+      {showAdd && (
+        <InvoiceFormModal
+          projects={projects}
+          clients={clients}
+          leads={leads}
+          unpaidProjects={unpaidProjects}
+          userId={user?.id}
+          onSaved={async () => { await refetch(); setShowAdd(false); }}
+          onClose={() => setShowAdd(false)}
+        />
+      )}
+
       {deletingId && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
-          onClick={() => setDeletingId(null)}
-        >
-          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-sm font-semibold text-gray-900 mb-2">Hapus Invoice?</h3>
-            <p className="text-xs text-gray-500 mb-5">Semua data pembayaran terkait juga akan dihapus.</p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setDeletingId(null)}
-                className="flex-1 px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                Batal
-              </button>
-              <button
-                onClick={() => handleDelete(deletingId)}
-                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors"
-              >
-                Hapus
-              </button>
-            </div>
-          </div>
-        </div>
+        <DeleteConfirmModal
+          title="Hapus Invoice?"
+          description="Semua data pembayaran terkait juga akan dihapus."
+          saving={deleting}
+          onConfirm={handleDelete}
+          onClose={() => setDeletingId(null)}
+        />
       )}
     </div>
   );

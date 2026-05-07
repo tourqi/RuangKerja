@@ -1,7 +1,10 @@
 "use client";
+import { useState } from "react";
 import { useClients } from "@/hooks/useClients";
 import { useLeads } from "@/hooks/useLeads";
 import { useProjects } from "@/hooks/useProjects";
+import { useInvoices } from "@/hooks/useInvoices";
+import { ClientFormModal } from "./ClientFormModal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -59,13 +62,23 @@ function InfoRow({ label, value }: { label: string; value?: string | null }) {
   );
 }
 
+const invoiceStatusColors: Record<string, string> = {
+  draft: "bg-gray-100 text-gray-600",
+  sent: "bg-blue-100 text-blue-700",
+  partial: "bg-yellow-100 text-yellow-700",
+  paid: "bg-green-100 text-green-700",
+  overdue: "bg-red-100 text-red-700",
+};
+
 export default function ClientProfile({ clientId }: { clientId: string }) {
-  const { clients, loading: lc } = useClients();
+  const { clients, loading: lc, refetch: refetchClients } = useClients();
   const { leads, loading: ll } = useLeads();
   const { projects, loading: lp } = useProjects();
+  const { invoices, loading: li } = useInvoices();
   const router = useRouter();
+  const [editOpen, setEditOpen] = useState(false);
 
-  const loading = lc || ll || lp;
+  const loading = lc || ll || lp || li;
 
   if (loading) {
     return (
@@ -92,6 +105,7 @@ export default function ClientProfile({ clientId }: { clientId: string }) {
 
   const clientLeads = leads.filter((l) => l.client_id === clientId);
   const clientProjects = projects.filter((p) => p.client_id === clientId);
+  const clientInvoices = invoices.filter((inv) => inv.client_id === clientId);
   const totalProjectValue = clientProjects.reduce((s, p) => s + (p.value ?? 0), 0);
   const activeProjects = clientProjects.filter((p) => p.status !== "Done").length;
 
@@ -156,9 +170,28 @@ export default function ClientProfile({ clientId }: { clientId: string }) {
         </div>
       </div>
 
+      {editOpen && (
+        <ClientFormModal
+          client={client}
+          onSaved={() => { setEditOpen(false); refetchClients(); }}
+          onClose={() => setEditOpen(false)}
+        />
+      )}
+
       {/* Info grid */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-        <h2 className="text-sm font-semibold text-gray-800 mb-4">Informasi Client</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-semibold text-gray-800">Informasi Client</h2>
+          <button
+            onClick={() => setEditOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Edit
+          </button>
+        </div>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
           <InfoRow label="No. HP" value={client.phone} />
           <InfoRow label="Sumber" value={client.source} />
@@ -194,7 +227,7 @@ export default function ClientProfile({ clientId }: { clientId: string }) {
             <table className="w-full text-sm min-w-[600px]">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  {["Status", "Prioritas", "Sumber", "Follow-up", "Last Contact", "Catatan"].map((h) => (
+                  {["Status", "Prioritas", "Sumber", "Follow-up", "Last Contact", "Catatan", ""].map((h) => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -218,6 +251,9 @@ export default function ClientProfile({ clientId }: { clientId: string }) {
                     <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{formatDate(lead.follow_up_date)}</td>
                     <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{formatDate(lead.last_contacted_at)}</td>
                     <td className="px-4 py-3 text-xs text-gray-500 max-w-[200px] truncate">{lead.notes || "-"}</td>
+                    <td className="px-4 py-3">
+                      <Link href={`/leads/${lead.id}`} className="text-xs text-blue-600 hover:underline whitespace-nowrap">Lihat →</Link>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -250,7 +286,7 @@ export default function ClientProfile({ clientId }: { clientId: string }) {
             <table className="w-full text-sm min-w-[640px]">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  {["Nama Proyek", "Status", "Nilai", "Progress", "Start", "Deadline", "PIC"].map((h) => (
+                  {["Nama Proyek", "Status", "Nilai", "Progress", "Start", "Deadline", "PIC", ""].map((h) => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -288,9 +324,59 @@ export default function ClientProfile({ clientId }: { clientId: string }) {
                         {isOverdue && <span className="ml-1 text-red-400">(overdue)</span>}
                       </td>
                       <td className="px-4 py-3 text-xs text-gray-500">{project.assigned_to || "-"}</td>
+                      <td className="px-4 py-3">
+                        <Link href={`/projects/${project.id}`} className="text-xs text-blue-600 hover:underline whitespace-nowrap">Lihat →</Link>
+                      </td>
                     </tr>
                   );
                 })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Invoices */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h2 className="text-sm font-semibold text-gray-800">
+            Invoice Terkait
+            <span className="ml-2 px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-xs font-medium">{clientInvoices.length}</span>
+          </h2>
+          <Link href="/invoices" className="text-xs text-blue-600 hover:underline">Kelola invoice →</Link>
+        </div>
+        {clientInvoices.length === 0 ? (
+          <div className="px-6 py-10 text-center">
+            <p className="text-sm text-gray-400">Belum ada invoice terkait client ini.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[560px]">
+              <thead className="bg-gray-50 border-b border-gray-100">
+                <tr>
+                  {["No. Invoice", "Tanggal", "Jatuh Tempo", "Total", "Terbayar", "Status", ""].map((h) => (
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {clientInvoices.map((inv) => (
+                  <tr key={inv.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3 text-xs font-medium text-gray-800 whitespace-nowrap">{inv.invoice_number || "-"}</td>
+                    <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{formatDate(inv.invoice_date)}</td>
+                    <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{formatDate(inv.due_date)}</td>
+                    <td className="px-4 py-3 text-xs text-gray-700 whitespace-nowrap">{formatCurrency(inv.total_amount)}</td>
+                    <td className="px-4 py-3 text-xs text-gray-700 whitespace-nowrap">{formatCurrency(inv.paid_amount)}</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${invoiceStatusColors[inv.status] || "bg-gray-100 text-gray-600"}`}>
+                        {inv.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Link href={`/invoices/${inv.id}`} className="text-xs text-blue-600 hover:underline whitespace-nowrap">Lihat →</Link>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

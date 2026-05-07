@@ -1,33 +1,31 @@
 "use client";
-import React, { useState } from "react";
+import { useState, type ChangeEvent } from "react";
 import Link from "next/link";
 import { useClients } from "@/hooks/useClients";
-import { addClient, updateClient, deleteClient } from "@/services/clients";
+import { useLeads } from "@/hooks/useLeads";
+import { deleteClient } from "@/services/clients";
 import { Client } from "@/types/db";
 import { useToast } from "@/components/Toast";
+import { ClientFormModal } from "./ClientFormModal";
+import { ClientViewModal } from "./ClientViewModal";
+import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
+import { LeadFormModal } from "@/features/leads/LeadFormModal";
+import { ProjectFormModal } from "@/features/projects/ProjectFormModal";
 import { SortableHeader } from "@/components/SortableHeader";
 import { useSortable } from "@/hooks/useSortable";
 import { usePagination } from "@/hooks/usePagination";
 import Pagination from "@/components/Pagination";
 import { exportCSV } from "@/utils/csv";
 import { MultiSelect } from "@/components/MultiSelect";
-
-const leadStatusColors: Record<string, string> = {
-  "New Lead": "bg-blue-100 text-blue-800",
-  "Contacted": "bg-yellow-100 text-yellow-800",
-  "Meeting Scheduled": "bg-orange-100 text-orange-800",
-  "Proposal Sent": "bg-indigo-100 text-indigo-800",
-  "Negotiation": "bg-purple-100 text-purple-800",
-  "Deal Won": "bg-green-100 text-green-800",
-  "Deal Lost": "bg-red-100 text-red-800",
-};
-
-const priorityColors: Record<string, string> = {
-  Low: "bg-gray-100 text-gray-700",
-  Medium: "bg-blue-100 text-blue-700",
-  High: "bg-orange-100 text-orange-700",
-  Urgent: "bg-red-100 text-red-700",
-};
+import {
+  CLIENT_LEAD_STATUSES,
+  CLIENT_LEAD_STATUS_COLORS,
+  PRIORITY_COLORS,
+  PROPERTY_TYPES,
+  BUDGET_RANGES,
+  SOURCES,
+  toOptions,
+} from "@/constants/options";
 
 function SkeletonRow({ cols }: { cols: number }) {
   return (
@@ -44,13 +42,23 @@ function SkeletonRow({ cols }: { cols: number }) {
 export default function ClientsTable() {
   const toast = useToast();
   const { clients, loading, error, refetch } = useClients();
-  const [form, setForm] = useState<Partial<Client>>({});
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const { leads } = useLeads();
+  const [editingClient, setEditingClient] = useState<Client | null | undefined>(undefined);
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [viewingClient, setViewingClient] = useState<Client | null>(null);
+
+  // cross-modal flow: client → lead → project
+  const [leadFlowClientId, setLeadFlowClientId] = useState<string | null>(null);
+  const [showLeadFlow, setShowLeadFlow] = useState(false);
+  const [projectFlowClientId, setProjectFlowClientId] = useState<string | null>(null);
+  const [projectFlowLeadId, setProjectFlowLeadId] = useState<string | null>(null);
+  const [showProjectFlow, setShowProjectFlow] = useState(false);
+
+  const wonClientIds = new Set((leads ?? []).filter((l) => l.status === "Deal").map((l) => l.client_id));
+  const wonClients = (clients ?? []).filter((c) => wonClientIds.has(c.id));
 
   const [filter, setFilter] = useState({
     name: "",
@@ -62,57 +70,9 @@ export default function ClientsTable() {
     priority: [] as string[],
   });
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
-    const { name, value } = e.target;
-    if (name === "phone") {
-      setForm({ ...form, [name]: value.replace(/\D/g, "").slice(0, 13) });
-    } else {
-      setForm({ ...form, [name]: value });
-    }
-  };
-
-  const handleAdd = async (e: React.SubmitEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      await addClient({ ...form, name: form.name || "" });
-      setForm({});
-      setShowModal(false);
-      refetch();
-      toast("Client berhasil ditambahkan", "success");
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : JSON.stringify(err);
-      toast("Gagal menambah client: " + msg, "error");
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const handleEdit = (client: Client) => {
-    setEditingId(client.id);
-    setForm(client);
+    setEditingClient(client);
     setShowModal(true);
-  };
-
-  const handleUpdate = async (e: React.SubmitEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!editingId) return;
-    setSaving(true);
-    try {
-      await updateClient(editingId, form);
-      setEditingId(null);
-      setForm({});
-      setShowModal(false);
-      refetch();
-      toast("Client berhasil diperbarui", "success");
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : JSON.stringify(err);
-      toast("Gagal update client: " + msg, "error");
-    } finally {
-      setSaving(false);
-    }
   };
 
   const confirmDelete = (id: string) => {
@@ -169,7 +129,7 @@ export default function ClientsTable() {
     );
   };
 
-  const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleFilterChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFilter((prev) => ({ ...prev, [name]: value }));
   };
@@ -189,7 +149,7 @@ export default function ClientsTable() {
             </button>
             <button
               className="px-5 py-2 bg-black text-white text-sm rounded-lg hover:bg-gray-800 transition font-medium"
-              onClick={() => { setEditingId(null); setForm({}); setShowModal(true); }}
+              onClick={() => { setEditingClient(null); setShowModal(true); }}
             >
               + Tambah Client
             </button>
@@ -216,22 +176,13 @@ export default function ClientsTable() {
           />
           <MultiSelect
             placeholder="Semua Tipe"
-            options={[
-              { value: "Rumah", label: "Rumah" },
-              { value: "Ruko", label: "Ruko" },
-              { value: "Apartemen", label: "Apartemen" },
-              { value: "Tanah", label: "Tanah" },
-            ]}
+            options={toOptions(PROPERTY_TYPES)}
             value={filter.property_type}
             onChange={(v) => setFilter((prev) => ({ ...prev, property_type: v }))}
           />
           <MultiSelect
             placeholder="Semua Budget"
-            options={[
-              { value: "< 500jt", label: "< 500jt" },
-              { value: "500jt - 1M", label: "500jt - 1M" },
-              { value: "> 1M", label: "> 1M" },
-            ]}
+            options={toOptions(BUDGET_RANGES)}
             value={filter.budget_range}
             onChange={(v) => setFilter((prev) => ({ ...prev, budget_range: v }))}
           />
@@ -239,29 +190,13 @@ export default function ClientsTable() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <MultiSelect
             placeholder="Semua Status"
-            options={[
-              { value: "New Lead", label: "New Lead" },
-              { value: "Contacted", label: "Contacted" },
-              { value: "Meeting Scheduled", label: "Meeting Scheduled" },
-              { value: "Proposal Sent", label: "Proposal Sent" },
-              { value: "Negotiation", label: "Negotiation" },
-              { value: "Deal Won", label: "Deal Won" },
-              { value: "Deal Lost", label: "Deal Lost" },
-            ]}
+            options={toOptions(CLIENT_LEAD_STATUSES)}
             value={filter.lead_status}
             onChange={(v) => setFilter((prev) => ({ ...prev, lead_status: v }))}
           />
           <MultiSelect
             placeholder="Semua Sumber"
-            options={[
-              { value: "Instagram", label: "Instagram" },
-              { value: "TikTok", label: "TikTok" },
-              { value: "Website", label: "Website" },
-              { value: "Referral", label: "Referral" },
-              { value: "Walk-in", label: "Walk-in" },
-              { value: "Marketplace", label: "Marketplace" },
-              { value: "Ads (Google/Facebook)", label: "Ads (Google/Facebook)" },
-            ]}
+            options={toOptions(SOURCES)}
             value={filter.source}
             onChange={(v) => setFilter((prev) => ({ ...prev, source: v }))}
           />
@@ -331,7 +266,7 @@ export default function ClientsTable() {
                     <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{client.budget_range || "-"}</td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       {client.lead_status ? (
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${leadStatusColors[client.lead_status] || "bg-gray-100 text-gray-700"}`}>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${CLIENT_LEAD_STATUS_COLORS[client.lead_status] || "bg-gray-100 text-gray-700"}`}>
                           {client.lead_status}
                         </span>
                       ) : "-"}
@@ -339,7 +274,7 @@ export default function ClientsTable() {
                     <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{client.source || "-"}</td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       {client.priority ? (
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${priorityColors[client.priority] || "bg-gray-100 text-gray-700"}`}>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${PRIORITY_COLORS[client.priority] || "bg-gray-100 text-gray-700"}`}>
                           {client.priority}
                         </span>
                       ) : "-"}
@@ -392,199 +327,64 @@ export default function ClientsTable() {
         </div>
       </div>
 
-      {/* Modal Form */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
-              <h2 className="text-lg font-semibold text-gray-900">
-                {editingId ? "Edit Client" : "Tambah Client Baru"}
-              </h2>
-              <button
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition"
-                onClick={() => { setShowModal(false); setEditingId(null); setForm({}); }}
-              >
-                ✕
-              </button>
-            </div>
-            <form onSubmit={editingId ? handleUpdate : handleAdd} className="px-6 py-5 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nama <span className="text-red-500">*</span></label>
-                  <input name="name" value={form.name || ""} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-black focus:border-black outline-none" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">No. HP <span className="text-red-500">*</span></label>
-                  <input name="phone" value={form.phone || ""} onChange={handleChange} required maxLength={13} pattern="[0-9]*" placeholder="08xxxxxxxxxx" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-black focus:border-black outline-none" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Alamat</label>
-                  <input name="address" value={form.address || ""} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-black focus:border-black outline-none" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nama Project</label>
-                  <input name="project_name" value={form.project_name || ""} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-black focus:border-black outline-none" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Tipe Properti</label>
-                  <select name="property_type" value={form.property_type || ""} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none">
-                    <option value="">Pilih tipe</option>
-                    <option value="Rumah">Rumah</option>
-                    <option value="Ruko">Ruko</option>
-                    <option value="Apartemen">Apartemen</option>
-                    <option value="Tanah">Tanah</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Budget</label>
-                  <select name="budget_range" value={form.budget_range || ""} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none">
-                    <option value="">Pilih budget</option>
-                    <option value="< 500jt">{"< 500jt"}</option>
-                    <option value="500jt - 1M">500jt - 1M</option>
-                    <option value="> 1M">{"> 1M"}</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Status Lead</label>
-                  <select name="lead_status" value={form.lead_status || ""} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none">
-                    <option value="">Pilih status</option>
-                    <option value="New Lead">New Lead</option>
-                    <option value="Contacted">Contacted</option>
-                    <option value="Meeting Scheduled">Meeting Scheduled</option>
-                    <option value="Proposal Sent">Proposal Sent</option>
-                    <option value="Negotiation">Negotiation</option>
-                    <option value="Deal Won">Deal Won</option>
-                    <option value="Deal Lost">Deal Lost</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Sumber</label>
-                  <select name="source" value={form.source || ""} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none">
-                    <option value="">Pilih sumber</option>
-                    <option value="Instagram">Instagram</option>
-                    <option value="TikTok">TikTok</option>
-                    <option value="Website">Website</option>
-                    <option value="Referral">Referral</option>
-                    <option value="Walk-in">Walk-in</option>
-                    <option value="Marketplace">Marketplace</option>
-                    <option value="Ads (Google/Facebook)">Ads (Google/Facebook)</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Prioritas</label>
-                  <select name="priority" value={form.priority || ""} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none">
-                    <option value="">Pilih prioritas</option>
-                    <option value="Low">Low</option>
-                    <option value="Medium">Medium</option>
-                    <option value="High">High</option>
-                    <option value="Urgent">Urgent</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Catatan</label>
-                <textarea name="notes" value={form.notes || ""} onChange={handleChange} rows={3} placeholder="Catatan tambahan..." className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-black focus:border-black outline-none resize-none" />
-              </div>
-              <div className="flex gap-2 pt-1">
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-6 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {saving ? "Menyimpan..." : editingId ? "Simpan Perubahan" : "Tambah Client"}
-                </button>
-                <button
-                  type="button"
-                  className="px-6 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition"
-                  onClick={() => { setShowModal(false); setEditingId(null); setForm({}); }}
-                >
-                  Batal
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <ClientFormModal
+          client={editingClient}
+          onSaved={() => { setShowModal(false); setEditingClient(undefined); refetch(); }}
+          onClose={() => { setShowModal(false); setEditingClient(undefined); }}
+          onSavedAndAddLead={(client) => {
+            setShowModal(false);
+            setEditingClient(undefined);
+            refetch();
+            setLeadFlowClientId(client.id);
+            setShowLeadFlow(true);
+          }}
+        />
       )}
 
-      {/* View Modal */}
+      {showLeadFlow && (
+        <LeadFormModal
+          clients={clients ?? []}
+          preselectedClientId={leadFlowClientId}
+          onSaved={() => { setShowLeadFlow(false); setLeadFlowClientId(null); }}
+          onClose={() => { setShowLeadFlow(false); setLeadFlowClientId(null); }}
+          onSavedAndAddProject={(lead) => {
+            setShowLeadFlow(false);
+            setLeadFlowClientId(null);
+            setProjectFlowClientId(lead.client_id ?? null);
+            setProjectFlowLeadId(lead.id);
+            setShowProjectFlow(true);
+          }}
+        />
+      )}
+
+      {showProjectFlow && (
+        <ProjectFormModal
+          wonClients={wonClients}
+          allClients={clients ?? []}
+          autoClientId={projectFlowClientId}
+          autoLeadId={projectFlowLeadId}
+          onSaved={() => { setShowProjectFlow(false); setProjectFlowClientId(null); setProjectFlowLeadId(null); }}
+          onClose={() => { setShowProjectFlow(false); setProjectFlowClientId(null); setProjectFlowLeadId(null); }}
+        />
+      )}
+
       {viewingClient && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
-              <h2 className="text-lg font-semibold text-gray-900">Detail Client</h2>
-              <button
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition"
-                onClick={() => setViewingClient(null)}
-              >✕</button>
-            </div>
-            <div className="px-6 py-5 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                {[
-                  { label: "Nama", value: viewingClient.name },
-                  { label: "No. HP", value: viewingClient.phone },
-                  { label: "Alamat", value: viewingClient.address },
-                  { label: "Nama Project", value: viewingClient.project_name },
-                  { label: "Tipe Properti", value: viewingClient.property_type },
-                  { label: "Budget", value: viewingClient.budget_range },
-                  { label: "Sumber", value: viewingClient.source },
-                  { label: "Prioritas", value: viewingClient.priority },
-                ].map(({ label, value }) => (
-                  <div key={label}>
-                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-0.5">{label}</p>
-                    <p className="text-sm text-gray-800">{value || "-"}</p>
-                  </div>
-                ))}
-                <div className="col-span-2">
-                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-0.5">Status Lead</p>
-                  {viewingClient.lead_status ? (
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${leadStatusColors[viewingClient.lead_status] || "bg-gray-100 text-gray-700"}`}>
-                      {viewingClient.lead_status}
-                    </span>
-                  ) : <p className="text-sm text-gray-800">-</p>}
-                </div>
-                <div className="col-span-2">
-                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-0.5">Catatan</p>
-                  <p className="text-sm text-gray-800 whitespace-pre-wrap">{viewingClient.notes || "-"}</p>
-                </div>
-              </div>
-              <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
-                <button
-                  className="px-4 py-2 text-sm font-medium bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition"
-                  onClick={() => { setViewingClient(null); handleEdit(viewingClient); }}
-                >Edit</button>
-                <button
-                  className="px-4 py-2 text-sm font-medium bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
-                  onClick={() => setViewingClient(null)}
-                >Tutup</button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ClientViewModal
+          client={viewingClient}
+          onClose={() => setViewingClient(null)}
+          onEdit={(c) => { setViewingClient(null); handleEdit(c); }}
+        />
       )}
 
-      {/* Delete Confirmation Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
-            <h3 className="text-base font-semibold text-gray-900 mb-2">Hapus Client?</h3>
-            <p className="text-sm text-gray-500 mb-5">Data client akan dihapus permanen dan tidak dapat dikembalikan.</p>
-            <div className="flex gap-2">
-              <button
-                onClick={handleDelete}
-                disabled={saving}
-                className="flex-1 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition disabled:opacity-50"
-              >
-                {saving ? "Menghapus..." : "Ya, Hapus"}
-              </button>
-              <button
-                onClick={() => { setShowDeleteModal(false); setDeletingId(null); }}
-                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition"
-              >
-                Batal
-              </button>
-            </div>
-          </div>
-        </div>
+        <DeleteConfirmModal
+          title="Hapus Client?"
+          description="Data client akan dihapus permanen dan tidak dapat dikembalikan."
+          saving={saving}
+          onConfirm={handleDelete}
+          onClose={() => { setShowDeleteModal(false); setDeletingId(null); }}
+        />
       )}
     </div>
   );

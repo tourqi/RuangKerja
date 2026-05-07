@@ -47,6 +47,7 @@ export const projectStatusLabel: Record<ProjectStatus, string> = {
 export interface Project {
   id: string;
   client_id?: string;
+  lead_id?: string;
   name: string;
   value?: number;
   status: ProjectStatus;
