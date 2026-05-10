@@ -20,7 +20,7 @@ type Props = {
 };
 
 const PROJECT_COLUMNS: (keyof Project)[] = [
-  "client_id", "lead_id", "name", "value", "status", "start_date", "deadline", "assigned_to", "progress",
+  "client_id", "name", "value", "status", "start_date", "deadline", "assigned_to", "progress",
 ];
 
 export function ProjectFormModal({

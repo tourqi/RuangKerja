@@ -7,6 +7,8 @@ import { useAllPayments } from "@/hooks/usePayments";
 import { useAllExpenses } from "@/hooks/useExpenses";
 import { useState } from "react";
 import Link from "next/link";
+import { LaporanPendapatan } from "./LaporanPendapatan";
+import { LaporanPengeluaran } from "./LaporanPengeluaran";
 
 const formatCurrency = (v?: number) =>
   v == null
@@ -61,6 +63,8 @@ const TABS = [
   { key: "klien", label: "Klien" },
   { key: "finansial", label: "Finansial" },
   { key: "labarugi", label: "Laba Rugi" },
+  { key: "pendapatan", label: "Lap. Pendapatan" },
+  { key: "pengeluaran", label: "Lap. Pengeluaran" },
 ];
 
 const invoiceStatusColors: Record<string, string> = {
@@ -977,6 +981,25 @@ export default function ReportsOverview() {
           </div>
         );
       })()}
+
+      {/* ── TAB: Laporan Pendapatan ── */}
+      {tab === "pendapatan" && (
+        <LaporanPendapatan
+          payments={payments}
+          invoices={invoices}
+          projects={projects}
+          clients={clients}
+        />
+      )}
+
+      {/* ── TAB: Laporan Pengeluaran ── */}
+      {tab === "pengeluaran" && (
+        <LaporanPengeluaran
+          expenses={expenses}
+          projects={projects}
+          clients={clients}
+        />
+      )}
     </div>
   );
 }
