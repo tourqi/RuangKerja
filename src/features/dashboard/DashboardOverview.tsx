@@ -4,118 +4,115 @@ import { useLeads } from "@/hooks/useLeads";
 import { useProjects } from "@/hooks/useProjects";
 import { useInvoices } from "@/hooks/useInvoices";
 import { useAllPayments } from "@/hooks/usePayments";
+import { useAllExpenses } from "@/hooks/useExpenses";
 import Link from "next/link";
 import {
-  PieChart,
-  Pie,
-  Tooltip,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  ResponsiveContainer,
-  Legend,
-  AreaChart,
-  Area,
+  PieChart, Pie, Tooltip,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer,
+  AreaChart, Area, Legend,
 } from "recharts";
 
-/* ── Colours ── */
 const LEAD_COLORS: Record<string, string> = {
-  "New Lead": "#3b82f6",
-  Contacted: "#eab308",
-  Survey: "#a855f7",
-  Deal: "#22c55e",
-  Lost: "#ef4444",
-};
-const PROJECT_COLORS: Record<string, string> = {
-  Planning: "#9ca3af",
-  Design: "#3b82f6",
-  Production: "#eab308",
-  Installation: "#a855f7",
-  Done: "#22c55e",
+  "New Lead": "#3b82f6", Contacted: "#eab308", Survey: "#a855f7", Deal: "#22c55e", Lost: "#ef4444",
 };
 const PROJECT_LABEL: Record<string, string> = {
-  Planning: "Planning",
-  Design: "Design",
-  Production: "Produksi",
-  Installation: "Instalasi",
-  Done: "Selesai",
+  Planning: "Planning", Design: "Design", Production: "Produksi", Installation: "Instalasi", Done: "Selesai",
 };
-const leadBadge: Record<string, string> = {
-  "New Lead": "bg-blue-100 text-blue-700",
-  Contacted: "bg-yellow-100 text-yellow-700",
-  Survey: "bg-purple-100 text-purple-700",
-  Deal: "bg-green-100 text-green-700",
-  Lost: "bg-red-100 text-red-700",
-};
-const projectStatusColors: Record<string, string> = {
-  Design: "bg-blue-100 text-blue-700",
-  Production: "bg-yellow-100 text-yellow-700",
-  Installation: "bg-purple-100 text-purple-700",
+const projectStatusBadge: Record<string, string> = {
+  Planning: "bg-gray-100 text-gray-600", Design: "bg-blue-100 text-blue-700",
+  Production: "bg-yellow-100 text-yellow-700", Installation: "bg-purple-100 text-purple-700",
   Done: "bg-green-100 text-green-700",
 };
-
+const invoiceStatusBadge: Record<string, string> = {
+  draft: "bg-gray-100 text-gray-500", sent: "bg-blue-100 text-blue-700",
+  partial: "bg-yellow-100 text-yellow-700", paid: "bg-green-100 text-green-700",
+  overdue: "bg-red-100 text-red-600",
+};
+const invoiceStatusLabels: Record<string, string> = {
+  draft: "Draft", sent: "Terkirim", partial: "Sebagian", paid: "Lunas", overdue: "Jatuh Tempo",
+};
 const LEAD_STATUSES = ["New Lead", "Contacted", "Survey", "Deal", "Lost"] as const;
 const PROJECT_STATUSES = ["Planning", "Design", "Production", "Installation", "Done"] as const;
 
-const formatCurrency = (v?: number) =>
+const fmt = (v?: number) =>
   v == null ? "-" : new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(v);
 
-const formatCurrencyShort = (v: number) => {
+const fmtShort = (v: number) => {
   if (v >= 1_000_000_000) return `${(v / 1_000_000_000).toFixed(1)}M`;
-  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(0)}jt`;
+  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}jt`;
   if (v >= 1_000) return `${(v / 1_000).toFixed(0)}rb`;
   return `${v}`;
 };
 
-/* Build last-N-months labels */
 function lastNMonths(n: number) {
-  const months: { key: string; label: string }[] = [];
+  const out: { key: string; label: string }[] = [];
   const now = new Date();
   for (let i = n - 1; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    const label = d.toLocaleDateString("id-ID", { month: "short", year: "2-digit" });
-    months.push({ key, label });
+    out.push({
+      key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+      label: d.toLocaleDateString("id-ID", { month: "short", year: "2-digit" }),
+    });
   }
-  return months;
+  return out;
 }
-
-function monthKey(dateStr?: string) {
-  if (!dateStr) return "";
-  const d = new Date(dateStr);
+function monthKey(s?: string) {
+  if (!s) return "";
+  const d = new Date(s);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
+function currentMonthKey() {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}`;
+}
 
-/* Custom tooltip for currency */
-const CurrencyTooltip = ({ active, payload, label }: { active?: boolean; payload?: { name: string; value: number }[]; label?: string }) => {
+const CurrencyTooltip = ({ active, payload, label }: { active?: boolean; payload?: { name: string; value: number; color?: string }[]; label?: string }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-white border border-gray-100 shadow-lg rounded-lg p-3 text-xs">
+    <div className="bg-white border border-gray-200 shadow-lg rounded-lg p-3 text-xs space-y-0.5">
       <p className="font-semibold text-gray-700 mb-1">{label}</p>
       {payload.map((p) => (
-        <p key={p.name} className="text-gray-600">
-          {p.name}: <span className="font-semibold text-gray-900">{formatCurrency(p.value)}</span>
-        </p>
+        <p key={p.name} style={{ color: p.color }} className="font-medium">{p.name}: {fmt(p.value)}</p>
       ))}
     </div>
   );
 };
-
 const CountTooltip = ({ active, payload, label }: { active?: boolean; payload?: { name: string; value: number }[]; label?: string }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-white border border-gray-100 shadow-lg rounded-lg p-3 text-xs">
+    <div className="bg-white border border-gray-200 shadow-lg rounded-lg p-3 text-xs space-y-0.5">
       <p className="font-semibold text-gray-700 mb-1">{label}</p>
       {payload.map((p) => (
-        <p key={p.name} className="text-gray-600">
-          {p.name}: <span className="font-semibold text-gray-900">{p.value}</span>
-        </p>
+        <p key={p.name} className="text-gray-600">{p.name}: <b className="text-gray-900">{p.value}</b></p>
       ))}
     </div>
   );
 };
+
+function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <div className={`bg-white rounded-xl border border-gray-100 shadow-sm ${className}`}>{children}</div>;
+}
+
+function StatCard({
+  label, value, sub, valueClass = "text-gray-900", badge,
+}: {
+  label: string; value: string | number; sub?: string; valueClass?: string; badge?: React.ReactNode;
+}) {
+  return (
+    <Card className="p-5">
+      <div className="flex items-start justify-between mb-1">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider leading-tight">{label}</p>
+        {badge}
+      </div>
+      <p className={`text-2xl font-bold mt-1 ${valueClass}`}>{value}</p>
+      {sub && <p className="text-xs text-gray-400 mt-1 leading-snug">{sub}</p>}
+    </Card>
+  );
+}
+
+const BlnIniBadge = () => (
+  <span className="text-[10px] font-semibold bg-indigo-50 text-indigo-500 px-1.5 py-0.5 rounded-full whitespace-nowrap">Bln ini</span>
+);
 
 export default function DashboardOverview() {
   const { clients, loading: lc } = useClients();
@@ -123,6 +120,7 @@ export default function DashboardOverview() {
   const { projects, loading: lp } = useProjects();
   const { invoices, loading: li } = useInvoices();
   const { payments } = useAllPayments();
+  const { expenses } = useAllExpenses();
 
   const loading = lc || ll || lp || li;
 
@@ -134,265 +132,285 @@ export default function DashboardOverview() {
     );
   }
 
-  /* ── Derived data ── */
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const thisMonth = currentMonthKey();
 
-  const dealWon = clients.filter((c) => c.lead_status === "Deal Won").length;
+  /* bisnis */
   const activeProjects = projects.filter((p) => p.status !== "Done").length;
   const dealLeads = leads.filter((l) => l.status === "Deal").length;
   const totalValue = projects.reduce((s, p) => s + (p.value ?? 0), 0);
+  const overdueProjects = projects.filter((p) => p.status !== "Done" && p.deadline && new Date(p.deadline) < today);
+  const followUpLeads = leads.filter(
+    (l) => l.status !== "Deal" && l.status !== "Lost" && l.follow_up_date && new Date(l.follow_up_date) <= today
+  );
 
+  /* keuangan all-time */
   const totalTagihan = invoices.reduce((s, i) => s + i.total_amount, 0);
   const totalTerkumpul = payments.reduce((s, p) => s + p.amount, 0);
+  const totalPengeluaran = expenses.reduce((s, e) => s + e.jumlah, 0);
   const totalPiutang = totalTagihan - totalTerkumpul;
-  const overdueInvoices = invoices.filter(
-    (i) => i.status !== "paid" && i.due_date && new Date(i.due_date) < today
-  );
-  const recentInvoices = [...invoices]
-    .sort((a, b) => {
-      const da = new Date(b.invoice_date || b.created_at || 0).getTime();
-      const db = new Date(a.invoice_date || a.created_at || 0).getTime();
-      return da - db;
-    })
-    .slice(0, 5);
+  const labaBersih = totalTerkumpul - totalPengeluaran;
+  const collectionRate = totalTagihan > 0 ? Math.round((totalTerkumpul / totalTagihan) * 100) : 0;
+  const overdueInvoices = invoices.filter((i) => i.status !== "paid" && i.due_date && new Date(i.due_date) < today);
 
-  /* Donut: Lead pipeline */
+  /* keuangan bulan ini */
+  const pemasukanBulanIni = payments.filter((p) => monthKey(p.payment_date) === thisMonth).reduce((s, p) => s + p.amount, 0);
+  const pengeluaranBulanIni = expenses.filter((e) => monthKey(e.tanggal) === thisMonth).reduce((s, e) => s + e.jumlah, 0);
+  const arusBulanIni = pemasukanBulanIni - pengeluaranBulanIni;
+
+  /* chart data */
   const leadPieData = LEAD_STATUSES.map((s) => ({
-    name: s,
-    value: leads.filter((l) => l.status === s).length,
-    fill: LEAD_COLORS[s],
+    name: s, value: leads.filter((l) => l.status === s).length, fill: LEAD_COLORS[s],
   })).filter((d) => d.value > 0);
 
-  /* Bar: Project status (count + value) */
   const projectBarData = PROJECT_STATUSES.map((s) => ({
     name: PROJECT_LABEL[s],
     jumlah: projects.filter((p) => p.status === s).length,
-    nilai: projects.filter((p) => p.status === s).reduce((sum, p) => sum + (p.value ?? 0), 0),
-    fill: PROJECT_COLORS[s],
   }));
 
-  /* Area: Monthly trend (last 6 months) */
   const months = lastNMonths(6);
-  const trendData = months.map(({ key, label }) => ({
+  const financialTrend = months.map(({ key, label }) => ({
     label,
-    Klien: clients.filter((c) => monthKey(c.created_at) === key).length,
+    Pemasukan: payments.filter((p) => monthKey(p.payment_date) === key).reduce((s, p) => s + p.amount, 0),
+    Pengeluaran: expenses.filter((e) => monthKey(e.tanggal) === key).reduce((s, e) => s + e.jumlah, 0),
+  }));
+  const activityTrend = months.map(({ key, label }) => ({
+    label,
     Lead: leads.filter((l) => monthKey(l.created_at) === key).length,
     Proyek: projects.filter((p) => monthKey(p.created_at) === key).length,
     Invoice: invoices.filter((i) => monthKey(i.invoice_date || i.created_at) === key).length,
   }));
 
-  /* Recent */
-  const recentClients = [...clients]
-    .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
-    .slice(0, 5);
+  /* tables */
   const recentProjects = [...projects]
     .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
     .slice(0, 5);
-
-  const overdueProjects = projects.filter(
-    (p) => p.status !== "Done" && p.deadline && new Date(p.deadline) < today
-  );
-  const followUpLeads = leads.filter(
-    (l) =>
-      l.status !== "Deal" &&
-      l.status !== "Lost" &&
-      l.follow_up_date &&
-      new Date(l.follow_up_date) <= today
-  );
+  const recentInvoices = [...invoices]
+    .sort((a, b) => new Date(b.invoice_date || b.created_at || 0).getTime() - new Date(a.invoice_date || a.created_at || 0).getTime())
+    .slice(0, 5);
+  const invoicePaidByProject = invoices.reduce<Record<string, number>>((acc, inv) => {
+    if (inv.project_id) acc[inv.project_id] = (acc[inv.project_id] ?? 0) + inv.paid_amount;
+    return acc;
+  }, {});
+  const expenseByProject = expenses.reduce<Record<string, number>>((acc, e) => {
+    acc[e.project_id] = (acc[e.project_id] ?? 0) + e.jumlah;
+    return acc;
+  }, {});
+  const labaRows = projects
+    .filter((p) => (invoicePaidByProject[p.id] ?? 0) > 0 || (expenseByProject[p.id] ?? 0) > 0)
+    .map((p) => {
+      const t = invoicePaidByProject[p.id] ?? 0;
+      const e = expenseByProject[p.id] ?? 0;
+      return { p, laba: t - e, margin: t > 0 ? Math.round(((t - e) / t) * 100) : null };
+    })
+    .sort((a, b) => b.laba - a.laba)
+    .slice(0, 5);
 
   return (
-    <div className="space-y-6">
-      {/* ── Alert banners ── */}
+    <div className="space-y-4">
+
+      {/* ── Alerts ── */}
       {(overdueProjects.length > 0 || followUpLeads.length > 0 || overdueInvoices.length > 0) && (
         <div className="space-y-2">
           {overdueProjects.length > 0 && (
-            <div className="flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm">
-              <span className="w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center text-xs flex-shrink-0">!</span>
-              <span className="text-red-800 font-medium">
-                {overdueProjects.length} proyek melewati deadline:
-              </span>
-              <span className="text-red-700 truncate">
+            <div className="flex items-center gap-3 px-4 py-2.5 bg-red-50 border border-red-200 rounded-xl text-xs">
+              <span className="w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center font-bold flex-shrink-0">!</span>
+              <span className="text-red-800 font-semibold">{overdueProjects.length} proyek lewat deadline</span>
+              <span className="text-red-600 truncate hidden sm:block">
                 {overdueProjects.slice(0, 3).map((p) => p.name).join(", ")}
                 {overdueProjects.length > 3 && ` +${overdueProjects.length - 3} lainnya`}
               </span>
-              <Link href="/projects" className="ml-auto text-xs text-red-600 hover:underline flex-shrink-0">
-                Lihat →
-              </Link>
+              <Link href="/projects" className="ml-auto text-red-500 hover:underline flex-shrink-0">Lihat →</Link>
             </div>
           )}
           {followUpLeads.length > 0 && (
-            <div className="flex items-center gap-3 px-4 py-3 bg-orange-50 border border-orange-200 rounded-xl text-sm">
-              <span className="w-5 h-5 rounded-full bg-orange-500 text-white flex items-center justify-center text-xs flex-shrink-0">!</span>
-              <span className="text-orange-800 font-medium">
-                {followUpLeads.length} lead perlu follow-up hari ini
-              </span>
-              <Link href="/leads" className="ml-auto text-xs text-orange-600 hover:underline flex-shrink-0">
-                Lihat →
-              </Link>
+            <div className="flex items-center gap-3 px-4 py-2.5 bg-orange-50 border border-orange-200 rounded-xl text-xs">
+              <span className="w-4 h-4 rounded-full bg-orange-400 text-white flex items-center justify-center font-bold flex-shrink-0">!</span>
+              <span className="text-orange-800 font-semibold">{followUpLeads.length} lead perlu follow-up hari ini</span>
+              <Link href="/leads" className="ml-auto text-orange-500 hover:underline flex-shrink-0">Lihat →</Link>
             </div>
           )}
           {overdueInvoices.length > 0 && (
-            <div className="flex items-center gap-3 px-4 py-3 bg-yellow-50 border border-yellow-200 rounded-xl text-sm">
-              <span className="w-5 h-5 rounded-full bg-yellow-500 text-white flex items-center justify-center text-xs flex-shrink-0">!</span>
-              <span className="text-yellow-800 font-medium">
-                {overdueInvoices.length} invoice jatuh tempo belum terbayar
-              </span>
-              <Link href="/invoices" className="ml-auto text-xs text-yellow-700 hover:underline flex-shrink-0">
-                Lihat →
-              </Link>
+            <div className="flex items-center gap-3 px-4 py-2.5 bg-yellow-50 border border-yellow-200 rounded-xl text-xs">
+              <span className="w-4 h-4 rounded-full bg-yellow-400 text-white flex items-center justify-center font-bold flex-shrink-0">!</span>
+              <span className="text-yellow-800 font-semibold">{overdueInvoices.length} invoice jatuh tempo belum terbayar</span>
+              <Link href="/invoices" className="ml-auto text-yellow-600 hover:underline flex-shrink-0">Lihat →</Link>
             </div>
           )}
         </div>
       )}
 
-      {/* ── KPI cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Total Client</p>
-          <p className="text-3xl font-bold text-gray-900">{clients.length}</p>
-          <p className="text-xs text-gray-400 mt-1">{dealWon} deal won</p>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Total Lead</p>
-          <p className="text-3xl font-bold text-gray-900">{leads.length}</p>
-          <p className="text-xs text-gray-400 mt-1">{dealLeads} deal closing</p>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Project Aktif</p>
-          <p className="text-3xl font-bold text-gray-900">{activeProjects}</p>
-          <p className="text-xs text-gray-400 mt-1">{projects.filter((p) => p.status === "Done").length} selesai</p>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Total Nilai Proyek</p>
-          <p className="text-3xl font-bold text-gray-900">{formatCurrencyShort(totalValue)}</p>
-          <p className="text-xs text-gray-400 mt-1">{projects.length} proyek</p>
-        </div>
+      {/* ── Row 1: KPI bisnis ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCard label="Total Klien" value={clients.length}
+          sub={`${clients.filter((c) => c.lead_status === "Deal Won").length} deal won`} />
+        <StatCard label="Total Lead" value={leads.length}
+          sub={`${dealLeads} closing · ${leads.filter((l) => l.status === "Lost").length} lost`} />
+        <StatCard label="Proyek Aktif" value={activeProjects}
+          sub={`${projects.filter((p) => p.status === "Done").length} selesai · ${projects.length} total`} />
+        <StatCard label="Nilai Semua Proyek" value={fmtShort(totalValue)} sub={`${projects.length} proyek`} />
       </div>
 
-      {/* ── Financial KPI cards ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Total Tagihan</p>
-          <p className="text-2xl font-bold text-gray-900">{formatCurrencyShort(totalTagihan)}</p>
-          <p className="text-xs text-gray-400 mt-1">{invoices.length} invoice</p>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Terkumpul</p>
-          <p className="text-2xl font-bold text-green-600">{formatCurrencyShort(totalTerkumpul)}</p>
+      {/* ── Row 2: KPI keuangan bulan ini ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <StatCard
+          label="Pemasukan"
+          value={fmtShort(pemasukanBulanIni)}
+          sub={fmt(pemasukanBulanIni)}
+          valueClass="text-green-600"
+          badge={<BlnIniBadge />}
+        />
+        <StatCard
+          label="Pengeluaran"
+          value={fmtShort(pengeluaranBulanIni)}
+          sub={fmt(pengeluaranBulanIni)}
+          valueClass="text-red-500"
+          badge={<BlnIniBadge />}
+        />
+        <StatCard
+          label="Arus Kas Bersih"
+          value={fmtShort(arusBulanIni)}
+          sub={`${arusBulanIni >= 0 ? "Surplus" : "Defisit"} · ${fmt(arusBulanIni)}`}
+          valueClass={arusBulanIni >= 0 ? "text-blue-600" : "text-orange-500"}
+          badge={<BlnIniBadge />}
+        />
+      </div>
+
+      {/* ── Row 3: KPI keuangan kumulatif ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCard label="Total Tagihan" value={fmtShort(totalTagihan)}
+          sub={`${invoices.length} invoice · ${collectionRate}% terkumpul`} />
+        <StatCard label="Total Terkumpul" value={fmtShort(totalTerkumpul)}
+          sub={`${invoices.filter((i) => i.status === "paid").length} invoice lunas`}
+          valueClass="text-green-600" />
+        <StatCard label="Total Pengeluaran" value={fmtShort(totalPengeluaran)}
+          sub={`${expenses.length} transaksi`}
+          valueClass="text-red-500" />
+        <Card className="p-5">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Laba Bersih</p>
+          <p className={`text-2xl font-bold mt-1 ${labaBersih >= 0 ? "text-green-600" : "text-red-500"}`}>{fmtShort(labaBersih)}</p>
           <p className="text-xs text-gray-400 mt-1">
-            {totalTagihan > 0 ? Math.round((totalTerkumpul / totalTagihan) * 100) : 0}% dari total tagihan
+            Piutang: {fmtShort(totalPiutang)}
+            {overdueInvoices.length > 0 && <span className="text-red-400"> · {overdueInvoices.length} jatuh tempo</span>}
           </p>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Piutang</p>
-          <p className={`text-2xl font-bold ${totalPiutang > 0 ? "text-red-500" : "text-gray-900"}`}>
-            {formatCurrencyShort(totalPiutang)}
-          </p>
-          <p className="text-xs text-gray-400 mt-1">{overdueInvoices.length} invoice jatuh tempo</p>
-        </div>
+        </Card>
       </div>
 
-      {/* ── Charts row 1: Pie + Bar ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Donut: Lead Pipeline */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+      {/* ── Row 4: Charts kecil ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <Card className="p-5">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-800">Pipeline Lead</h3>
             <Link href="/leads" className="text-xs text-blue-600 hover:underline">Lihat semua</Link>
           </div>
           {leads.length === 0 ? (
-            <div className="flex items-center justify-center h-48 text-xs text-gray-400">Belum ada data lead</div>
+            <div className="flex items-center justify-center h-44 text-xs text-gray-400">Belum ada data lead</div>
           ) : (
             <div className="flex items-center gap-4">
-              <div className="h-48 flex-1 min-w-0">
+              <div className="h-44 flex-1 min-w-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie
-                      data={leadPieData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius="52%"
-                      outerRadius="80%"
-                      paddingAngle={2}
-                      dataKey="value"
-                    />
-                    <Tooltip
-                      content={({ active, payload }) => {
-                        if (!active || !payload?.length) return null;
-                        const d = payload[0].payload as { name: string; value: number };
-                        return (
-                          <div className="bg-white border border-gray-100 shadow-lg rounded-lg p-3 text-xs">
-                            <p className="font-semibold text-gray-700 mb-1">{d.name}</p>
-                            <p className="text-gray-600">{d.value} lead</p>
-                          </div>
-                        );
-                      }}
-                    />
+                    <Pie data={leadPieData} cx="50%" cy="50%" innerRadius="50%" outerRadius="78%" paddingAngle={2} dataKey="value" />
+                    <Tooltip content={({ active, payload }) => {
+                      if (!active || !payload?.length) return null;
+                      const d = payload[0].payload as { name: string; value: number };
+                      return (
+                        <div className="bg-white border border-gray-200 shadow-lg rounded-lg p-2.5 text-xs">
+                          <p className="font-semibold text-gray-700">{d.name}</p>
+                          <p className="text-gray-500">{d.value} lead</p>
+                        </div>
+                      );
+                    }} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="space-y-1.5 flex-shrink-0">
+              <div className="space-y-2 flex-shrink-0">
                 {LEAD_STATUSES.map((s) => {
                   const cnt = leads.filter((l) => l.status === s).length;
                   return (
                     <div key={s} className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: LEAD_COLORS[s] }} />
-                      <span className="text-xs text-gray-600 w-20">{s}</span>
-                      <span className="text-xs font-semibold text-gray-900">{cnt}</span>
+                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: LEAD_COLORS[s] }} />
+                      <span className="text-xs text-gray-500 w-20">{s}</span>
+                      <span className="text-xs font-bold text-gray-900">{cnt}</span>
                     </div>
                   );
                 })}
               </div>
             </div>
           )}
-        </div>
+        </Card>
 
-        {/* Bar: Project Status */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+        <Card className="p-5">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-800">Status Proyek</h3>
             <Link href="/projects" className="text-xs text-blue-600 hover:underline">Lihat semua</Link>
           </div>
           {projects.length === 0 ? (
-            <div className="flex items-center justify-center h-48 text-xs text-gray-400">Belum ada data proyek</div>
+            <div className="flex items-center justify-center h-44 text-xs text-gray-400">Belum ada data proyek</div>
           ) : (
-            <div className="h-48">
+            <div className="h-44">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={projectBarData} barSize={28} margin={{ top: 4, right: 4, bottom: 0, left: -10 }}>
+                <BarChart data={projectBarData} barSize={26} margin={{ top: 4, right: 4, bottom: 0, left: -16 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
                   <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} allowDecimals={false} />
                   <Tooltip content={<CountTooltip />} cursor={{ fill: "#f9fafb" }} />
-                  <Bar dataKey="jumlah" name="Jumlah" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="jumlah" name="Jumlah" radius={[4, 4, 0, 0]} fill="#6366f1" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           )}
-        </div>
+        </Card>
       </div>
 
-      {/* ── Chart row 2: Area trend ── */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h3 className="text-sm font-semibold text-gray-800 mb-4">Tren 6 Bulan Terakhir</h3>
-        <div className="h-52">
+      {/* ── Row 5: Tren keuangan ── */}
+      <Card className="p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold text-gray-800">Tren Keuangan 6 Bulan</h3>
+          <Link href="/reports" className="text-xs text-blue-600 hover:underline">Laporan lengkap →</Link>
+        </div>
+        <div className="h-48">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={trendData} margin={{ top: 4, right: 4, bottom: 0, left: -10 }}>
+            <AreaChart data={financialTrend} margin={{ top: 4, right: 4, bottom: 0, left: 20 }}>
               <defs>
-                <linearGradient id="gradKlien" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="gradLead" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#a855f7" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="gradProyek" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id="gP" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#22c55e" stopOpacity={0.15} />
                   <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
                 </linearGradient>
-                <linearGradient id="gradInvoice" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#f97316" stopOpacity={0.15} />
+                <linearGradient id="gK" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.12} />
+                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+              <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} tickFormatter={fmtShort} />
+              <Tooltip content={<CurrencyTooltip />} cursor={{ stroke: "#e5e7eb" }} />
+              <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }} />
+              <Area type="monotone" dataKey="Pemasukan" stroke="#22c55e" strokeWidth={2} fill="url(#gP)" dot={{ r: 3, fill: "#22c55e" }} />
+              <Area type="monotone" dataKey="Pengeluaran" stroke="#ef4444" strokeWidth={2} fill="url(#gK)" dot={{ r: 3, fill: "#ef4444" }} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </Card>
+
+      {/* ── Row 6: Tren aktivitas ── */}
+      <Card className="p-5">
+        <h3 className="text-sm font-semibold text-gray-800 mb-4">Tren Aktivitas 6 Bulan</h3>
+        <div className="h-40">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={activityTrend} margin={{ top: 4, right: 4, bottom: 0, left: -12 }}>
+              <defs>
+                <linearGradient id="gL" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#a855f7" stopOpacity={0.12} />
+                  <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="gPr" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.12} />
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="gI" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#f97316" stopOpacity={0.12} />
                   <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
                 </linearGradient>
               </defs>
@@ -400,152 +418,110 @@ export default function DashboardOverview() {
               <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} allowDecimals={false} />
               <Tooltip content={<CountTooltip />} cursor={{ stroke: "#e5e7eb" }} />
-              <Legend
-                iconType="circle"
-                iconSize={8}
-                wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }}
-              />
-              <Area type="monotone" dataKey="Klien" stroke="#3b82f6" strokeWidth={2} fill="url(#gradKlien)" dot={{ r: 3, fill: "#3b82f6" }} />
-              <Area type="monotone" dataKey="Lead" stroke="#a855f7" strokeWidth={2} fill="url(#gradLead)" dot={{ r: 3, fill: "#a855f7" }} />
-              <Area type="monotone" dataKey="Proyek" stroke="#22c55e" strokeWidth={2} fill="url(#gradProyek)" dot={{ r: 3, fill: "#22c55e" }} />
-              <Area type="monotone" dataKey="Invoice" stroke="#f97316" strokeWidth={2} fill="url(#gradInvoice)" dot={{ r: 3, fill: "#f97316" }} />
+              <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }} />
+              <Area type="monotone" dataKey="Lead" stroke="#a855f7" strokeWidth={2} fill="url(#gL)" dot={{ r: 3, fill: "#a855f7" }} />
+              <Area type="monotone" dataKey="Proyek" stroke="#3b82f6" strokeWidth={2} fill="url(#gPr)" dot={{ r: 3, fill: "#3b82f6" }} />
+              <Area type="monotone" dataKey="Invoice" stroke="#f97316" strokeWidth={2} fill="url(#gI)" dot={{ r: 3, fill: "#f97316" }} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
-      </div>
+      </Card>
 
-      {/* ── Chart row 3: Project value by status ── */}
-      {totalValue > 0 && (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-          <h3 className="text-sm font-semibold text-gray-800 mb-4">Nilai Proyek per Status</h3>
-          <div className="h-48">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={projectBarData.filter((d) => d.nilai > 0)}
-                barSize={36}
-                margin={{ top: 4, right: 4, bottom: 0, left: 20 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-                <YAxis
-                  tick={{ fontSize: 10, fill: "#9ca3af" }}
-                  axisLine={false}
-                  tickLine={false}
-                  tickFormatter={formatCurrencyShort}
-                />
-                <Tooltip content={<CurrencyTooltip />} cursor={{ fill: "#f9fafb" }} />
-                <Bar dataKey="nilai" name="Nilai" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+      {/* ── Row 7: Tables ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        {/* Proyek terbaru */}
+        <Card className="overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
+            <h3 className="text-sm font-semibold text-gray-800">Proyek Terbaru</h3>
+            <Link href="/projects" className="text-xs text-blue-600 hover:underline">Semua →</Link>
           </div>
-        </div>
-      )}
-
-      {/* ── Recent tables ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-            <h3 className="text-sm font-semibold text-gray-800">Client Terbaru</h3>
-            <Link href="/clients" className="text-xs text-blue-600 hover:underline">Lihat semua</Link>
-          </div>
-          <table className="w-full text-sm">
-            <tbody className="divide-y divide-gray-50">
-              {recentClients.map((c) => (
-                <tr key={c.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-5 py-3">
-                    <p className="font-medium text-gray-900 text-xs">{c.name}</p>
-                    <p className="text-gray-400 text-xs">{c.source || "-"}</p>
-                  </td>
-                  <td className="px-5 py-3 text-right">
-                    {c.lead_status && (
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${leadBadge[c.lead_status] || "bg-gray-100 text-gray-600"}`}>
-                        {c.lead_status}
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {recentClients.length === 0 && (
-                <tr><td colSpan={2} className="px-5 py-8 text-center text-gray-400 text-xs">Belum ada client</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-            <h3 className="text-sm font-semibold text-gray-800">Project Terbaru</h3>
-            <Link href="/projects" className="text-xs text-blue-600 hover:underline">Lihat semua</Link>
-          </div>
-          <table className="w-full text-sm">
+          <table className="w-full">
             <tbody className="divide-y divide-gray-50">
               {recentProjects.map((p) => (
-                <tr key={p.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={p.id} className="hover:bg-gray-50/60">
                   <td className="px-5 py-3">
-                    <p className="font-medium text-gray-900 text-xs">{p.name}</p>
-                    <p className="text-gray-400 text-xs">{formatCurrency(p.value)}</p>
+                    <Link href={`/projects/${p.id}`} className="text-xs font-medium text-gray-900 hover:underline block truncate max-w-[140px]">{p.name}</Link>
+                    <p className="text-xs text-gray-400">{fmt(p.value)}</p>
                   </td>
-                  <td className="px-5 py-3 text-right">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${projectStatusColors[p.status] || "bg-gray-100 text-gray-600"}`}>
+                  <td className="px-4 py-3 text-right">
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${projectStatusBadge[p.status] ?? "bg-gray-100 text-gray-500"}`}>
                       {PROJECT_LABEL[p.status] ?? p.status}
                     </span>
                   </td>
                 </tr>
               ))}
               {recentProjects.length === 0 && (
-                <tr><td colSpan={2} className="px-5 py-8 text-center text-gray-400 text-xs">Belum ada project</td></tr>
+                <tr><td colSpan={2} className="px-5 py-8 text-center text-xs text-gray-400">Belum ada proyek</td></tr>
               )}
             </tbody>
           </table>
-        </div>
+        </Card>
 
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        {/* Invoice terbaru */}
+        <Card className="overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
             <h3 className="text-sm font-semibold text-gray-800">Invoice Terbaru</h3>
-            <Link href="/invoices" className="text-xs text-blue-600 hover:underline">Lihat semua</Link>
+            <Link href="/invoices" className="text-xs text-blue-600 hover:underline">Semua →</Link>
           </div>
-          <table className="w-full text-sm">
+          <table className="w-full">
             <tbody className="divide-y divide-gray-50">
               {recentInvoices.map((inv) => {
-                const outstanding = inv.total_amount - inv.paid_amount;
                 const proj = projects.find((p) => p.id === inv.project_id);
                 const cl = clients.find((c) => c.id === inv.client_id);
-                const statusColors: Record<string, string> = {
-                  draft: "bg-gray-100 text-gray-600",
-                  sent: "bg-blue-100 text-blue-700",
-                  partial: "bg-yellow-100 text-yellow-700",
-                  paid: "bg-green-100 text-green-700",
-                  overdue: "bg-red-100 text-red-700",
-                };
-                const statusLabels: Record<string, string> = {
-                  draft: "Draft", sent: "Terkirim", partial: "Sebagian", paid: "Lunas", overdue: "Jatuh Tempo",
-                };
+                const outstanding = inv.total_amount - inv.paid_amount;
                 return (
-                  <tr key={inv.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={inv.id} className="hover:bg-gray-50/60">
                     <td className="px-5 py-3">
-                      <Link href={`/invoices/${inv.id}`} className="font-medium text-gray-900 text-xs hover:underline">
-                        {inv.invoice_number}
-                      </Link>
-                      <p className="text-gray-400 text-xs truncate">
+                      <Link href={`/invoices/${inv.id}`} className="text-xs font-medium text-gray-900 hover:underline">{inv.invoice_number}</Link>
+                      <p className="text-xs text-gray-400 truncate max-w-[140px]">
                         {proj?.name ?? cl?.name ?? "—"}
-                        {outstanding > 0 && <span className="ml-1">· sisa {formatCurrencyShort(outstanding)}</span>}
+                        {outstanding > 0 && <span className="ml-1">· sisa {fmtShort(outstanding)}</span>}
                       </p>
                     </td>
-                    <td className="px-5 py-3 text-right">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${statusColors[inv.status] ?? "bg-gray-100 text-gray-600"}`}>
-                        {statusLabels[inv.status] ?? inv.status}
+                    <td className="px-4 py-3 text-right">
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${invoiceStatusBadge[inv.status] ?? "bg-gray-100 text-gray-500"}`}>
+                        {invoiceStatusLabels[inv.status] ?? inv.status}
                       </span>
                     </td>
                   </tr>
                 );
               })}
               {recentInvoices.length === 0 && (
-                <tr><td colSpan={2} className="px-5 py-8 text-center text-gray-400 text-xs">Belum ada invoice</td></tr>
+                <tr><td colSpan={2} className="px-5 py-8 text-center text-xs text-gray-400">Belum ada invoice</td></tr>
               )}
             </tbody>
           </table>
-        </div>
+        </Card>
+
+        {/* Laba per proyek */}
+        <Card className="overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
+            <h3 className="text-sm font-semibold text-gray-800">Laba per Proyek</h3>
+            <Link href="/reports" className="text-xs text-blue-600 hover:underline">Laporan →</Link>
+          </div>
+          <table className="w-full">
+            <tbody className="divide-y divide-gray-50">
+              {labaRows.map(({ p, laba, margin }) => (
+                <tr key={p.id} className="hover:bg-gray-50/60">
+                  <td className="px-5 py-3">
+                    <Link href={`/projects/${p.id}`} className="text-xs font-medium text-gray-900 hover:underline block truncate max-w-[140px]">{p.name}</Link>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <p className={`text-xs font-semibold ${laba >= 0 ? "text-green-600" : "text-red-500"}`}>{fmtShort(laba)}</p>
+                    {margin !== null && (
+                      <p className={`text-xs ${margin < 0 ? "text-red-400" : margin < 20 ? "text-yellow-500" : "text-green-400"}`}>{margin}%</p>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {labaRows.length === 0 && (
+                <tr><td colSpan={2} className="px-5 py-8 text-center text-xs text-gray-400">Belum ada data laba</td></tr>
+              )}
+            </tbody>
+          </table>
+        </Card>
       </div>
+
     </div>
   );
 }
