@@ -9,6 +9,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { LaporanPendapatan } from "./LaporanPendapatan";
 import { LaporanPengeluaran } from "./LaporanPengeluaran";
+import { LaporanArusKas } from "./LaporanArusKas";
 
 const formatCurrency = (v?: number) =>
   v == null
@@ -65,6 +66,7 @@ const TABS = [
   { key: "labarugi", label: "Laba Rugi" },
   { key: "pendapatan", label: "Lap. Pendapatan" },
   { key: "pengeluaran", label: "Lap. Pengeluaran" },
+  { key: "aruskas", label: "Arus Kas" },
 ];
 
 const invoiceStatusColors: Record<string, string> = {
@@ -996,6 +998,17 @@ export default function ReportsOverview() {
       {tab === "pengeluaran" && (
         <LaporanPengeluaran
           expenses={expenses}
+          projects={projects}
+          clients={clients}
+        />
+      )}
+
+      {/* ── TAB: Laporan Arus Kas ── */}
+      {tab === "aruskas" && (
+        <LaporanArusKas
+          payments={payments}
+          expenses={expenses}
+          invoices={invoices}
           projects={projects}
           clients={clients}
         />
