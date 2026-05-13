@@ -461,8 +461,6 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                 <tr>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase w-10">No</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase w-36">Deskripsi</th>
-                  <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase w-14">P (m)</th>
-                  <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase w-14">L (m)</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Spesifikasi</th>
                   <th className="px-3 py-3 text-right text-xs font-semibold text-gray-500 uppercase w-20">QTY</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase w-16">Unit</th>
@@ -474,7 +472,7 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
               <tbody>
                 {groups.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="px-6 py-12 text-center text-gray-400 text-sm">
+                    <td colSpan={6} className="px-6 py-12 text-center text-gray-400 text-sm">
                       Belum ada section. Klik "+ Tambah Section" untuk mulai.
                     </td>
                   </tr>
@@ -484,7 +482,7 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                     {/* Group Header Row */}
                     <tr key={`group-${group.id}`} className="bg-gray-50 border-t border-gray-200">
                       <td className="px-3 py-2 font-semibold text-gray-700 text-sm">{group.no}</td>
-                      <td colSpan={7} className="px-3 py-2">
+                      <td colSpan={5} className="px-3 py-2">
                         <input
                           type="text"
                           value={group.deskripsi}
@@ -511,30 +509,6 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                       <tr key={item.id} className="border-t border-gray-100 hover:bg-gray-50 transition-colors group/row">
                         <td className="px-3 py-2" />
                         <td className="px-3 py-2" />
-                        {/* Dimensi P */}
-                        <td className="px-1 py-2">
-                          <input
-                            type="number"
-                            value={item.dimensi_p || ""}
-                            onChange={(e) => updateItemLocal(group.id, item.id, "dimensi_p", parseFloat(e.target.value) || 0)}
-                            onBlur={() => handleBlurItem(item, "dimensi_p")}
-                            className="w-full text-center bg-transparent outline-none text-gray-600 focus:bg-white focus:px-1 focus:rounded transition text-xs"
-                            placeholder="—"
-                            step="0.01"
-                          />
-                        </td>
-                        {/* Dimensi L */}
-                        <td className="px-1 py-2">
-                          <input
-                            type="number"
-                            value={item.dimensi_l || ""}
-                            onChange={(e) => updateItemLocal(group.id, item.id, "dimensi_l", parseFloat(e.target.value) || 0)}
-                            onBlur={() => handleBlurItem(item, "dimensi_l")}
-                            className="w-full text-center bg-transparent outline-none text-gray-600 focus:bg-white focus:px-1 focus:rounded transition text-xs"
-                            placeholder="—"
-                            step="0.01"
-                          />
-                        </td>
                         <td className="px-3 py-2">
                           <input
                             type="text"
@@ -595,7 +569,7 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                     <tr key={`add-item-${group.id}`} className="border-t border-dashed border-gray-200">
                       <td />
                       <td />
-                      <td colSpan={6} className="px-3 py-1.5">
+                      <td colSpan={4} className="px-3 py-1.5">
                         <button
                           onClick={() => handleAddItem(group.id)}
                           disabled={saving}
@@ -615,7 +589,7 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
 
                 {/* Tambah Section — above subtotal */}
                 <tr className="border-t border-dashed border-gray-200">
-                  <td colSpan={10} className="px-4 py-3">
+                  <td colSpan={8} className="px-4 py-3">
                     <button
                       onClick={handleAddGroup}
                       disabled={saving}
@@ -631,7 +605,7 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                 {groups.length > 0 && (
                   <>
                     <tr className="border-t-2 border-gray-300">
-                      <td colSpan={8} className="px-4 py-2.5 text-sm font-semibold text-gray-700 text-right">
+                      <td colSpan={6} className="px-4 py-2.5 text-sm font-semibold text-gray-700 text-right">
                         Subtotal
                       </td>
                       <td className="px-3 py-2.5 text-right text-sm font-semibold text-gray-700">
@@ -640,7 +614,7 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                       <td />
                     </tr>
                     <tr className="border-t border-gray-200">
-                      <td colSpan={7} className="px-4 py-2 text-sm text-gray-600 text-right">
+                      <td colSpan={5} className="px-4 py-2 text-sm text-gray-600 text-right">
                         Diskon
                       </td>
                       <td className="px-2 py-2">
@@ -673,7 +647,7 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                       <td />
                     </tr>
                     <tr className="border-t-2 border-gray-300 bg-gray-50">
-                      <td colSpan={8} className="px-4 py-3 text-sm font-bold text-gray-800 uppercase tracking-wide text-right">
+                      <td colSpan={6} className="px-4 py-3 text-sm font-bold text-gray-800 uppercase tracking-wide text-right">
                         TOTAL
                       </td>
                       <td className="px-3 py-3 text-right text-sm font-bold text-gray-900">
@@ -684,7 +658,7 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
 
                     {/* Skema Pembayaran header */}
                     <tr className="border-t-2 border-gray-200">
-                      <td colSpan={8} className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide text-left bg-gray-50">
+                      <td colSpan={6} className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide text-left bg-gray-50">
                         Skema Pembayaran
                       </td>
                       <td className="px-3 py-2 text-right bg-gray-50">
@@ -701,7 +675,7 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
 
                     {skema.length === 0 && (
                       <tr className="border-t border-dashed border-gray-200">
-                        <td colSpan={10} className="px-4 py-2 text-xs text-gray-400 italic">
+                        <td colSpan={8} className="px-4 py-2 text-xs text-gray-400 italic">
                           Belum ada skema pembayaran. Klik "+ Tambah Tahap" untuk menambahkan.
                         </td>
                       </tr>
@@ -714,7 +688,7 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                           <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">
                             Tahap {idx + 1}
                           </td>
-                          <td colSpan={6} className="px-3 py-2">
+                          <td colSpan={4} className="px-3 py-2">
                             <input
                               type="text"
                               value={s.keterangan}
@@ -758,7 +732,7 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
 
                     {skema.length > 0 && (
                       <tr className="border-t border-dashed border-gray-200">
-                        <td colSpan={7} className="px-4 py-1.5 text-xs text-right text-gray-400">
+                        <td colSpan={5} className="px-4 py-1.5 text-xs text-right text-gray-400">
                           Total skema
                         </td>
                         <td className="px-2 py-1.5">

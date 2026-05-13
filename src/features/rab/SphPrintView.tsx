@@ -41,11 +41,7 @@ interface Props {
 }
 
 /* ─── Brand constants ─────────────────────────────── */
-const NAVY   = "#1a2560";
-const GOLD   = "#c8a84b";
-const EMAIL  = "peshasuryaconstruction@gmail.com";
-const ADDR1  = "Lingkungan 02 citatah Dalam, Rt 04/Rw 04 (No 83),";
-const ADDR2  = "Kab. Bogor, Cibinong, Jawa Barat, ID, 16918";
+const NAVY = "#1a2560";
 
 /* ─── Default payment terms (fallback if no skema set) ─ */
 const DEFAULT_TERMIN = [
@@ -56,102 +52,11 @@ const DEFAULT_TERMIN = [
 ];
 
 /* ─── Logo SVG (approximate PT PESHA SURYA badge) ──── */
-function LogoBadge() {
-  return (
-    <svg viewBox="0 0 110 110" width="72" height="72" xmlns="http://www.w3.org/2000/svg">
-      {/* Outer circle */}
-      <circle cx="55" cy="55" r="53" fill={NAVY} />
-      <circle cx="55" cy="55" r="53" fill="none" stroke={GOLD} strokeWidth="3" />
-      {/* Inner thin ring */}
-      <circle cx="55" cy="55" r="46" fill="none" stroke={GOLD} strokeWidth="1" />
-
-      {/* Roof / pediment triangle */}
-      <polygon points="55,16 85,38 25,38" fill={GOLD} />
-      {/* Horizontal frieze below roof */}
-      <rect x="23" y="37" width="64" height="5" fill={GOLD} />
-
-      {/* Building body */}
-      <rect x="23" y="42" width="64" height="42" fill={GOLD} />
-
-      {/* 2×3 window grid (navy boxes on gold body) */}
-      <rect x="30" y="47" width="14" height="11" fill={NAVY} rx="1" />
-      <rect x="48" y="47" width="14" height="11" fill={NAVY} rx="1" />
-      <rect x="66" y="47" width="14" height="11" fill={NAVY} rx="1" />
-      <rect x="30" y="61" width="14" height="11" fill={NAVY} rx="1" />
-      <rect x="66" y="61" width="14" height="11" fill={NAVY} rx="1" />
-
-      {/* Centre door / arch */}
-      <rect x="46" y="61" width="18" height="23" fill={NAVY} rx="1" />
-      <path d="M46,63 Q55,55 64,63" fill={NAVY} />
-    </svg>
-  );
-}
-
 /* ─── Kop header (shared between pages) ─────────────── */
 function KopHeader() {
   return (
-    <div style={{ position: "relative", width: "100%", height: "36mm", overflow: "hidden" }}>
-
-      {/* Navy right block — parallelogram via clip-path */}
-      <div style={{
-        position: "absolute", top: 0, left: 0, right: 0,
-        height: "26mm",
-        background: NAVY,
-        clipPath: "polygon(34% 0%, 100% 0%, 100% 100%, 28% 100%)",
-      }} />
-
-      {/* Gold bar below the navy block */}
-      <div style={{
-        position: "absolute", top: "26mm", left: 0, right: 0,
-        height: "10mm",
-        background: GOLD,
-        clipPath: "polygon(31% 0%, 100% 0%, 100% 100%, 25% 100%)",
-      }} />
-
-      {/* Tagline text inside the navy block */}
-      <div style={{
-        position: "absolute", top: 0, right: "8mm",
-        height: "26mm",
-        display: "flex", alignItems: "center",
-        textAlign: "right",
-        color: "#ffffff",
-        fontSize: "7.5pt",
-        fontWeight: "700",
-        lineHeight: 1.6,
-        letterSpacing: "0.3px",
-        fontFamily: "Arial, sans-serif",
-      }}>
-        INTERIOR, EKSTERIOR, KONTRAKTOR BANGUNAN,<br />
-        ALUMUNIUM, BAJA RINGAN, GLASS ART,DLL
-      </div>
-
-      {/* Logo + company name — sits on the white left area */}
-      <div style={{
-        position: "absolute", top: "4mm", left: "12mm",
-        display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "2px",
-      }}>
-        <LogoBadge />
-        <div style={{
-          fontFamily: "Arial, sans-serif",
-          fontWeight: "900",
-          fontSize: "11pt",
-          color: NAVY,
-          letterSpacing: "0.5px",
-          lineHeight: 1.1,
-          marginTop: "2px",
-        }}>
-          PT PESHA SURYA
-        </div>
-        <div style={{
-          fontFamily: "Arial, sans-serif",
-          fontWeight: "700",
-          fontSize: "6.5pt",
-          color: GOLD,
-          letterSpacing: "3px",
-        }}>
-          CONSTRUCTION
-        </div>
-      </div>
+    <div style={{ width: "100%", lineHeight: 0 }}>
+      <img src="/header.png" alt="" style={{ width: "100%", display: "block" }} />
     </div>
   );
 }
@@ -159,54 +64,8 @@ function KopHeader() {
 /* ─── Kop footer (shared between pages) ─────────────── */
 function KopFooter() {
   return (
-    <div style={{
-      position: "absolute", bottom: 0, left: 0, right: 0,
-      height: "20mm",
-      overflow: "hidden",
-    }}>
-      {/* Navy wedge at bottom-left */}
-      <div style={{
-        position: "absolute", bottom: 0, left: 0,
-        width: "38mm", height: "14mm",
-        background: NAVY,
-        clipPath: "polygon(0% 100%, 0% 40%, 100% 100%)",
-      }} />
-
-      {/* Gold bar at bottom-right */}
-      <div style={{
-        position: "absolute", bottom: 0, left: 0, right: 0,
-        height: "8mm",
-        background: GOLD,
-        clipPath: "polygon(60% 0%, 100% 0%, 100% 100%, 55% 100%)",
-      }} />
-
-      {/* Contact info */}
-      <div style={{
-        position: "absolute", bottom: "9mm", left: "14mm",
-        fontFamily: "Arial, sans-serif",
-        fontSize: "7.5pt",
-        color: "#222",
-        lineHeight: 1.6,
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-          {/* Email icon */}
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-            <circle cx="8" cy="8" r="7.5" fill="#e05a2b" />
-            <rect x="3" y="5" width="10" height="7" rx="1" fill="none" stroke="#fff" strokeWidth="1" />
-            <path d="M3 6l5 3.5L13 6" stroke="#fff" strokeWidth="1" strokeLinecap="round" />
-          </svg>
-          <span>{EMAIL}</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: "5px", marginTop: "1px" }}>
-          {/* Location icon */}
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, marginTop: "1px" }}>
-            <circle cx="8" cy="8" r="7.5" fill="#e05a2b" />
-            <path d="M8 4C6.34 4 5 5.34 5 7c0 2.5 3 5 3 5s3-2.5 3-5c0-1.66-1.34-3-3-3z" fill="#fff" />
-            <circle cx="8" cy="7" r="1.2" fill="#e05a2b" />
-          </svg>
-          <span>{ADDR1}<br />{ADDR2}</span>
-        </div>
-      </div>
+    <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, lineHeight: 0 }}>
+      <img src="/footer.png" alt="" style={{ width: "100%", display: "block" }} />
     </div>
   );
 }
@@ -222,6 +81,7 @@ export default function SphPrintView({ rab, groups, config, onClose }: Props) {
   const groupSubtotal = (g: PrintGroup) =>
     g.items.reduce((s, i) => s + i.qty * i.harga, 0);
   const grandTotal = groups.reduce((s, g) => s + groupSubtotal(g), 0);
+  const netTotal = grandTotal - (rab.diskon_nilai ?? 0);
 
   const termin = (rab.skema_pembayaran ?? []).length > 0
     ? rab.skema_pembayaran!.map((s) => ({ label: s.keterangan, pct: s.persen / 100 }))
@@ -253,7 +113,7 @@ export default function SphPrintView({ rab, groups, config, onClose }: Props) {
             overflow: hidden;
           }
           .sph-page:last-child { page-break-after: auto; }
-          .sph-body { padding: 2mm 18mm 22mm; font-family: 'Times New Roman', serif; font-size: 10pt; }
+          .sph-body { padding: 2mm 18mm 26mm; font-family: 'Cambria', 'Times New Roman', serif; font-size: 10pt; }
           .rab-table { border-collapse: collapse; width: 100%; font-size: 8pt; }
           .rab-table th, .rab-table td { border: 1px solid #000; padding: 2.5px 4px; vertical-align: middle; }
           .rab-table th { text-align: center; font-weight: bold; }
@@ -262,9 +122,9 @@ export default function SphPrintView({ rab, groups, config, onClose }: Props) {
           .termin-table { border-collapse: collapse; width: 100%; font-size: 8pt; margin-top: 10px; }
           .termin-table td { border: 1px solid #000; padding: 3px 6px; }
         }
-        .sph-print { font-family: 'Times New Roman', serif; font-size: 10pt; color: #000; }
+        .sph-print { font-family: 'Cambria', 'Times New Roman', serif; font-size: 10pt; color: #000; }
         .sph-page { position: relative; width: 210mm; min-height: 297mm; box-sizing: border-box; overflow: hidden; }
-        .sph-body { padding: 2mm 18mm 22mm; }
+        .sph-body { padding: 2mm 18mm 26mm; }
       `}</style>
 
       {/* ════════════════════════════════════════
@@ -277,7 +137,7 @@ export default function SphPrintView({ rab, groups, config, onClose }: Props) {
           <Separator />
 
           {/* Nomor / Lampiran / Hal */}
-          <div style={{ marginBottom: "5mm", fontSize: "10pt", fontFamily: "'Times New Roman', serif" }}>
+          <div style={{ marginBottom: "5mm", fontSize: "10pt", fontFamily: "'Cambria', 'Times New Roman', serif" }}>
             {([
               ["Nomor",    nomorSph],
               ["Lampiran", "1 (satu) berkas RAB"],
@@ -304,20 +164,20 @@ export default function SphPrintView({ rab, groups, config, onClose }: Props) {
           {/* Body text */}
           <div style={{ fontSize: "10pt", textAlign: "justify", lineHeight: 1.8 }}>
             <p style={{ margin: "0 0 3.5mm" }}>
-              Sehubungan dengan rencana pekerjaan penataan Interior Full House, bersama ini kami
-              sampaikan Rencana Anggaran Biaya (RAB) sebagai bahan pertimbangan dan acuan. Dokumen
-              RAB tersebut telah kami susun berdasarkan spesifikasi pekerjaan, kebutuhan material,
-              dan ketentuan yang telah dibicarakan sebelumnya.
+              Sehubungan dengan rencana pekerjaan {rab.nama}, bersama ini kami sampaikan Rencana
+              Anggaran Biaya (RAB) sebagai bahan pertimbangan dan acuan. Dokumen RAB tersebut telah
+              kami susun berdasarkan spesifikasi pekerjaan, kebutuhan material, dan ketentuan yang
+              telah dibicarakan sebelumnya.
             </p>
             <p style={{ margin: "0 0 3.5mm" }}>
-              Kami berharap rincian yang kami sampaikan ini dapat membantu {config.greeting}{" "}
-              {config.clientName.split(" ")[0]} dalam menentukan pilihan terbaik sesuai kebutuhan
-              dan anggaran yang tersedia. Apabila diperlukan, kami siap memberikan penjelasan lebih
-              detail atau melakukan penyesuaian sesuai masukan dari {config.greeting}.
+              Kami berharap rincian yang kami sampaikan ini dapat membantu Bapak/Ibu dalam
+              menentukan pilihan terbaik sesuai kebutuhan dan anggaran yang tersedia. Apabila
+              diperlukan, kami siap memberikan penjelasan lebih detail atau melakukan penyesuaian
+              sesuai masukan dari Bapak/Ibu.
             </p>
             <p style={{ margin: 0 }}>
               Demikian surat penawaran ini kami sampaikan. Atas perhatian, waktu, dan kerja sama
-              yang baik dari {config.greeting}, kami ucapkan terima kasih.
+              yang baik dari Bapak/Ibu, kami ucapkan terima kasih.
             </p>
           </div>
 
@@ -342,7 +202,7 @@ export default function SphPrintView({ rab, groups, config, onClose }: Props) {
         <div className="sph-body">
           <Separator />
 
-          <div style={{ fontSize: "8.5pt", marginBottom: "3mm", fontFamily: "'Times New Roman', serif" }}>
+          <div style={{ fontSize: "8.5pt", marginBottom: "3mm", fontFamily: "'Cambria', 'Times New Roman', serif" }}>
             Lampiran I
           </div>
 
@@ -350,27 +210,22 @@ export default function SphPrintView({ rab, groups, config, onClose }: Props) {
             textAlign: "center", fontWeight: "bold",
             fontSize: "9.5pt", marginBottom: "4mm",
             textTransform: "uppercase",
-            fontFamily: "'Times New Roman', serif",
+            fontFamily: "'Cambria', 'Times New Roman', serif",
           }}>
-            <div>Rencana Anggaran Biaya</div>
-            <div>Pekerjaan Interior {rab.nama}</div>
+            <div>Lampiran</div>
+            <div>Rancangan Anggaran Biaya</div>
           </div>
 
           <table className="rab-table">
             <thead>
               <tr>
-                <th style={{ width: "22px" }} rowSpan={2}>NO</th>
-                <th style={{ width: "90px" }} rowSpan={2}>DESKRIPSI</th>
-                <th colSpan={2}>DIMENSI</th>
-                <th rowSpan={2}>SPESIFIKASI</th>
-                <th style={{ width: "34px" }} rowSpan={2}>QTY</th>
-                <th style={{ width: "26px" }} rowSpan={2}>SAT</th>
-                <th style={{ width: "68px" }} rowSpan={2}>HARGA</th>
-                <th style={{ width: "76px" }} rowSpan={2}>TOTAL</th>
-              </tr>
-              <tr>
-                <th style={{ width: "28px" }}>P</th>
-                <th style={{ width: "28px" }}>L</th>
+                <th style={{ width: "22px" }}>NO</th>
+                <th style={{ width: "90px" }}>DESKRIPSI</th>
+                <th>SPESIFIKASI</th>
+                <th style={{ width: "34px" }}>QTY</th>
+                <th style={{ width: "26px" }}>SAT</th>
+                <th style={{ width: "68px" }}>HARGA</th>
+                <th style={{ width: "76px" }}>TOTAL</th>
               </tr>
             </thead>
             <tbody>
@@ -382,7 +237,7 @@ export default function SphPrintView({ rab, groups, config, onClose }: Props) {
                       <tr key={item.id}>
                         {idx === 0 && (
                           <>
-                            <td style={{ textAlign: "center", verticalAlign: "top" }} rowSpan={group.items.length || 1}>
+                            <td style={{ textAlign: "center", verticalAlign: "top", fontSize: "7.5pt" }} rowSpan={group.items.length || 1}>
                               {group.no}
                             </td>
                             <td style={{ verticalAlign: "top", fontWeight: "600", fontSize: "7.5pt" }} rowSpan={group.items.length || 1}>
@@ -390,16 +245,6 @@ export default function SphPrintView({ rab, groups, config, onClose }: Props) {
                             </td>
                           </>
                         )}
-                        <td style={{ textAlign: "center", fontSize: "7.5pt" }}>
-                          {item.dimensi_p != null && item.dimensi_p > 0
-                            ? item.dimensi_p.toLocaleString("id-ID", { maximumFractionDigits: 2 })
-                            : ""}
-                        </td>
-                        <td style={{ textAlign: "center", fontSize: "7.5pt" }}>
-                          {item.dimensi_l != null && item.dimensi_l > 0
-                            ? item.dimensi_l.toLocaleString("id-ID", { maximumFractionDigits: 2 })
-                            : ""}
-                        </td>
                         <td style={{ fontSize: "7.5pt" }}>{item.spesifikasi}</td>
                         <td style={{ textAlign: "right", fontSize: "7.5pt" }}>
                           {item.qty > 0
@@ -416,7 +261,7 @@ export default function SphPrintView({ rab, groups, config, onClose }: Props) {
                       </tr>
                     ))}
                     <tr className="subtotal-row">
-                      <td colSpan={8} style={{ textAlign: "center", fontWeight: "600" }}>Sub Total</td>
+                      <td colSpan={6} style={{ textAlign: "center", fontWeight: "600" }}>Sub Total</td>
                       <td style={{ textAlign: "right", fontWeight: "600" }}>{fmt(sub)}</td>
                     </tr>
                   </React.Fragment>
@@ -424,11 +269,25 @@ export default function SphPrintView({ rab, groups, config, onClose }: Props) {
               })}
             </tbody>
             <tfoot>
+              <tr>
+                <td colSpan={6} style={{ textAlign: "center", fontWeight: "600" }}>Total Sebelum Diskon</td>
+                <td style={{ textAlign: "right", fontWeight: "600" }}>{fmt(grandTotal)}</td>
+              </tr>
+              <tr>
+                <td colSpan={6} style={{ textAlign: "center" }}>
+                  Diskon{(rab.diskon_persen ?? 0) > 0 ? ` (${rab.diskon_persen}%)` : ""}
+                </td>
+                <td style={{ textAlign: "right" }}>
+                  {(rab.diskon_nilai ?? 0) > 0 ? `(${fmt(rab.diskon_nilai ?? 0)})` : fmt(0)}
+                </td>
+              </tr>
               <tr className="grand-total-row">
-                <td colSpan={8} style={{ textAlign: "center", fontWeight: "bold", textTransform: "uppercase" }}>
+                <td colSpan={6} style={{ textAlign: "center", fontWeight: "bold", textTransform: "uppercase" }}>
                   Grand Total
                 </td>
-                <td style={{ textAlign: "right", fontWeight: "bold" }}>{fmt(grandTotal)}</td>
+                <td style={{ textAlign: "right", fontWeight: "bold" }}>
+                  {fmt(grandTotal - (rab.diskon_nilai ?? 0))}
+                </td>
               </tr>
             </tfoot>
           </table>
@@ -453,7 +312,7 @@ export default function SphPrintView({ rab, groups, config, onClose }: Props) {
                     border: "1px solid #000", padding: "3px 8px",
                     textAlign: "right", fontWeight: "600", whiteSpace: "nowrap", width: "88px",
                   }}>
-                    {fmt(Math.round(grandTotal * t.pct))}
+                    {fmt(Math.round(netTotal * t.pct))}
                   </td>
                 </tr>
               ))}
