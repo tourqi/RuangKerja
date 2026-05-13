@@ -60,6 +60,11 @@ export interface Project {
 
 export type RabStatus = 'draft' | 'sent' | 'approved';
 
+export interface SkemaPembayaran {
+  persen: number;
+  keterangan: string;
+}
+
 export interface Rab {
   id: string;
   lead_id: string;
@@ -67,6 +72,7 @@ export interface Rab {
   status: RabStatus;
   diskon_persen?: number;
   diskon_nilai?: number;
+  skema_pembayaran?: SkemaPembayaran[];
   created_at?: string;
   updated_at?: string;
 }

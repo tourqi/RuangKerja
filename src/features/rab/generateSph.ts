@@ -272,14 +272,16 @@ function buildRabTable(groups: PrintGroup[], grandTotal: number): Table {
   });
 }
 
+const DEFAULT_TERMIN = [
+  { label: "Progres 0% sd 30% : Dibayar DP 30%",                                                     pct: 0.3  },
+  { label: "Progres Pekerjaan 31% sd 60% dan Pemasangan 50%: Dibayar 30%",                           pct: 0.3  },
+  { label: "Progres Pekerjaan 76% sd 90% & Pemasangan 70%: Dibayar 30%",                             pct: 0.3  },
+  { label: "Progress Pekerjaan dan Pemasangan 100% dan BAST Sudah Ditandatangan: Dibayar 10%",       pct: 0.1  },
+];
+
 /* ─── Termin table ───────────────────────────────── */
-function buildTerminTable(grandTotal: number): Table {
-  const TERMIN = [
-    { label: "Progres 0% sd 30% : Dibayar DP 30%",                                                     pct: 0.3  },
-    { label: "Progres Pekerjaan 31% sd 60% dan Pemasangan 50%: Dibayar 30%",                           pct: 0.3  },
-    { label: "Progres Pekerjaan 76% sd 90% & Pemasangan 70%: Dibayar 30%",                             pct: 0.3  },
-    { label: "Progress Pekerjaan dan Pemasangan 100% dan BAST Sudah Ditandatangan: Dibayar 10%",       pct: 0.1  },
-  ];
+function buildTerminTable(grandTotal: number, termin: Array<{ label: string; pct: number }>): Table {
+  const TERMIN = termin;
 
   return new Table({
     width:  { size: CONTENT_W, type: WidthType.DXA },
@@ -430,7 +432,10 @@ export async function generateSphDocx(
     }),
     buildRabTable(groups, grandTotal),
     new Paragraph({ spacing: { before: MM(6), after: 0 }, children: [] }),
-    buildTerminTable(grandTotal),
+    buildTerminTable(grandTotal, (rab.skema_pembayaran ?? []).length > 0
+      ? rab.skema_pembayaran!.map((s) => ({ label: s.keterangan, pct: s.persen / 100 }))
+      : DEFAULT_TERMIN
+    ),
   ];
 
   /* ── Build document ── */

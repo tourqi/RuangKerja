@@ -47,8 +47,8 @@ const EMAIL  = "peshasuryaconstruction@gmail.com";
 const ADDR1  = "Lingkungan 02 citatah Dalam, Rt 04/Rw 04 (No 83),";
 const ADDR2  = "Kab. Bogor, Cibinong, Jawa Barat, ID, 16918";
 
-/* ─── Payment terms ───────────────────────────────── */
-const TERMIN = [
+/* ─── Default payment terms (fallback if no skema set) ─ */
+const DEFAULT_TERMIN = [
   { label: "Progres 0% sd 30% : Dibayar DP 30%",                                                      pct: 0.3  },
   { label: "Progres Pekerjaan 31% sd 60% dan Pemasangan 50%: Dibayar 30%",                            pct: 0.3  },
   { label: "Progres Pekerjaan 76% sd 90% & Pemasangan 70%: Dibayar 30%",                              pct: 0.3  },
@@ -222,6 +222,10 @@ export default function SphPrintView({ rab, groups, config, onClose }: Props) {
   const groupSubtotal = (g: PrintGroup) =>
     g.items.reduce((s, i) => s + i.qty * i.harga, 0);
   const grandTotal = groups.reduce((s, g) => s + groupSubtotal(g), 0);
+
+  const termin = (rab.skema_pembayaran ?? []).length > 0
+    ? rab.skema_pembayaran!.map((s) => ({ label: s.keterangan, pct: s.persen / 100 }))
+    : DEFAULT_TERMIN;
 
   const now   = new Date();
   const nomorSph = config.nomorSph ||
@@ -442,7 +446,7 @@ export default function SphPrintView({ rab, groups, config, onClose }: Props) {
               </tr>
             </thead>
             <tbody>
-              {TERMIN.map((t) => (
+              {termin.map((t) => (
                 <tr key={t.label}>
                   <td style={{ border: "1px solid #000", padding: "3px 6px" }}>{t.label}</td>
                   <td style={{

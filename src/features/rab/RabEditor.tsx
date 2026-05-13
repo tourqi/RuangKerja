@@ -14,7 +14,7 @@ import {
   updateRab,
 } from "@/services/rab";
 import { getRabByLead } from "@/services/rab";
-import { Rab, RabGroup, RabItem } from "@/types/db";
+import { Rab, RabGroup, RabItem, SkemaPembayaran } from "@/types/db";
 import RabPrintView from "@/features/rab/RabPrintView";
 import SphPrintView, { SphConfig } from "@/features/rab/SphPrintView";
 import { generateSphDocx } from "@/features/rab/generateSph";
@@ -44,6 +44,7 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [diskon, setDiskon] = useState({ persen: "", nilai: "" });
+  const [skema, setSkema] = useState<Array<{ persen: string; keterangan: string }>>([]);
   const [showPrint, setShowPrint] = useState(false);
   const [showSph, setShowSph] = useState(false);
   const [showSphDialog, setShowSphDialog] = useState(false);
@@ -73,6 +74,12 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
         persen: rabData?.diskon_persen ? String(rabData.diskon_persen) : "",
         nilai: rabData?.diskon_nilai ? String(rabData.diskon_nilai) : "",
       });
+      setSkema(
+        (rabData?.skema_pembayaran ?? []).map((s) => ({
+          persen: String(s.persen),
+          keterangan: s.keterangan,
+        }))
+      );
       setGroups(
         rawGroups.map((g) => ({
           id: g.id,
@@ -142,6 +149,37 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
     } catch {
       toast("Gagal menyimpan diskon", "error");
     }
+  }
+
+  async function handleSaveSkema(updatedSkema?: typeof skema) {
+    if (!rab) return;
+    const toSave = updatedSkema ?? skema;
+    const parsed = toSave.map((s) => ({
+      persen: parseFloat(s.persen) || 0,
+      keterangan: s.keterangan,
+    })) as SkemaPembayaran[];
+    try {
+      await updateRab(rab.id, { skema_pembayaran: parsed });
+      setRab({ ...rab, skema_pembayaran: parsed });
+    } catch {
+      toast("Gagal menyimpan skema pembayaran", "error");
+    }
+  }
+
+  function handleAddSkema() {
+    const next = [...skema, { persen: "", keterangan: "" }];
+    setSkema(next);
+    handleSaveSkema(next);
+  }
+
+  function handleRemoveSkema(idx: number) {
+    const next = skema.filter((_, i) => i !== idx);
+    setSkema(next);
+    handleSaveSkema(next);
+  }
+
+  function updateSkemaLocal(idx: number, field: "persen" | "keterangan", value: string) {
+    setSkema((prev) => prev.map((s, i) => (i === idx ? { ...s, [field]: value } : s)));
   }
 
   // --- RAB NAME ---
@@ -574,76 +612,171 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                     </tr>
                   </React.Fragment>
                 ))}
+
+                {/* Tambah Section — above subtotal */}
+                <tr className="border-t border-dashed border-gray-200">
+                  <td colSpan={10} className="px-4 py-3">
+                    <button
+                      onClick={handleAddGroup}
+                      disabled={saving}
+                      className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition disabled:opacity-50"
+                    >
+                      <span className="text-lg leading-none">+</span> Tambah Section
+                    </button>
+                  </td>
+                </tr>
               </tbody>
 
-              {/* Grand Total */}
-              {groups.length > 0 && (
-                <tfoot>
-                  <tr className="border-t-2 border-gray-300">
-                    <td colSpan={8} className="px-4 py-2.5 text-sm font-semibold text-gray-700 text-right">
-                      Subtotal
-                    </td>
-                    <td className="px-3 py-2.5 text-right text-sm font-semibold text-gray-700">
-                      Rp {formatCurrency(grandTotal)}
-                    </td>
-                    <td />
-                  </tr>
-                  <tr className="border-t border-gray-200">
-                    <td colSpan={7} className="px-4 py-2 text-sm text-gray-600 text-right">
-                      Diskon
-                    </td>
-                    <td className="px-2 py-2">
-                      <div className="relative">
+              <tfoot>
+                {groups.length > 0 && (
+                  <>
+                    <tr className="border-t-2 border-gray-300">
+                      <td colSpan={8} className="px-4 py-2.5 text-sm font-semibold text-gray-700 text-right">
+                        Subtotal
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-sm font-semibold text-gray-700">
+                        Rp {formatCurrency(grandTotal)}
+                      </td>
+                      <td />
+                    </tr>
+                    <tr className="border-t border-gray-200">
+                      <td colSpan={7} className="px-4 py-2 text-sm text-gray-600 text-right">
+                        Diskon
+                      </td>
+                      <td className="px-2 py-2">
+                        <div className="relative">
+                          <input
+                            type="number"
+                            value={diskon.persen}
+                            onChange={(e) => handleDiskonPersenChange(e.target.value)}
+                            onBlur={handleSaveDiskon}
+                            placeholder="0"
+                            min="0"
+                            max="100"
+                            step="0.01"
+                            className="w-full text-right bg-white border border-gray-200 rounded px-2 py-1 text-sm outline-none focus:ring-1 focus:ring-gray-400 pr-6"
+                          />
+                          <span className="absolute right-2 top-1.5 text-xs text-gray-400">%</span>
+                        </div>
+                      </td>
+                      <td className="px-2 py-2">
                         <input
                           type="number"
-                          value={diskon.persen}
-                          onChange={(e) => handleDiskonPersenChange(e.target.value)}
+                          value={diskon.nilai}
+                          onChange={(e) => handleDiskonNilaiChange(e.target.value)}
                           onBlur={handleSaveDiskon}
                           placeholder="0"
                           min="0"
-                          max="100"
-                          step="0.01"
-                          className="w-full text-right bg-white border border-gray-200 rounded px-2 py-1 text-sm outline-none focus:ring-1 focus:ring-gray-400 pr-6"
+                          className="w-full text-right bg-white border border-gray-200 rounded px-2 py-1 text-sm outline-none focus:ring-1 focus:ring-gray-400"
                         />
-                        <span className="absolute right-2 top-1.5 text-xs text-gray-400">%</span>
-                      </div>
-                    </td>
-                    <td className="px-2 py-2">
-                      <input
-                        type="number"
-                        value={diskon.nilai}
-                        onChange={(e) => handleDiskonNilaiChange(e.target.value)}
-                        onBlur={handleSaveDiskon}
-                        placeholder="0"
-                        min="0"
-                        className="w-full text-right bg-white border border-gray-200 rounded px-2 py-1 text-sm outline-none focus:ring-1 focus:ring-gray-400"
-                      />
-                    </td>
-                    <td />
-                  </tr>
-                  <tr className="border-t-2 border-gray-300 bg-gray-50">
-                    <td colSpan={8} className="px-4 py-3 text-sm font-bold text-gray-800 uppercase tracking-wide text-right">
-                      TOTAL
-                    </td>
-                    <td className="px-3 py-3 text-right text-sm font-bold text-gray-900">
-                      Rp {formatCurrency(netTotal)}
-                    </td>
-                    <td />
-                  </tr>
-                </tfoot>
-              )}
-            </table>
-          </div>
+                      </td>
+                      <td />
+                    </tr>
+                    <tr className="border-t-2 border-gray-300 bg-gray-50">
+                      <td colSpan={8} className="px-4 py-3 text-sm font-bold text-gray-800 uppercase tracking-wide text-right">
+                        TOTAL
+                      </td>
+                      <td className="px-3 py-3 text-right text-sm font-bold text-gray-900">
+                        Rp {formatCurrency(netTotal)}
+                      </td>
+                      <td />
+                    </tr>
 
-          {/* Add Section Button */}
-          <div className="px-4 py-3 border-t border-gray-100">
-            <button
-              onClick={handleAddGroup}
-              disabled={saving}
-              className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition disabled:opacity-50"
-            >
-              <span className="text-lg leading-none">+</span> Tambah Section
-            </button>
+                    {/* Skema Pembayaran header */}
+                    <tr className="border-t-2 border-gray-200">
+                      <td colSpan={8} className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide text-left bg-gray-50">
+                        Skema Pembayaran
+                      </td>
+                      <td className="px-3 py-2 text-right bg-gray-50">
+                        <button
+                          onClick={handleAddSkema}
+                          className="text-xs text-blue-500 hover:text-blue-700 font-medium transition"
+                          title="Tambah tahap pembayaran"
+                        >
+                          + Tambah Tahap
+                        </button>
+                      </td>
+                      <td className="bg-gray-50" />
+                    </tr>
+
+                    {skema.length === 0 && (
+                      <tr className="border-t border-dashed border-gray-200">
+                        <td colSpan={10} className="px-4 py-2 text-xs text-gray-400 italic">
+                          Belum ada skema pembayaran. Klik "+ Tambah Tahap" untuk menambahkan.
+                        </td>
+                      </tr>
+                    )}
+
+                    {skema.map((s, idx) => {
+                      const amount = Math.round(netTotal * (parseFloat(s.persen) || 0) / 100);
+                      return (
+                        <tr key={idx} className="border-t border-gray-100 group/skema">
+                          <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">
+                            Tahap {idx + 1}
+                          </td>
+                          <td colSpan={6} className="px-3 py-2">
+                            <input
+                              type="text"
+                              value={s.keterangan}
+                              onChange={(e) => updateSkemaLocal(idx, "keterangan", e.target.value)}
+                              onBlur={() => handleSaveSkema()}
+                              placeholder="Keterangan tahap pembayaran..."
+                              className="w-full bg-transparent outline-none text-sm text-gray-700 focus:bg-white focus:px-2 focus:rounded transition"
+                            />
+                          </td>
+                          <td className="px-2 py-2">
+                            <div className="relative">
+                              <input
+                                type="number"
+                                value={s.persen}
+                                onChange={(e) => updateSkemaLocal(idx, "persen", e.target.value)}
+                                onBlur={() => handleSaveSkema()}
+                                placeholder="0"
+                                min="0"
+                                max="100"
+                                step="0.01"
+                                className="w-full text-right bg-white border border-gray-200 rounded px-2 py-1 text-sm outline-none focus:ring-1 focus:ring-gray-400 pr-6"
+                              />
+                              <span className="absolute right-2 top-1.5 text-xs text-gray-400">%</span>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2 text-right text-sm font-medium text-gray-700">
+                            {amount > 0 ? `Rp ${formatCurrency(amount)}` : "—"}
+                          </td>
+                          <td className="px-3 py-2 text-right">
+                            <button
+                              onClick={() => handleRemoveSkema(idx)}
+                              className="text-red-300 hover:text-red-500 transition text-xs opacity-0 group-hover/skema:opacity-100"
+                              title="Hapus tahap"
+                            >
+                              ✕
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+
+                    {skema.length > 0 && (
+                      <tr className="border-t border-dashed border-gray-200">
+                        <td colSpan={7} className="px-4 py-1.5 text-xs text-right text-gray-400">
+                          Total skema
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <span className={`text-xs font-medium ${Math.abs(skema.reduce((s, item) => s + (parseFloat(item.persen) || 0), 0) - 100) < 0.01 ? "text-green-600" : "text-amber-600"}`}>
+                            {skema.reduce((s, item) => s + (parseFloat(item.persen) || 0), 0).toFixed(0)}%
+                          </span>
+                        </td>
+                        <td className="px-3 py-1.5 text-right text-xs text-gray-500">
+                          {formatCurrency(skema.reduce((s, item) => s + Math.round(netTotal * (parseFloat(item.persen) || 0) / 100), 0))}
+                        </td>
+                        <td />
+                      </tr>
+                    )}
+                  </>
+                )}
+
+              </tfoot>
+            </table>
           </div>
         </div>
       </div>
