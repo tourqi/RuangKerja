@@ -4,13 +4,29 @@ import { usePathname, useRouter } from "next/navigation";
 import React, { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 
-const navItems = [
+interface NavItem {
+  href: string;
+  label: string;
+  icon: string;
+  children?: { href: string; label: string }[];
+}
+
+const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: "▦" },
   { href: "/clients", label: "Clients", icon: "⊙" },
   { href: "/leads", label: "Leads", icon: "◎" },
   { href: "/projects", label: "Projects", icon: "▣" },
   { href: "/invoices", label: "Invoice", icon: "◧" },
-  { href: "/reports", label: "Laporan", icon: "◈" },
+  { href: "/reports", label: "Laporan", icon: "◉" },
+  {
+    href: "/keuangan",
+    label: "Keuangan",
+    icon: "◈",
+    children: [
+      { href: "/keuangan/pengeluaran", label: "Pengeluaran Umum" },
+      { href: "/keuangan/laporan", label: "Laporan Keuangan" },
+    ],
+  },
 ];
 
 export default function Sidebar() {
@@ -24,33 +40,78 @@ export default function Sidebar() {
     router.push("/login");
   }
 
+  function NavLink({ item, onNav }: { item: NavItem; onNav?: () => void }) {
+    const isActive =
+      pathname === item.href ||
+      pathname.startsWith(item.href + "/") ||
+      item.children?.some((c) => pathname === c.href || pathname.startsWith(c.href + "/"));
+    const hasChildren = !!item.children?.length;
+
+    return (
+      <li>
+        {hasChildren ? (
+          <div>
+            <div
+              className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
+                isActive
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-400 hover:text-white hover:bg-white/10"
+              }`}
+            >
+              <span className="text-base">{item.icon}</span>
+              <span>{item.label}</span>
+            </div>
+            <ul className="mt-0.5 ml-8 space-y-0.5">
+              {item.children!.map((child) => {
+                const childActive = pathname === child.href || pathname.startsWith(child.href + "/");
+                return (
+                  <li key={child.href}>
+                    <Link
+                      href={child.href}
+                      onClick={onNav}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-150 ${
+                        childActive
+                          ? "bg-white/20 text-white"
+                          : "text-gray-500 hover:text-white hover:bg-white/10"
+                      }`}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 shrink-0" />
+                      {child.label}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ) : (
+          <Link
+            href={item.href}
+            onClick={onNav}
+            className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
+              isActive
+                ? "bg-white text-gray-900 shadow-sm"
+                : "text-gray-400 hover:text-white hover:bg-white/10"
+            }`}
+          >
+            <span className="text-base">{item.icon}</span>
+            <span>{item.label}</span>
+          </Link>
+        )}
+      </li>
+    );
+  }
+
   const navContent = (
     <>
       <div className="p-6 border-b border-white/10">
         <div className="text-xl font-bold text-white tracking-tight">Interior ERP</div>
         <div className="text-xs text-gray-400 mt-0.5">Manajemen Bisnis Interior</div>
       </div>
-      <nav className="flex-1 p-3">
+      <nav className="flex-1 p-3 overflow-y-auto">
         <ul className="space-y-0.5">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-            return (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  onClick={() => setOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
-                    isActive
-                      ? "bg-white text-gray-900 shadow-sm"
-                      : "text-gray-400 hover:text-white hover:bg-white/10"
-                  }`}
-                >
-                  <span className="text-base">{item.icon}</span>
-                  <span>{item.label}</span>
-                </Link>
-              </li>
-            );
-          })}
+          {navItems.map((item) => (
+            <NavLink key={item.href} item={item} />
+          ))}
         </ul>
       </nav>
       <div className="p-4 border-t border-white/10 space-y-2">
@@ -106,27 +167,11 @@ export default function Sidebar() {
             </svg>
           </button>
         </div>
-        <nav className="flex-1 p-3">
+        <nav className="flex-1 p-3 overflow-y-auto">
           <ul className="space-y-0.5">
-            {navItems.map((item) => {
-              const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    onClick={() => setOpen(false)}
-                    className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
-                      isActive
-                        ? "bg-white text-gray-900 shadow-sm"
-                        : "text-gray-400 hover:text-white hover:bg-white/10"
-                    }`}
-                  >
-                    <span className="text-base">{item.icon}</span>
-                    <span>{item.label}</span>
-                  </Link>
-                </li>
-              );
-            })}
+            {navItems.map((item) => (
+              <NavLink key={item.href} item={item} onNav={() => setOpen(false)} />
+            ))}
           </ul>
         </nav>
         <div className="p-4 border-t border-white/10">

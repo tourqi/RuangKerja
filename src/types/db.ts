@@ -154,6 +154,21 @@ export interface ProjectExpense {
   created_at?: string;
 }
 
+export type GeneralExpenseKategori = 'operasional' | 'marketing' | 'gaji' | 'lainnya';
+
+export interface GeneralExpense {
+  id: string;
+  tanggal: string;
+  deskripsi: string;
+  kategori: GeneralExpenseKategori;
+  sub_kategori?: string;
+  jumlah: number;
+  vendor?: string;
+  notes?: string;
+  created_by?: string;
+  created_at?: string;
+}
+
 export type NotificationType = 'follow_up_due' | 'project_overdue' | 'invoice_overdue';
 
 export interface Notification {
