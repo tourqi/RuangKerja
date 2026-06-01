@@ -650,6 +650,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100">
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">No. Invoice</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide hidden sm:table-cell">RAB</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide hidden md:table-cell">Termin / Catatan</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide hidden lg:table-cell">Tgl Tagih</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide hidden lg:table-cell">Jatuh Tempo</th>
@@ -679,6 +680,15 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                           >
                             {inv.invoice_number}
                           </a>
+                        </td>
+                        <td className="px-4 py-3 hidden sm:table-cell">
+                          {inv.rab_id ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blue-50 text-blue-700 font-medium">
+                              {approvedRabs.find((r) => r.id === inv.rab_id)?.nama ?? "RAB"}
+                            </span>
+                          ) : (
+                            <span className="text-gray-300 text-xs">—</span>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-gray-500 text-xs hidden md:table-cell max-w-[180px] truncate">
                           {inv.notes ?? "—"}
@@ -721,7 +731,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                       </tr>
                       {isExpanded && (
                         <tr key={`${inv.id}-detail`} className="bg-blue-50/30">
-                          <td colSpan={8} className="px-6 py-3">
+                          <td colSpan={9} className="px-6 py-3">
                             {pays.length === 0 ? (
                               <p className="text-xs text-gray-400 py-1">Belum ada pembayaran tercatat untuk invoice ini.</p>
                             ) : (
@@ -751,8 +761,8 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
               </tbody>
               <tfoot>
                 <tr className="bg-gray-50 border-t border-gray-100">
-                  <td colSpan={4} className="px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell">Total</td>
-                  <td colSpan={4} className="px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide lg:hidden">Total</td>
+                  <td colSpan={5} className="px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell">Total</td>
+                  <td colSpan={5} className="px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide lg:hidden">Total</td>
                   <td className="px-4 py-2.5 text-right font-bold text-gray-900">
                     {formatCurrency(projectInvoices.reduce((s, i) => s + i.total_amount, 0))}
                   </td>
