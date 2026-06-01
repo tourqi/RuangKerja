@@ -11,6 +11,8 @@ import { useToast } from "@/components/Toast";
 import type { InvoiceStatus, PaymentMethod } from "@/types/db";
 import ActivityTimeline from "@/components/ActivityTimeline";
 import { addPayment, deletePayment, updateInvoice } from "@/services/invoices";
+import { getRabByLead, getRabWithGroups } from "@/services/rab";
+import type { Rab } from "@/types/db";
 
 const formatCurrency = (v?: number) =>
   v == null
@@ -69,24 +71,105 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
   const [editForm, setEditForm] = useState({
     project_id: invoice?.project_id ?? "",
     client_id: invoice?.client_id ?? "",
+    rab_id: invoice?.rab_id ?? "",
     total_amount: String(invoice?.total_amount ?? ""),
     invoice_date: invoice?.invoice_date ?? invoice?.created_at?.slice(0, 10) ?? "",
     due_date: invoice?.due_date ?? "",
     notes: invoice?.notes ?? "",
     status: (invoice?.status ?? "draft") as InvoiceStatus,
+    diskon_persen: String(invoice?.diskon_persen ?? ""),
+    diskon_nilai: String(invoice?.diskon_nilai ?? ""),
   });
+  const [editAvailableRabs, setEditAvailableRabs] = useState<Rab[]>([]);
+  const [editRabTotal, setEditRabTotal] = useState<number | null>(null);
+  const [loadingEditRabs, setLoadingEditRabs] = useState(false);
 
-  function openEdit() {
+  async function openEdit() {
     setEditForm({
       project_id: invoice?.project_id ?? "",
       client_id: invoice?.client_id ?? "",
+      rab_id: invoice?.rab_id ?? "",
       total_amount: String(invoice?.total_amount ?? ""),
       invoice_date: invoice?.invoice_date ?? invoice?.created_at?.slice(0, 10) ?? "",
       due_date: invoice?.due_date ?? "",
       notes: invoice?.notes ?? "",
       status: (invoice?.status ?? "draft") as InvoiceStatus,
+      diskon_persen: String(invoice?.diskon_persen ?? ""),
+      diskon_nilai: String(invoice?.diskon_nilai ?? ""),
     });
+    setEditAvailableRabs([]);
+    setEditRabTotal(null);
+
+    // load RABs for current project
+    const proj = projects.find((p) => p.id === invoice?.project_id);
+    if (proj) {
+      setLoadingEditRabs(true);
+      try {
+        const leads = proj.lead_id ? [{ id: proj.lead_id }] : [];
+        const all: Rab[] = [];
+        for (const l of leads) {
+          const r = await getRabByLead(l.id);
+          all.push(...r.filter((x) => x.status === "approved"));
+        }
+        setEditAvailableRabs(all);
+        // fetch total for currently linked RAB
+        if (invoice?.rab_id) {
+          const groups = await getRabWithGroups(invoice.rab_id);
+          const total = groups.reduce((s, g) => s + (g.items ?? []).reduce((ss, it) => ss + it.qty * it.harga, 0), 0);
+          setEditRabTotal(total);
+        }
+      } catch {
+        toast("Gagal memuat RAB", "error");
+      } finally {
+        setLoadingEditRabs(false);
+      }
+    }
     setShowEdit(true);
+  }
+
+  async function handleEditProjectChange(projectId: string) {
+    setEditForm((f) => ({ ...f, project_id: projectId, rab_id: "" }));
+    setEditRabTotal(null);
+    setEditAvailableRabs([]);
+    if (!projectId) return;
+    const proj = projects.find((p) => p.id === projectId);
+    if (!proj?.lead_id) return;
+    setLoadingEditRabs(true);
+    try {
+      const r = await getRabByLead(proj.lead_id);
+      setEditAvailableRabs(r.filter((x) => x.status === "approved"));
+    } catch {
+      toast("Gagal memuat RAB", "error");
+    } finally {
+      setLoadingEditRabs(false);
+    }
+  }
+
+  async function handleEditRabChange(rabId: string) {
+    setEditForm((f) => ({ ...f, rab_id: rabId }));
+    setEditRabTotal(null);
+    if (!rabId) return;
+    try {
+      const groups = await getRabWithGroups(rabId);
+      const total = groups.reduce((s, g) => s + (g.items ?? []).reduce((ss, it) => ss + it.qty * it.harga, 0), 0);
+      setEditRabTotal(total);
+    } catch {
+      toast("Gagal memuat total RAB", "error");
+    }
+  }
+
+  function handleEditDiskonPersen(value: string) {
+    const persen = parseFloat(value) || 0;
+    const base = editRabTotal ?? 0;
+    const nilai = base > 0 ? Math.round(base * persen / 100) : 0;
+    setEditForm((f) => ({ ...f, diskon_persen: value, diskon_nilai: nilai > 0 ? String(nilai) : "" }));
+  }
+
+  function handleEditDiskonNilai(value: string) {
+    const nilai = parseFloat(value) || 0;
+    const base = editRabTotal ?? 0;
+    const persen = base > 0 ? ((nilai / base) * 100).toFixed(1) : "";
+    setEditForm((f) => ({ ...f, diskon_nilai: value, diskon_persen: persen }));
   }
 
   async function handleEdit(e: React.FormEvent) {
@@ -98,11 +181,14 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
       await updateInvoice(invoiceId, {
         project_id: editForm.project_id || undefined,
         client_id: selectedProject?.client_id || editForm.client_id || undefined,
+        rab_id: editForm.rab_id || undefined,
         total_amount: parseFloat(editForm.total_amount),
         invoice_date: editForm.invoice_date || undefined,
         due_date: editForm.due_date || undefined,
         notes: editForm.notes || undefined,
         status: editForm.status,
+        diskon_persen: parseFloat(editForm.diskon_persen) || undefined,
+        diskon_nilai: parseFloat(editForm.diskon_nilai) || undefined,
       });
       await refetchInvoices();
       setShowEdit(false);
@@ -495,10 +581,10 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
           onClick={() => setShowEdit(false)}
         >
           <div
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6"
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
               <h2 className="text-base font-semibold text-gray-900">Edit Invoice</h2>
               <button onClick={() => setShowEdit(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -506,12 +592,13 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
                 </svg>
               </button>
             </div>
-            <form onSubmit={handleEdit} className="space-y-4">
+            <form onSubmit={handleEdit} className="px-6 py-5 space-y-5">
+              {/* Project */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1.5">Project</label>
                 <select
                   value={editForm.project_id}
-                  onChange={(e) => setEditForm((f) => ({ ...f, project_id: e.target.value }))}
+                  onChange={(e) => handleEditProjectChange(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900"
                 >
                   <option value="">Tidak terhubung ke project</option>
@@ -525,41 +612,115 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
                   })}
                 </select>
               </div>
+
+              {/* RAB */}
+              {editForm.project_id && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                    RAB (opsional)
+                    {loadingEditRabs && <span className="ml-2 text-gray-400">Memuat…</span>}
+                  </label>
+                  {editAvailableRabs.length === 0 && !loadingEditRabs ? (
+                    <p className="text-xs text-gray-400 py-1">Tidak ada RAB disetujui untuk project ini.</p>
+                  ) : (
+                    <select
+                      value={editForm.rab_id}
+                      onChange={(e) => handleEditRabChange(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900"
+                    >
+                      <option value="">— Tanpa RAB —</option>
+                      {editAvailableRabs.map((r) => (
+                        <option key={r.id} value={r.id}>{r.nama}</option>
+                      ))}
+                    </select>
+                  )}
+                  {editRabTotal != null && (
+                    <div className="mt-2 space-y-2">
+                      <div className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
+                        <span className="text-xs text-gray-500">Total RAB</span>
+                        <span className="text-sm font-semibold text-gray-900">{formatRupiah(editRabTotal)}</span>
+                      </div>
+                      <div className="flex items-center gap-2 px-1">
+                        <span className="text-xs text-gray-500 shrink-0">Diskon</span>
+                        <div className="relative w-24">
+                          <input
+                            type="number" value={editForm.diskon_persen} onChange={(e) => handleEditDiskonPersen(e.target.value)}
+                            placeholder="0" min="0" max="100" step="0.1"
+                            className="w-full pl-2.5 pr-7 py-1.5 border border-gray-300 rounded-md text-xs text-gray-900 outline-none focus:ring-1 focus:ring-gray-900"
+                          />
+                          <span className="absolute right-2 top-1.5 text-xs text-gray-400">%</span>
+                        </div>
+                        <input
+                          type="number" value={editForm.diskon_nilai} onChange={(e) => handleEditDiskonNilai(e.target.value)}
+                          placeholder="Rp" min="0"
+                          className="flex-1 px-2.5 py-1.5 border border-gray-300 rounded-md text-xs text-gray-900 outline-none focus:ring-1 focus:ring-gray-900"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Tanggal Invoice */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">Total Tagihan (IDR) *</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1.5">Tanggal Invoice</label>
                 <input
-                  type="number"
-                  value={editForm.total_amount}
-                  onChange={(e) => setEditForm((f) => ({ ...f, total_amount: e.target.value }))}
+                  type="date"
+                  value={editForm.invoice_date}
+                  onChange={(e) => setEditForm((f) => ({ ...f, invoice_date: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900"
-                  required
-                  min="0"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1.5">Tanggal Invoice</label>
-                  <input
-                    type="date"
-                    value={editForm.invoice_date}
-                    onChange={(e) => {
-                      const d = new Date(e.target.value);
-                      d.setDate(d.getDate() + 14);
-                      setEditForm((f) => ({ ...f, invoice_date: e.target.value, due_date: d.toISOString().slice(0, 10) }));
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1.5">Jatuh Tempo</label>
-                  <input
-                    type="date"
-                    value={editForm.due_date}
-                    onChange={(e) => setEditForm((f) => ({ ...f, due_date: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900"
-                  />
+
+              {/* Termin: tagihan + jatuh tempo + riwayat pembayaran */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-2">Termin Pembayaran</label>
+                <div className="p-3 border border-gray-200 rounded-lg bg-gray-50 space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Total Tagihan (Rp) *</p>
+                      <input
+                        type="number"
+                        value={editForm.total_amount}
+                        onChange={(e) => setEditForm((f) => ({ ...f, total_amount: e.target.value }))}
+                        className="w-full px-2.5 py-1.5 border border-gray-300 rounded-md text-xs text-gray-900 outline-none focus:ring-1 focus:ring-gray-900"
+                        required min="0"
+                      />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Jatuh Tempo</p>
+                      <input
+                        type="date"
+                        value={editForm.due_date}
+                        onChange={(e) => setEditForm((f) => ({ ...f, due_date: e.target.value }))}
+                        className="w-full px-2.5 py-1.5 border border-gray-300 rounded-md text-xs text-gray-900 outline-none focus:ring-1 focus:ring-gray-900"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Payment history */}
+                  {payments.length > 0 && (
+                    <div className="pt-2 border-t border-gray-200">
+                      <p className="text-xs font-medium text-gray-500 mb-1.5">Riwayat Pembayaran</p>
+                      <div className="space-y-1">
+                        {payments.map((p) => (
+                          <div key={p.id} className="flex items-center justify-between text-xs bg-white rounded px-2.5 py-1.5 border border-gray-100">
+                            <span className="text-gray-500">{new Date(p.payment_date).toLocaleDateString("id-ID")}</span>
+                            <span className="text-gray-400 hidden sm:block">{METHOD_LABELS[p.payment_method]}</span>
+                            <span className="font-medium text-green-600">{formatRupiah(p.amount)}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex justify-between text-xs font-semibold mt-1.5 px-2.5">
+                        <span className="text-gray-600">Total terbayar</span>
+                        <span className="text-green-600">{formatRupiah(invoice.paid_amount)}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {/* Status */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1.5">Status</label>
                 <select
@@ -572,6 +733,8 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
                   ))}
                 </select>
               </div>
+
+              {/* Catatan */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1.5">Catatan</label>
                 <textarea
@@ -582,6 +745,7 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
                   placeholder="Catatan tambahan…"
                 />
               </div>
+
               <div className="flex gap-3 pt-1">
                 <button
                   type="button"
