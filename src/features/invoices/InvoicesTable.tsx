@@ -11,6 +11,7 @@ import type { InvoiceStatus } from "@/types/db";
 import { deleteInvoice, updateInvoice } from "@/services/invoices";
 import { useAuth } from "@/context/AuthContext";
 import { usePagination } from "@/hooks/usePagination";
+import { useAllRabs } from "@/hooks/useRab";
 import {
   INVOICE_STATUS_COLORS,
   INVOICE_STATUS_LABELS,
@@ -26,6 +27,7 @@ export default function InvoicesTable() {
   const { clients } = useClients();
   const { projects } = useProjects();
   const { leads } = useLeads();
+  const { rabs } = useAllRabs();
   const { user } = useAuth();
   const toast = useToast();
 
@@ -152,6 +154,7 @@ export default function InvoicesTable() {
               <tr className="border-b border-gray-100 bg-gray-50">
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">No. Invoice</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Project / Client</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden xl:table-cell">RAB</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell">Tgl Invoice</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Jatuh Tempo</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Total</th>
@@ -177,6 +180,15 @@ export default function InvoicesTable() {
                         if (project) return <><span className="font-medium text-gray-800">{project.name}</span>{client && <span className="text-gray-400 text-xs ml-1">· {client.name}</span>}</>;
                         return client?.name ?? "—";
                       })()}
+                    </td>
+                    <td className="px-4 py-3 hidden xl:table-cell">
+                      {inv.rab_id ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blue-50 text-blue-700 font-medium">
+                          {rabs.find((r) => r.id === inv.rab_id)?.nama ?? "RAB"}
+                        </span>
+                      ) : (
+                        <span className="text-gray-300 text-xs">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-gray-500 hidden lg:table-cell">
                       {inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString("id-ID") : "—"}

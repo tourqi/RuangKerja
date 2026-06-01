@@ -1,6 +1,15 @@
 import { supabase } from '@/services/supabase';
 import { Rab, RabGroup, RabItem } from '@/types/db';
 
+export async function getAllRabs(): Promise<Rab[]> {
+  const { data, error } = await supabase
+    .from('rab')
+    .select('id, lead_id, nama, status, created_at')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data as Rab[];
+}
+
 export async function getRabByLead(leadId: string): Promise<Rab[]> {
   const { data, error } = await supabase
     .from('rab')

@@ -1,7 +1,21 @@
 "use client";
 import { useEffect, useState, useCallback } from 'react';
-import { getRabByLead, getRabWithGroups } from '@/services/rab';
+import { getAllRabs, getRabByLead, getRabWithGroups } from '@/services/rab';
 import { Rab, RabGroup } from '@/types/db';
+
+export function useAllRabs() {
+  const [rabs, setRabs] = useState<Rab[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getAllRabs()
+      .then(setRabs)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  return { rabs, loading };
+}
 
 export function useRabList(leadId: string) {
   const [rabList, setRabList] = useState<Rab[]>([]);

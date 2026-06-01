@@ -117,6 +117,7 @@ export interface Invoice {
   client_id?: string;
   lead_id?: string;
   project_id?: string;
+  rab_id?: string;
   invoice_number: string;
   total_amount: number;
   paid_amount: number;

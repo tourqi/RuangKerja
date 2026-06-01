@@ -144,6 +144,7 @@ export function InvoiceFormModal({
           invoice_number,
           client_id: project?.client_id || undefined,
           project_id: form.project_id,
+          rab_id: selectedRabId || undefined,
           total_amount: parseFloat(termin.jumlah),
           status: "draft",
           invoice_date: form.invoice_date || undefined,

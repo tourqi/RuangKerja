@@ -5,6 +5,8 @@ import { useInvoices } from "@/hooks/useInvoices";
 import { usePayments } from "@/hooks/usePayments";
 import { useClients } from "@/hooks/useClients";
 import { useProjects } from "@/hooks/useProjects";
+import { useAllRabs } from "@/hooks/useRab";
+import { formatRupiah } from "@/utils/format";
 import { useToast } from "@/components/Toast";
 import type { InvoiceStatus, PaymentMethod } from "@/types/db";
 import ActivityTimeline from "@/components/ActivityTimeline";
@@ -46,6 +48,7 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
   const { payments, loading: loadingPayments, refetch: refetchPayments } = usePayments(invoiceId);
   const { clients } = useClients();
   const { projects } = useProjects();
+  const { rabs } = useAllRabs();
   const toast = useToast();
 
   const [showAddPayment, setShowAddPayment] = useState(false);
@@ -293,6 +296,50 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
           <p className="text-xs text-gray-500 mt-3 pt-3 border-t border-gray-50">{invoice.notes}</p>
         )}
       </div>
+
+      {/* Sibling invoices from same RAB */}
+      {invoice.rab_id && (() => {
+        const rab = rabs.find((r) => r.id === invoice.rab_id);
+        const siblings = invoices.filter((i) => i.rab_id === invoice.rab_id && i.id !== invoiceId);
+        if (siblings.length === 0) return null;
+        const rabTotal = invoices.filter((i) => i.rab_id === invoice.rab_id).reduce((s, i) => s + i.total_amount, 0);
+        const rabPaid = invoices.filter((i) => i.rab_id === invoice.rab_id).reduce((s, i) => s + i.paid_amount, 0);
+        return (
+          <div className="bg-blue-50 rounded-xl border border-blue-100 p-4 mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">RAB Terkait</p>
+                <p className="text-sm font-medium text-blue-900 mt-0.5">{rab?.nama ?? "—"}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-blue-500">Total RAB</p>
+                <p className="text-sm font-bold text-blue-900">{formatRupiah(rabTotal)}</p>
+                <p className="text-xs text-blue-600">Terbayar: {formatRupiah(rabPaid)}</p>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              {siblings.map((sib) => (
+                <Link
+                  key={sib.id}
+                  href={`/invoices/${sib.id}`}
+                  className="flex items-center justify-between px-3 py-2 bg-white rounded-lg border border-blue-100 hover:border-blue-300 transition-colors group"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-gray-700 group-hover:text-blue-700">{sib.invoice_number}</span>
+                    {sib.notes && <span className="text-xs text-gray-400 truncate max-w-[160px]">{sib.notes.split(" · ")[0]}</span>}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-gray-700">{formatRupiah(sib.total_amount)}</span>
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[sib.status]}`}>
+                      {STATUS_LABELS[sib.status]}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Payment log */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
