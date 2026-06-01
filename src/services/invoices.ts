@@ -1,6 +1,16 @@
 import { supabase } from './supabase';
 import type { Invoice, InvoiceStatus, Payment } from '@/types/db';
 
+export async function getInvoicesByProject(projectId: string): Promise<Invoice[]> {
+  const { data, error } = await supabase
+    .from('invoices')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('invoice_date', { ascending: true });
+  if (error) throw error;
+  return data as Invoice[];
+}
+
 export async function getInvoices(): Promise<Invoice[]> {
   const { data, error } = await supabase
     .from('invoices')

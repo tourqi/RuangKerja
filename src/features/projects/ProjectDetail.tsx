@@ -5,9 +5,11 @@ import { useState, useCallback, useEffect } from "react";
 import { useProjects } from "@/hooks/useProjects";
 import { useClients } from "@/hooks/useClients";
 import { getExpenses, addExpense, updateExpense, deleteExpense } from "@/services/expenses";
+import { getInvoicesByProject, getPaymentsByInvoice } from "@/services/invoices";
+import { getRabByLead, getRabWithGroups } from "@/services/rab";
 import { useToast } from "@/components/Toast";
 import ActivityTimeline from "@/components/ActivityTimeline";
-import type { ExpenseCategory, ProjectExpense } from "@/types/db";
+import type { ExpenseCategory, Invoice, Payment, ProjectExpense, Rab } from "@/types/db";
 import { projectStatusLabel } from "@/types/db";
 
 const formatCurrency = (v: number) =>
@@ -38,6 +40,20 @@ const STATUS_COLORS: Record<string, string> = {
   Done: "bg-green-100 text-green-800",
 };
 
+const INV_STATUS_COLORS: Record<string, string> = {
+  draft: "bg-gray-100 text-gray-600",
+  sent: "bg-blue-100 text-blue-700",
+  partial: "bg-yellow-100 text-yellow-700",
+  paid: "bg-green-100 text-green-700",
+  overdue: "bg-red-100 text-red-700",
+};
+const INV_STATUS_LABELS: Record<string, string> = {
+  draft: "Draft", sent: "Terkirim", partial: "Sebagian", paid: "Lunas", overdue: "Jatuh Tempo",
+};
+const METHOD_LABELS: Record<string, string> = {
+  transfer: "Transfer", cash: "Tunai", check: "Cek",
+};
+
 type LocalExpense = ProjectExpense & { _saving?: boolean; _jumlahFocused?: boolean };
 
 const TODAY = new Date().toISOString().slice(0, 10);
@@ -56,6 +72,14 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
   const [loadingExp, setLoadingExp] = useState(true);
   const [addingRow, setAddingRow] = useState(false);
 
+  // Tagihan & Pembayaran
+  const [projectInvoices, setProjectInvoices] = useState<Invoice[]>([]);
+  const [paymentsByInvoice, setPaymentsByInvoice] = useState<Record<string, Payment[]>>({});
+  const [loadingInvoices, setLoadingInvoices] = useState(true);
+  const [expandedInvoice, setExpandedInvoice] = useState<string | null>(null);
+  const [approvedRabs, setApprovedRabs] = useState<Rab[]>([]);
+  const [rabTotals, setRabTotals] = useState<Record<string, number>>({});
+
   // Filters
   const [filterKategori, setFilterKategori] = useState<string>("");
   const [filterVendor, setFilterVendor] = useState<string>("");
@@ -72,6 +96,54 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
   }, [projectId]);
 
   useEffect(() => { loadExpenses(); }, [loadExpenses]);
+
+  // Load invoices + payments + RABs for this project
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoadingInvoices(true);
+      try {
+        const invs = await getInvoicesByProject(projectId);
+        if (cancelled) return;
+        setProjectInvoices(invs);
+        // load payments for each invoice in parallel
+        const entries = await Promise.all(
+          invs.map(async (inv) => {
+            const pays = await getPaymentsByInvoice(inv.id);
+            return [inv.id, pays] as [string, Payment[]];
+          })
+        );
+        if (!cancelled) setPaymentsByInvoice(Object.fromEntries(entries));
+      } catch { /* silent */ } finally {
+        if (!cancelled) setLoadingInvoices(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [projectId]);
+
+  // Load approved RABs and their totals for this project
+  useEffect(() => {
+    let cancelled = false;
+    async function loadRabs(leadId: string) {
+      try {
+        const rabs = await getRabByLead(leadId);
+        const approved = rabs.filter((r) => r.status === "approved");
+        if (cancelled) return;
+        setApprovedRabs(approved);
+        const totals: Record<string, number> = {};
+        await Promise.all(approved.map(async (rab) => {
+          const groups = await getRabWithGroups(rab.id);
+          totals[rab.id] = groups.reduce((s, g) => s + (g.items ?? []).reduce((ss, it) => ss + it.qty * it.harga, 0), 0);
+        }));
+        if (!cancelled) setRabTotals(totals);
+      } catch { /* silent */ }
+    }
+    // wait for project to be loaded
+    const proj = projects.find((p) => p.id === projectId);
+    if (proj?.lead_id) loadRabs(proj.lead_id);
+    return () => { cancelled = true; };
+  }, [projectId, projects]);
 
   // Reset page when filters change
   useEffect(() => { setPage(1); }, [filterKategori, filterVendor]);
@@ -508,6 +580,191 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Tagihan & Pembayaran */}
+      <div className="space-y-4">
+        <h2 className="text-sm font-semibold text-gray-800">Tagihan &amp; Pembayaran</h2>
+
+        {/* RAB summary */}
+        {approvedRabs.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {approvedRabs.map((rab) => (
+              <div key={rab.id} className="inline-flex items-center gap-2 text-xs bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full font-medium">
+                <span>{rab.nama}</span>
+                {rabTotals[rab.id] != null && (
+                  <span className="font-bold">{formatCurrency(rabTotals[rab.id])}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Financial summary cards */}
+        {(() => {
+          const totalRab = Object.values(rabTotals).reduce((s, v) => s + v, 0);
+          const totalTagih = projectInvoices.reduce((s, i) => s + i.total_amount, 0);
+          const totalBayar = projectInvoices.reduce((s, i) => s + i.paid_amount, 0);
+          const belumTagih = totalRab > 0 ? totalRab - totalTagih : null;
+          const belumBayar = totalTagih - totalBayar;
+          return (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {totalRab > 0 && (
+                <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3">
+                  <p className="text-xs text-gray-400 mb-1">Total Nilai RAB</p>
+                  <p className="text-sm font-bold text-gray-900">{formatCurrency(totalRab)}</p>
+                </div>
+              )}
+              <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3">
+                <p className="text-xs text-gray-400 mb-1">Sudah Ditagih</p>
+                <p className="text-sm font-bold text-gray-900">{formatCurrency(totalTagih)}</p>
+                {belumTagih != null && belumTagih > 0 && (
+                  <p className="text-xs text-orange-500 mt-0.5">Sisa {formatCurrency(belumTagih)} belum ditagih</p>
+                )}
+              </div>
+              <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3">
+                <p className="text-xs text-gray-400 mb-1">Sudah Diterima</p>
+                <p className="text-sm font-bold text-green-600">{formatCurrency(totalBayar)}</p>
+              </div>
+              <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3">
+                <p className="text-xs text-gray-400 mb-1">Belum Dibayar</p>
+                <p className={`text-sm font-bold ${belumBayar > 0 ? "text-red-600" : "text-green-600"}`}>
+                  {formatCurrency(belumBayar)}
+                </p>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Invoice table */}
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+          {loadingInvoices ? (
+            <div className="py-10 text-center text-xs text-gray-400">Memuat tagihan…</div>
+          ) : projectInvoices.length === 0 ? (
+            <div className="py-10 text-center text-sm text-gray-400">
+              Belum ada invoice untuk project ini.{" "}
+              <a href="/invoices" className="text-gray-700 underline">Buat Invoice</a>
+            </div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-100">
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">No. Invoice</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide hidden md:table-cell">Termin / Catatan</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide hidden lg:table-cell">Tgl Tagih</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide hidden lg:table-cell">Jatuh Tempo</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Tagihan</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide hidden sm:table-cell">Diterima</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Status</th>
+                  <th className="w-8" />
+                </tr>
+              </thead>
+              <tbody>
+                {projectInvoices.map((inv) => {
+                  const pays = paymentsByInvoice[inv.id] ?? [];
+                  const isExpanded = expandedInvoice === inv.id;
+                  const lastPay = pays.sort((a, b) => new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime())[0];
+                  return (
+                    <>
+                      <tr
+                        key={inv.id}
+                        className={`border-t border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer ${isExpanded ? "bg-blue-50/40" : ""}`}
+                        onClick={() => setExpandedInvoice(isExpanded ? null : inv.id)}
+                      >
+                        <td className="px-4 py-3">
+                          <a
+                            href={`/invoices/${inv.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="font-medium text-gray-900 hover:underline"
+                          >
+                            {inv.invoice_number}
+                          </a>
+                        </td>
+                        <td className="px-4 py-3 text-gray-500 text-xs hidden md:table-cell max-w-[180px] truncate">
+                          {inv.notes ?? "—"}
+                        </td>
+                        <td className="px-4 py-3 text-gray-500 text-xs hidden lg:table-cell">
+                          {inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString("id-ID") : "—"}
+                        </td>
+                        <td className="px-4 py-3 text-xs hidden lg:table-cell">
+                          {inv.due_date ? (
+                            <span className={new Date(inv.due_date) < new Date() && inv.status !== "paid" ? "text-red-500 font-medium" : "text-gray-500"}>
+                              {new Date(inv.due_date).toLocaleDateString("id-ID")}
+                            </span>
+                          ) : "—"}
+                        </td>
+                        <td className="px-4 py-3 text-right font-medium text-gray-900">
+                          {formatCurrency(inv.total_amount)}
+                        </td>
+                        <td className="px-4 py-3 text-right hidden sm:table-cell">
+                          <div>
+                            <span className={inv.paid_amount > 0 ? "text-green-600 font-medium" : "text-gray-300"}>
+                              {formatCurrency(inv.paid_amount)}
+                            </span>
+                            {lastPay && (
+                              <p className="text-xs text-gray-400 mt-0.5">
+                                {new Date(lastPay.payment_date).toLocaleDateString("id-ID")}
+                              </p>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${INV_STATUS_COLORS[inv.status] ?? "bg-gray-100 text-gray-600"}`}>
+                            {INV_STATUS_LABELS[inv.status] ?? inv.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-gray-300">
+                          <svg className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </td>
+                      </tr>
+                      {isExpanded && (
+                        <tr key={`${inv.id}-detail`} className="bg-blue-50/30">
+                          <td colSpan={8} className="px-6 py-3">
+                            {pays.length === 0 ? (
+                              <p className="text-xs text-gray-400 py-1">Belum ada pembayaran tercatat untuk invoice ini.</p>
+                            ) : (
+                              <div className="space-y-1">
+                                <p className="text-xs font-semibold text-gray-500 mb-2">Riwayat Pembayaran</p>
+                                {pays.map((p) => (
+                                  <div key={p.id} className="flex items-center gap-4 text-xs bg-white rounded-lg px-3 py-2 border border-blue-100">
+                                    <span className="text-gray-500 w-24 shrink-0">
+                                      {new Date(p.payment_date).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
+                                    </span>
+                                    <span className="text-gray-400">{METHOD_LABELS[p.payment_method] ?? p.payment_method}</span>
+                                    {p.notes && <span className="text-gray-400 truncate flex-1">{p.notes}</span>}
+                                    <span className="ml-auto font-semibold text-green-600">{formatCurrency(p.amount)}</span>
+                                  </div>
+                                ))}
+                                <div className="flex justify-end text-xs font-bold text-green-700 pt-1 pr-2">
+                                  Total: {formatCurrency(pays.reduce((s, p) => s + p.amount, 0))}
+                                </div>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="bg-gray-50 border-t border-gray-100">
+                  <td colSpan={4} className="px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell">Total</td>
+                  <td colSpan={4} className="px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide lg:hidden">Total</td>
+                  <td className="px-4 py-2.5 text-right font-bold text-gray-900">
+                    {formatCurrency(projectInvoices.reduce((s, i) => s + i.total_amount, 0))}
+                  </td>
+                  <td className="px-4 py-2.5 text-right font-bold text-green-600 hidden sm:table-cell">
+                    {formatCurrency(projectInvoices.reduce((s, i) => s + i.paid_amount, 0))}
+                  </td>
+                  <td colSpan={2} />
+                </tr>
+              </tfoot>
+            </table>
+          )}
+        </div>
       </div>
 
       <ActivityTimeline entityType="project" entityId={projectId} />
