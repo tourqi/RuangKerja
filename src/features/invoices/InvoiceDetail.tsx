@@ -6,6 +6,7 @@ import { usePayments } from "@/hooks/usePayments";
 import { useClients } from "@/hooks/useClients";
 import { useProjects } from "@/hooks/useProjects";
 import { useAllRabs } from "@/hooks/useRab";
+import { useLeads } from "@/hooks/useLeads";
 import { formatRupiah } from "@/utils/format";
 import { useToast } from "@/components/Toast";
 import type { InvoiceStatus, PaymentMethod } from "@/types/db";
@@ -51,6 +52,7 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
   const { clients } = useClients();
   const { projects } = useProjects();
   const { rabs } = useAllRabs();
+  const { leads } = useLeads();
   const toast = useToast();
 
   const [showAddPayment, setShowAddPayment] = useState(false);
@@ -105,11 +107,16 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
     if (proj) {
       setLoadingEditRabs(true);
       try {
-        const leads = proj.lead_id ? [{ id: proj.lead_id }] : [];
         const all: Rab[] = [];
-        for (const l of leads) {
-          const r = await getRabByLead(l.id);
+        if (proj.lead_id) {
+          const r = await getRabByLead(proj.lead_id);
           all.push(...r.filter((x) => x.status === "approved"));
+        } else {
+          const dealLeads = leads.filter((l) => l.client_id === proj.client_id && l.status === "Deal");
+          for (const l of dealLeads) {
+            const r = await getRabByLead(l.id);
+            all.push(...r.filter((x) => x.status === "approved"));
+          }
         }
         setEditAvailableRabs(all);
         // fetch total for currently linked RAB
@@ -133,11 +140,21 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
     setEditAvailableRabs([]);
     if (!projectId) return;
     const proj = projects.find((p) => p.id === projectId);
-    if (!proj?.lead_id) return;
+    if (!proj) return;
     setLoadingEditRabs(true);
     try {
-      const r = await getRabByLead(proj.lead_id);
-      setEditAvailableRabs(r.filter((x) => x.status === "approved"));
+      const all: Rab[] = [];
+      if (proj.lead_id) {
+        const r = await getRabByLead(proj.lead_id);
+        all.push(...r.filter((x) => x.status === "approved"));
+      } else {
+        const dealLeads = leads.filter((l) => l.client_id === proj.client_id && l.status === "Deal");
+        for (const l of dealLeads) {
+          const r = await getRabByLead(l.id);
+          all.push(...r.filter((x) => x.status === "approved"));
+        }
+      }
+      setEditAvailableRabs(all);
     } catch {
       toast("Gagal memuat RAB", "error");
     } finally {
