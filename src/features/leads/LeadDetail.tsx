@@ -135,8 +135,8 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{client?.name ?? "Unknown Client"}</h1>
-            {client?.project_name && (
-              <p className="text-sm text-gray-500 mt-0.5">{client.project_name}</p>
+            {lead.project_name && (
+              <p className="text-sm text-gray-500 mt-0.5">{lead.project_name}</p>
             )}
             <div className="flex flex-wrap gap-2 mt-3">
               <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${statusColors[lead.status] ?? "bg-gray-100 text-gray-700"}`}>

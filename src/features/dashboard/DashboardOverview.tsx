@@ -5,6 +5,7 @@ import { useProjects } from "@/hooks/useProjects";
 import { useInvoices } from "@/hooks/useInvoices";
 import { useAllPayments } from "@/hooks/usePayments";
 import { useAllExpenses } from "@/hooks/useExpenses";
+import { useApprovedRabTotals } from "@/hooks/useRab";
 import Link from "next/link";
 import {
   PieChart, Pie, Tooltip,
@@ -121,6 +122,12 @@ export default function DashboardOverview() {
   const { invoices, loading: li } = useInvoices();
   const { payments } = useAllPayments();
   const { expenses } = useAllExpenses();
+  const { totals: rabTotals } = useApprovedRabTotals();
+
+  const getProjectValue = (p: { lead_id?: string; value?: number }) =>
+    p.lead_id && rabTotals[p.lead_id] != null
+      ? rabTotals[p.lead_id]
+      : (p.value ?? 0);
 
   const loading = lc || ll || lp || li;
 
@@ -138,7 +145,7 @@ export default function DashboardOverview() {
   /* bisnis */
   const activeProjects = projects.filter((p) => p.status !== "Done").length;
   const dealLeads = leads.filter((l) => l.status === "Deal").length;
-  const totalValue = projects.reduce((s, p) => s + (p.value ?? 0), 0);
+  const totalValue = projects.reduce((s, p) => s + getProjectValue(p), 0);
   const overdueProjects = projects.filter((p) => p.status !== "Done" && p.deadline && new Date(p.deadline) < today);
   const followUpLeads = leads.filter(
     (l) => l.status !== "Deal" && l.status !== "Lost" && l.follow_up_date && new Date(l.follow_up_date) <= today
@@ -441,7 +448,7 @@ export default function DashboardOverview() {
                 <tr key={p.id} className="hover:bg-gray-50/60">
                   <td className="px-5 py-3">
                     <Link href={`/projects/${p.id}`} className="text-xs font-medium text-gray-900 hover:underline block truncate max-w-[140px]">{p.name}</Link>
-                    <p className="text-xs text-gray-400">{fmt(p.value)}</p>
+                    <p className="text-xs text-gray-400">{fmt(getProjectValue(p))}</p>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <span className={`text-xs px-2 py-0.5 rounded-full ${projectStatusBadge[p.status] ?? "bg-gray-100 text-gray-500"}`}>

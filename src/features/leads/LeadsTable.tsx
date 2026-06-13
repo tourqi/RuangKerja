@@ -301,6 +301,7 @@ export default function LeadsTable() {
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
                 <SortableHeader label="Client" col="client_name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableHeader label="Nama Project" col="project_name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Status" col="status" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Priority" col="priority" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Source" col="source" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
@@ -321,6 +322,7 @@ export default function LeadsTable() {
                       <div>{client?.name || "-"}</div>
                       {client?.phone && <div className="text-xs text-gray-400">{client.phone}</div>}
                     </td>
+                    <td className="px-4 py-3 text-gray-700 whitespace-nowrap text-sm">{lead.project_name || "-"}</td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${LEAD_STATUS_COLORS[lead.status] || "bg-gray-100 text-gray-700"}`}>
                         {lead.status}
@@ -376,7 +378,7 @@ export default function LeadsTable() {
               })}
               {filteredLeads.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="px-6 py-12 text-center text-gray-400 text-sm">
+                  <td colSpan={11} className="px-6 py-12 text-center text-gray-400 text-sm">
                     Belum ada lead. Klik "Tambah Lead" untuk memulai.
                   </td>
                 </tr>

@@ -5,7 +5,7 @@ import { useInvoices } from "@/hooks/useInvoices";
 import { usePayments } from "@/hooks/usePayments";
 import { useClients } from "@/hooks/useClients";
 import { useProjects } from "@/hooks/useProjects";
-import { useAllRabs } from "@/hooks/useRab";
+import { useAllRabs, useApprovedRabTotals } from "@/hooks/useRab";
 import { useLeads } from "@/hooks/useLeads";
 import { formatRupiah } from "@/utils/format";
 import { useToast } from "@/components/Toast";
@@ -53,7 +53,11 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
   const { projects } = useProjects();
   const { rabs } = useAllRabs();
   const { leads } = useLeads();
+  const { totals: rabTotals } = useApprovedRabTotals();
   const toast = useToast();
+
+  const getProjectValue = (p: { lead_id?: string; value?: number }) =>
+    p.lead_id && rabTotals[p.lead_id] != null ? rabTotals[p.lead_id] : (p.value ?? 0);
 
   const [showAddPayment, setShowAddPayment] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
@@ -223,7 +227,7 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
     return acc;
   }, {});
   const editableProjects = projects.filter(
-    (p) => p.id === invoice?.project_id || !p.value || (paidPerProject[p.id] ?? 0) < p.value
+    (p) => p.id === invoice?.project_id || !getProjectValue(p) || (paidPerProject[p.id] ?? 0) < getProjectValue(p)
   );
 
   const loading = loadingInvoices;

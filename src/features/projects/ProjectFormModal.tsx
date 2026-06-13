@@ -1,8 +1,9 @@
 "use client";
 import { useState, useEffect, type ChangeEvent, type SyntheticEvent } from "react";
-import { Project, ProjectStatus, Client } from "@/types/db";
+import { Project, ProjectStatus, Client, Lead } from "@/types/db";
 import { addProject, updateProject } from "@/services/projects";
 import { getRabByLead, getRabWithGroups } from "@/services/rab";
+import { useLeads } from "@/hooks/useLeads";
 import { useToast } from "@/components/Toast";
 import {
   PROJECT_STATUSES,
@@ -20,7 +21,7 @@ type Props = {
 };
 
 const PROJECT_COLUMNS: (keyof Project)[] = [
-  "client_id", "name", "value", "status", "start_date", "deadline", "assigned_to", "progress",
+  "client_id", "lead_id", "name", "value", "status", "start_date", "deadline", "assigned_to", "progress",
 ];
 
 export function ProjectFormModal({
@@ -34,6 +35,7 @@ export function ProjectFormModal({
 }: Props) {
   const toast = useToast();
   const isEditing = !!project;
+  const { leads } = useLeads();
 
   const [form, setForm] = useState<Partial<Project>>(
     project ?? { status: "Planning", progress: 0 }
@@ -77,6 +79,26 @@ export function ProjectFormModal({
       })();
     }
   }, [autoClientId, autoLeadId, isEditing, wonClients, allClients]);
+
+  const leadsForClient = leads.filter(
+    (l) => l.client_id === form.client_id && l.status === "Deal"
+  );
+
+  async function handleLeadSelect(leadId: string) {
+    setForm((prev) => ({ ...prev, lead_id: leadId || undefined }));
+    if (!leadId) return;
+    try {
+      const rabs = await getRabByLead(leadId);
+      const approved = rabs.filter((r) => r.status === "approved");
+      let total = 0;
+      for (const rab of approved) {
+        const groups = await getRabWithGroups(rab.id);
+        const gross = groups.reduce((s, g) => s + (g.items ?? []).reduce((gs, it) => gs + it.qty * it.harga, 0), 0);
+        total += gross - (rab.diskon_nilai ?? 0);
+      }
+      if (total > 0) setForm((prev) => ({ ...prev, lead_id: leadId, value: total }));
+    } catch { /* silent */ }
+  }
 
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -155,7 +177,7 @@ export function ProjectFormModal({
                 onChange={(e) => {
                   setClientQuery(e.target.value);
                   setShowDropdown(true);
-                  setForm((prev) => ({ ...prev, client_id: "" }));
+                  setForm((prev) => ({ ...prev, client_id: "", lead_id: undefined, value: undefined }));
                 }}
                 onFocus={() => setShowDropdown(true)}
                 onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
@@ -191,6 +213,30 @@ export function ProjectFormModal({
             </div>
             {form.client_id && <p className="text-xs text-green-600 mt-1">✓ Client dipilih</p>}
           </div>
+
+          {/* Lead selector — muncul setelah client dipilih */}
+          {form.client_id && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Lead</label>
+              {leadsForClient.length === 0 ? (
+                <p className="text-xs text-gray-400 mt-1">Tidak ada lead Deal untuk client ini</p>
+              ) : (
+                <select
+                  value={form.lead_id || ""}
+                  onChange={(e) => handleLeadSelect(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-green-500"
+                >
+                  <option value="">— Pilih Lead —</option>
+                  {leadsForClient.map((l: Lead) => (
+                    <option key={l.id} value={l.id}>
+                      {l.project_name || `Lead ${l.created_at ? new Date(l.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : l.id.slice(0, 8)}`}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {form.lead_id && <p className="text-xs text-green-600 mt-1">✓ Nilai project otomatis dari RAB disetujui</p>}
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Nilai Project */}

@@ -8,6 +8,7 @@ import { useProjects } from "@/hooks/useProjects";
 import { useInvoices } from "@/hooks/useInvoices";
 import { useAuth } from "@/context/AuthContext";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useApprovedRabTotals } from "@/hooks/useRab";
 import type { NotificationType } from "@/types/db";
 
 /* ── Route config ── */
@@ -201,6 +202,9 @@ function SearchModal({
   const [query, setQuery] = useState("");
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+  const { totals: rabTotals } = useApprovedRabTotals();
+  const getProjectValue = (p: { lead_id?: string; value?: number }) =>
+    p.lead_id && rabTotals[p.lead_id] != null ? rabTotals[p.lead_id] : (p.value ?? 0);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -311,7 +315,7 @@ function SearchModal({
                   <span className="w-7 h-7 rounded-full bg-green-100 text-green-700 text-xs font-bold flex items-center justify-center flex-shrink-0">P</span>
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-gray-800">{p.name}</p>
-                    <p className="text-xs text-gray-400">{p.status}{p.value ? ` · ${formatCurrency(p.value)}` : ""}</p>
+                    <p className="text-xs text-gray-400">{p.status}{getProjectValue(p) ? ` · ${formatCurrency(getProjectValue(p))}` : ""}</p>
                   </div>
                 </button>
               ))}

@@ -23,6 +23,7 @@ export interface Lead {
   status: LeadStatus;
   priority?: Priority;
   source?: string;
+  project_name?: string;
   follow_up_date?: string;
   last_contacted_at?: string;
   closed_at?: string;

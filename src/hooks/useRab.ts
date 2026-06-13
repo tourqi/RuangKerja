@@ -1,7 +1,21 @@
 "use client";
 import { useEffect, useState, useCallback } from 'react';
-import { getAllRabs, getRabByLead, getRabWithGroups } from '@/services/rab';
+import { getAllRabs, getApprovedRabTotals, getRabByLead, getRabWithGroups } from '@/services/rab';
 import { Rab, RabGroup } from '@/types/db';
+
+export function useApprovedRabTotals() {
+  const [totals, setTotals] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getApprovedRabTotals()
+      .then(setTotals)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  return { totals, loading };
+}
 
 export function useAllRabs() {
   const [rabs, setRabs] = useState<Rab[]>([]);

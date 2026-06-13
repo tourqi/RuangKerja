@@ -11,7 +11,7 @@ import type { InvoiceStatus } from "@/types/db";
 import { deleteInvoice, updateInvoice } from "@/services/invoices";
 import { useAuth } from "@/context/AuthContext";
 import { usePagination } from "@/hooks/usePagination";
-import { useAllRabs } from "@/hooks/useRab";
+import { useAllRabs, useApprovedRabTotals } from "@/hooks/useRab";
 import {
   INVOICE_STATUS_COLORS,
   INVOICE_STATUS_LABELS,
@@ -28,7 +28,11 @@ export default function InvoicesTable() {
   const { projects } = useProjects();
   const { leads } = useLeads();
   const { rabs } = useAllRabs();
+  const { totals: rabTotals } = useApprovedRabTotals();
   const { user } = useAuth();
+
+  const getProjectValue = (p: { lead_id?: string; value?: number }) =>
+    p.lead_id && rabTotals[p.lead_id] != null ? rabTotals[p.lead_id] : (p.value ?? 0);
   const toast = useToast();
 
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
@@ -42,7 +46,7 @@ export default function InvoicesTable() {
     return acc;
   }, {});
   const unpaidProjects = projects.filter(
-    (p) => !p.value || (paidPerProject[p.id] ?? 0) < p.value
+    (p) => !getProjectValue(p) || (paidPerProject[p.id] ?? 0) < getProjectValue(p)
   );
 
   const filtered = invoices.filter((inv) => {

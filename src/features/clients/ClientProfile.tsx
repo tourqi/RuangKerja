@@ -4,6 +4,7 @@ import { useClients } from "@/hooks/useClients";
 import { useLeads } from "@/hooks/useLeads";
 import { useProjects } from "@/hooks/useProjects";
 import { useInvoices } from "@/hooks/useInvoices";
+import { useApprovedRabTotals } from "@/hooks/useRab";
 import { ClientFormModal } from "./ClientFormModal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -75,7 +76,11 @@ export default function ClientProfile({ clientId }: { clientId: string }) {
   const { leads, loading: ll } = useLeads();
   const { projects, loading: lp } = useProjects();
   const { invoices, loading: li } = useInvoices();
+  const { totals: rabTotals } = useApprovedRabTotals();
   const router = useRouter();
+
+  const getProjectValue = (p: { lead_id?: string; value?: number }) =>
+    p.lead_id && rabTotals[p.lead_id] != null ? rabTotals[p.lead_id] : (p.value ?? 0);
   const [editOpen, setEditOpen] = useState(false);
 
   const loading = lc || ll || lp || li;
@@ -106,7 +111,7 @@ export default function ClientProfile({ clientId }: { clientId: string }) {
   const clientLeads = leads.filter((l) => l.client_id === clientId);
   const clientProjects = projects.filter((p) => p.client_id === clientId);
   const clientInvoices = invoices.filter((inv) => inv.client_id === clientId);
-  const totalProjectValue = clientProjects.reduce((s, p) => s + (p.value ?? 0), 0);
+  const totalProjectValue = clientProjects.reduce((s, p) => s + getProjectValue(p), 0);
   const activeProjects = clientProjects.filter((p) => p.status !== "Done").length;
 
   return (
@@ -306,7 +311,7 @@ export default function ClientProfile({ clientId }: { clientId: string }) {
                           {projectStatusLabel[project.status] ?? project.status}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-xs text-gray-700 whitespace-nowrap">{formatCurrency(project.value)}</td>
+                      <td className="px-4 py-3 text-xs text-gray-700 whitespace-nowrap">{formatCurrency(getProjectValue(project))}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <div className="w-20 bg-gray-100 rounded-full h-1.5">
@@ -406,7 +411,7 @@ export default function ClientProfile({ clientId }: { clientId: string }) {
               ...clientProjects.map((p) => ({
                 date: p.created_at,
                 label: `Proyek dibuat: ${p.name}`,
-                sub: `${projectStatusLabel[p.status] ?? p.status}${p.value ? ` · ${formatCurrency(p.value)}` : ""}`,
+                sub: `${projectStatusLabel[p.status] ?? p.status}${getProjectValue(p) ? ` · ${formatCurrency(getProjectValue(p))}` : ""}`,
                 color: "bg-purple-500",
               })),
             ]

@@ -5,6 +5,7 @@ import { useProjects } from "@/hooks/useProjects";
 import { useInvoices } from "@/hooks/useInvoices";
 import { useAllPayments } from "@/hooks/usePayments";
 import { useAllExpenses } from "@/hooks/useExpenses";
+import { useApprovedRabTotals } from "@/hooks/useRab";
 import { useState } from "react";
 import Link from "next/link";
 import { LaporanPendapatan } from "./LaporanPendapatan";
@@ -141,7 +142,11 @@ export default function ReportsOverview() {
   const { invoices, loading: li } = useInvoices();
   const { payments } = useAllPayments();
   const { expenses } = useAllExpenses();
+  const { totals: rabTotals } = useApprovedRabTotals();
   const [tab, setTab] = useState("ringkasan");
+
+  const getProjectValue = (p: { lead_id?: string; value?: number }) =>
+    p.lead_id && rabTotals[p.lead_id] != null ? rabTotals[p.lead_id] : (p.value ?? 0);
 
   const loading = lc || ll || lp || li;
 
@@ -154,9 +159,9 @@ export default function ReportsOverview() {
   }
 
   /* ── Computed values ── */
-  const totalProjectValue = projects.reduce((s, p) => s + (p.value ?? 0), 0);
-  const doneValue = projects.filter((p) => p.status === "Done").reduce((s, p) => s + (p.value ?? 0), 0);
-  const activeValue = projects.filter((p) => p.status !== "Done").reduce((s, p) => s + (p.value ?? 0), 0);
+  const totalProjectValue = projects.reduce((s, p) => s + getProjectValue(p), 0);
+  const doneValue = projects.filter((p) => p.status === "Done").reduce((s, p) => s + getProjectValue(p), 0);
+  const activeValue = projects.filter((p) => p.status !== "Done").reduce((s, p) => s + getProjectValue(p), 0);
   const dealLeads = leads.filter((l) => l.status === "Deal").length;
   const conversionRate = pct(dealLeads, leads.length);
   const avgProgress =
@@ -211,14 +216,14 @@ export default function ReportsOverview() {
 
   /* Project value per status */
   const projectValueByStatus = PROJECT_STATUSES.reduce<Record<string, number>>((acc, s) => {
-    acc[s] = projects.filter((p) => p.status === s).reduce((sum, p) => sum + (p.value ?? 0), 0);
+    acc[s] = projects.filter((p) => p.status === s).reduce((sum, p) => sum + getProjectValue(p), 0);
     return acc;
   }, {});
 
   /* Top projects by value */
   const topProjects = [...projects]
-    .filter((p) => p.value)
-    .sort((a, b) => (b.value ?? 0) - (a.value ?? 0))
+    .filter((p) => getProjectValue(p) > 0)
+    .sort((a, b) => getProjectValue(b) - getProjectValue(a))
     .slice(0, 5);
 
   /* ── Invoice metrics ── */
@@ -857,7 +862,7 @@ export default function ReportsOverview() {
         const rows = projects
           .filter((p) => (expenseByProject[p.id] ?? 0) > 0 || (paidByProject[p.id] ?? 0) > 0)
           .map((p) => {
-            const nilai = p.value ?? 0;
+            const nilai = getProjectValue(p);
             const tagihan = billedByProject[p.id] ?? 0;
             const terkumpul = paidByProject[p.id] ?? 0;
             const pengeluaran = expenseByProject[p.id] ?? 0;

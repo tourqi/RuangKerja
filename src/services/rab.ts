@@ -1,6 +1,35 @@
 import { supabase } from '@/services/supabase';
 import { Rab, RabGroup, RabItem } from '@/types/db';
 
+export async function getApprovedRabTotals(): Promise<Record<string, number>> {
+  const { data: rabs, error: e1 } = await supabase
+    .from('rab')
+    .select('id, lead_id, diskon_nilai')
+    .eq('status', 'approved');
+  if (e1) throw e1;
+  if (!rabs?.length) return {};
+
+  const rabIds = rabs.map((r) => r.id);
+  const { data: groups, error: e2 } = await supabase
+    .from('rab_groups')
+    .select('rab_id, rab_items(qty, harga)')
+    .in('rab_id', rabIds);
+  if (e2) throw e2;
+
+  const grossByRab: Record<string, number> = {};
+  for (const g of (groups ?? []) as Array<{ rab_id: string; rab_items: Array<{ qty: number; harga: number }> }>) {
+    grossByRab[g.rab_id] = (grossByRab[g.rab_id] ?? 0) +
+      (g.rab_items ?? []).reduce((s, it) => s + it.qty * it.harga, 0);
+  }
+
+  const totals: Record<string, number> = {};
+  for (const rab of rabs as Array<{ id: string; lead_id: string; diskon_nilai?: number }>) {
+    const net = (grossByRab[rab.id] ?? 0) - (rab.diskon_nilai ?? 0);
+    totals[rab.lead_id] = (totals[rab.lead_id] ?? 0) + net;
+  }
+  return totals;
+}
+
 export async function getAllRabs(): Promise<Rab[]> {
   const { data, error } = await supabase
     .from('rab')

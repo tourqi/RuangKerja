@@ -13,6 +13,7 @@ import { useSortable } from "@/hooks/useSortable";
 import { usePagination } from "@/hooks/usePagination";
 import Pagination from "@/components/Pagination";
 import { exportCSV } from "@/utils/csv";
+import { useApprovedRabTotals } from "@/hooks/useRab";
 import { MultiSelect } from "@/components/MultiSelect";
 import {
   PROJECT_STATUSES,
@@ -43,6 +44,12 @@ export default function ProjectsTable() {
   const { projects, loading, error, refetch } = useProjects();
   const { clients } = useClients();
   const { leads } = useLeads();
+  const { totals: rabTotals } = useApprovedRabTotals();
+
+  const getProjectValue = (p: { lead_id?: string; value?: number }) =>
+    p.lead_id && rabTotals[p.lead_id] != null
+      ? rabTotals[p.lead_id]
+      : (p.value ?? 0);
   const [editingProject, setEditingProject] = useState<Project | null | undefined>(undefined);
   const [saving, setSaving] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -105,7 +112,7 @@ export default function ProjectsTable() {
       sortedProjects.map((p) => ({
         "Nama Project": p.name,
         Klien: p.client_name,
-        Nilai: p.value ?? "",
+        Nilai: getProjectValue(p),
         Status: PROJECT_STATUS_LABELS[p.status] ?? p.status,
         "Start Date": formatDate(p.start_date),
         Deadline: formatDate(p.deadline),
@@ -178,7 +185,7 @@ export default function ProjectsTable() {
         <div className="flex items-center gap-4">
           <p className="text-sm text-gray-500">{filteredProjects.length} project</p>
           <p className="text-sm font-semibold text-green-700">
-            Total: {formatRupiah(filteredProjects.reduce((sum, p) => sum + (p.value ?? 0), 0))}
+            Total: {formatRupiah(filteredProjects.reduce((sum, p) => sum + getProjectValue(p), 0))}
           </p>
         </div>
         <div className="flex gap-2">
@@ -289,7 +296,7 @@ export default function ProjectsTable() {
                   <tr key={project.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">{project.name}</td>
                     <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{client?.name || "-"}</td>
-                    <td className="px-4 py-3 text-gray-700 font-medium whitespace-nowrap">{formatRupiah(project.value)}</td>
+                    <td className="px-4 py-3 text-gray-700 font-medium whitespace-nowrap">{formatRupiah(getProjectValue(project))}</td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${PROJECT_STATUS_COLORS[project.status]}`}>
                         {PROJECT_STATUS_LABELS[project.status]}
