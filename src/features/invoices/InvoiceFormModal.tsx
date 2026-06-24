@@ -1,7 +1,7 @@
 "use client";
 import { useState, type FormEvent } from "react";
-import { Project, Client, Lead, Rab } from "@/types/db";
-import { addInvoice, generateInvoiceNumber } from "@/services/invoices";
+import { Project, Client, Lead, Rab, Invoice } from "@/types/db";
+import { addInvoice, generateInvoiceNumber, getInvoicesByProject } from "@/services/invoices";
 import { getRabByLead, getRabWithGroups } from "@/services/rab";
 import { useToast } from "@/components/Toast";
 import { formatRupiah } from "@/utils/format";
@@ -48,6 +48,7 @@ export function InvoiceFormModal({
   const [loadingRabs, setLoadingRabs] = useState(false);
   const [termins, setTermins] = useState<Termin[]>([newTermin(0)]);
   const [diskon, setDiskon] = useState({ persen: "", nilai: "" });
+  const [existingInvoices, setExistingInvoices] = useState<Invoice[]>([]);
   const [saving, setSaving] = useState(false);
 
   const diskonNilaiNum = parseFloat(diskon.nilai) || 0;
@@ -60,6 +61,8 @@ export function InvoiceFormModal({
     setSelectedRabId("");
     setRabTotal(null);
     setAvailableRabs([]);
+    setExistingInvoices([]);
+    setDiskon({ persen: "", nilai: "" });
     if (!projectId) return;
 
     const project = projects.find((p) => p.id === projectId);
@@ -67,21 +70,27 @@ export function InvoiceFormModal({
 
     setLoadingRabs(true);
     try {
-      const allRabs: Rab[] = [];
-      if (project.lead_id) {
-        const rabs = await getRabByLead(project.lead_id);
-        allRabs.push(...rabs.filter((r) => r.status === "approved"));
-      } else {
-        // fallback for projects created before lead_id was tracked
-        const dealLeads = leads.filter((l) => l.client_id === project.client_id && l.status === "Deal");
-        for (const lead of dealLeads) {
-          const rabs = await getRabByLead(lead.id);
-          allRabs.push(...rabs.filter((r) => r.status === "approved"));
-        }
-      }
-      setAvailableRabs(allRabs);
+      const [allRabsRaw, invoices] = await Promise.all([
+        (async () => {
+          const allRabs: Rab[] = [];
+          if (project.lead_id) {
+            const rabs = await getRabByLead(project.lead_id);
+            allRabs.push(...rabs.filter((r) => r.status === "approved"));
+          } else {
+            const dealLeads = leads.filter((l) => l.client_id === project.client_id && l.status === "Deal");
+            for (const lead of dealLeads) {
+              const rabs = await getRabByLead(lead.id);
+              allRabs.push(...rabs.filter((r) => r.status === "approved"));
+            }
+          }
+          return allRabs;
+        })(),
+        getInvoicesByProject(projectId),
+      ]);
+      setAvailableRabs(allRabsRaw);
+      setExistingInvoices(invoices);
     } catch {
-      toast("Gagal memuat RAB", "error");
+      toast("Gagal memuat data", "error");
     } finally {
       setLoadingRabs(false);
     }
@@ -90,12 +99,41 @@ export function InvoiceFormModal({
   async function handleRabChange(rabId: string) {
     setSelectedRabId(rabId);
     setRabTotal(null);
+    setDiskon({ persen: "", nilai: "" });
     if (!rabId) return;
     try {
       const groups = await getRabWithGroups(rabId);
-      const total = groups.reduce((sum, g) => sum + (g.items ?? []).reduce((s, item) => s + item.qty * item.harga, 0), 0);
-      setRabTotal(total);
-      setTermins((prev) => prev.map((t) => ({ ...t, jumlah: "", persen: "" })));
+      const grossTotal = groups.reduce((sum, g) => sum + (g.items ?? []).reduce((s, item) => s + item.qty * item.harga, 0), 0);
+      setRabTotal(grossTotal);
+
+      const selectedRab = availableRabs.find((r) => r.id === rabId);
+      const diskonNilai = selectedRab?.diskon_nilai ?? 0;
+      if (diskonNilai > 0) {
+        setDiskon({
+          persen: selectedRab?.diskon_persen ? String(selectedRab.diskon_persen) : "",
+          nilai: String(diskonNilai),
+        });
+      }
+
+      // Suggest next termin from skema_pembayaran
+      const skema = selectedRab?.skema_pembayaran ?? [];
+      const rabInvoiceCount = existingInvoices.filter((inv) => inv.rab_id === rabId).length;
+      const netTotal = grossTotal - diskonNilai;
+
+      if (skema.length > 0 && rabInvoiceCount < skema.length) {
+        const suggested = skema[rabInvoiceCount];
+        const suggestedAmount = Math.round(netTotal * suggested.persen / 100);
+        const dueDate = new Date(); dueDate.setDate(dueDate.getDate() + 14);
+        setTermins([{
+          id: crypto.randomUUID(),
+          nama: suggested.keterangan || `Termin ${rabInvoiceCount + 1}`,
+          persen: String(suggested.persen),
+          jumlah: String(suggestedAmount),
+          due_date: dueDate.toISOString().slice(0, 10),
+        }]);
+      } else {
+        setTermins((prev) => prev.map((t) => ({ ...t, jumlah: "", persen: "" })));
+      }
     } catch {
       toast("Gagal memuat total RAB", "error");
     }
@@ -235,7 +273,7 @@ export function InvoiceFormModal({
                     <div className="relative w-24">
                       <input
                         type="number" value={diskon.persen} onChange={(e) => handleDiskonPersenChange(e.target.value)}
-                        placeholder="0" min="0" max="100" step="0.1"
+                        placeholder="0" min="0" max="100" step="any"
                         className="w-full pl-2.5 pr-7 py-1.5 border border-gray-300 rounded-md text-xs text-gray-900 outline-none focus:ring-1 focus:ring-gray-900"
                       />
                       <span className="absolute right-2 top-1.5 text-xs text-gray-400">%</span>
@@ -257,6 +295,50 @@ export function InvoiceFormModal({
             </div>
           )}
 
+          {/* Riwayat Invoice Sebelumnya */}
+          {form.project_id && existingInvoices.length > 0 && (() => {
+            const filtered = selectedRabId
+              ? existingInvoices.filter((inv) => inv.rab_id === selectedRabId)
+              : existingInvoices;
+            if (filtered.length === 0) return null;
+            const totalTagih = filtered.reduce((s, inv) => s + inv.total_amount, 0);
+            const statusLabel: Record<string, string> = {
+              draft: "Draft", sent: "Terkirim", partial: "Sebagian", paid: "Lunas", overdue: "Lewat Jatuh Tempo",
+            };
+            const statusColor: Record<string, string> = {
+              draft: "text-gray-500", sent: "text-blue-600", partial: "text-amber-600",
+              paid: "text-green-600", overdue: "text-red-500",
+            };
+            return (
+              <div className="rounded-lg border border-gray-200 overflow-hidden">
+                <div className="px-3 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                    Invoice Sebelumnya ({filtered.length})
+                  </span>
+                  <span className="text-xs text-gray-500">Total: {formatRupiah(totalTagih)}</span>
+                </div>
+                <div className="divide-y divide-gray-100">
+                  {filtered.map((inv) => (
+                    <div key={inv.id} className="flex items-center justify-between px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-mono text-gray-700">{inv.invoice_number}</span>
+                        {inv.notes && (
+                          <span className="text-xs text-gray-400 truncate max-w-[140px]">{inv.notes.split(" · ")[0]}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className={`text-xs font-medium ${statusColor[inv.status] ?? "text-gray-500"}`}>
+                          {statusLabel[inv.status] ?? inv.status}
+                        </span>
+                        <span className="text-xs font-semibold text-gray-800">{formatRupiah(inv.total_amount)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Tanggal Invoice */}
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1.5">Tanggal Invoice *</label>
@@ -271,6 +353,49 @@ export function InvoiceFormModal({
           {/* Termin Builder */}
           {form.project_id && (
             <div>
+              {/* Suggestion badge from skema_pembayaran */}
+              {(() => {
+                if (!selectedRabId) return null;
+                const selectedRab = availableRabs.find((r) => r.id === selectedRabId);
+                const skema = selectedRab?.skema_pembayaran ?? [];
+                if (skema.length === 0) return null;
+                const rabInvoiceCount = existingInvoices.filter((inv) => inv.rab_id === selectedRabId).length;
+                const nextIdx = rabInvoiceCount;
+                return (
+                  <div className="mb-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span className="text-xs font-semibold text-amber-800">
+                      💡 Skema RAB ({skema.length} termin):
+                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {skema.map((s, i) => (
+                        <span
+                          key={i}
+                          className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border ${
+                            i < rabInvoiceCount
+                              ? "bg-green-100 border-green-300 text-green-700 line-through opacity-60"
+                              : i === nextIdx
+                              ? "bg-amber-200 border-amber-400 text-amber-900 font-semibold"
+                              : "bg-white border-gray-200 text-gray-500"
+                          }`}
+                        >
+                          {i < rabInvoiceCount && "✓ "}
+                          {i === nextIdx && "→ "}
+                          Ke-{i + 1} · {s.persen}%
+                        </span>
+                      ))}
+                    </div>
+                    {nextIdx < skema.length && (
+                      <span className="text-xs text-amber-700 w-full mt-0.5">
+                        Saran: tagihan ke-{nextIdx + 1} · {skema[nextIdx].keterangan || `${skema[nextIdx].persen}%`}
+                      </span>
+                    )}
+                    {nextIdx >= skema.length && (
+                      <span className="text-xs text-green-700 font-medium">Semua termin sudah diinvoice ✓</span>
+                    )}
+                  </div>
+                );
+              })()}
+
               <div className="flex items-center justify-between mb-2">
                 <label className="text-xs font-medium text-gray-700">Termin Pembayaran *</label>
                 {rabTotal != null && sisaTagihan != null && (
@@ -296,7 +421,7 @@ export function InvoiceFormModal({
                           <input
                             type="number" value={t.persen}
                             onChange={(e) => updateTermin(t.id, "persen", e.target.value)}
-                            placeholder="0" min="0" max="100" step="0.1"
+                            placeholder="0" min="0" max="100" step="any"
                             className="w-full pl-2.5 pr-7 py-1.5 border border-gray-300 rounded-md text-xs text-gray-900 outline-none focus:ring-1 focus:ring-gray-900"
                           />
                           <span className="absolute right-2 top-1.5 text-xs text-gray-400">%</span>

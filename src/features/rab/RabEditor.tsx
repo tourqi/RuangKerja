@@ -141,11 +141,11 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
 
   async function handleSaveDiskon() {
     if (!rab) return;
+    const diskon_persen = parseFloat(diskon.persen) || 0;
+    const diskon_nilai = parseFloat(diskon.nilai) || 0;
     try {
-      await updateRab(rab.id, {
-        diskon_persen: parseFloat(diskon.persen) || 0,
-        diskon_nilai: parseFloat(diskon.nilai) || 0,
-      });
+      await updateRab(rab.id, { diskon_persen, diskon_nilai });
+      setRab({ ...rab, diskon_persen, diskon_nilai });
     } catch {
       toast("Gagal menyimpan diskon", "error");
     }

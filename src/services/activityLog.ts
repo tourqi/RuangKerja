@@ -33,3 +33,8 @@ export async function logActivity(
   const { error } = await supabase.from('activity_logs').insert([entry]);
   if (error) throw error;
 }
+
+export async function deleteActivityLog(id: string): Promise<void> {
+  const { error } = await supabase.from('activity_logs').delete().eq('id', id);
+  if (error) throw error;
+}

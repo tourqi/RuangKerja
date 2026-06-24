@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useActivityLog } from "@/hooks/useActivityLog";
-import { logActivity, type ActivityLog } from "@/services/activityLog";
+import { logActivity, deleteActivityLog, type ActivityLog } from "@/services/activityLog";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/components/Toast";
 
@@ -42,13 +42,27 @@ interface Props {
 }
 
 export default function ActivityTimeline({ entityType, entityId }: Props) {
-  const { logs, loading, refetch } = useActivityLog(entityType, entityId);
+  const { logs, loading, error, refetch } = useActivityLog(entityType, entityId);
   const { user, profile } = useAuth();
   const toast = useToast();
 
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(true);
+
+  async function handleDelete(id: string) {
+    setDeletingId(id);
+    try {
+      await deleteActivityLog(id);
+      await refetch();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast(`Gagal menghapus: ${msg}`, "error");
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   async function handleAddNote(e: React.FormEvent) {
     e.preventDefault();
@@ -66,8 +80,9 @@ export default function ActivityTimeline({ entityType, entityId }: Props) {
       setNote("");
       await refetch();
       toast("Catatan ditambahkan", "success");
-    } catch {
-      toast("Gagal menyimpan catatan", "error");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast(`Gagal menyimpan catatan: ${msg}`, "error");
     } finally {
       setSaving(false);
     }
@@ -111,6 +126,9 @@ export default function ActivityTimeline({ entityType, entityId }: Props) {
           </form>
 
           {/* Timeline */}
+          {error && (
+            <p className="text-xs text-red-500 mb-3 bg-red-50 rounded px-2 py-1">{error}</p>
+          )}
           {loading ? (
             <div className="space-y-3">
               {[...Array(3)].map((_, i) => (
@@ -134,7 +152,7 @@ export default function ActivityTimeline({ entityType, entityId }: Props) {
                   const icon = ACTION_ICONS[log.action] ?? "●";
                   const color = ACTION_COLORS[log.action] ?? "bg-gray-100 text-gray-600";
                   return (
-                    <div key={log.id} className="flex gap-3 relative">
+                    <div key={log.id} className="flex gap-3 relative group/log">
                       <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 z-10 ${color}`}>
                         {icon}
                       </span>
@@ -148,6 +166,14 @@ export default function ActivityTimeline({ entityType, entityId }: Props) {
                           <span className="text-[10px] text-gray-400">{timeAgo(log.created_at)}</span>
                         </div>
                       </div>
+                      <button
+                        onClick={() => handleDelete(log.id)}
+                        disabled={deletingId === log.id}
+                        className="opacity-0 group-hover/log:opacity-100 transition-opacity flex-shrink-0 text-gray-300 hover:text-red-400 disabled:opacity-40 text-xs px-1"
+                        title="Hapus aktivitas"
+                      >
+                        {deletingId === log.id ? "…" : "✕"}
+                      </button>
                     </div>
                   );
                 })}
