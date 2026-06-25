@@ -13,7 +13,8 @@ import { useSortable } from "@/hooks/useSortable";
 import { usePagination } from "@/hooks/usePagination";
 import Pagination from "@/components/Pagination";
 import { exportCSV } from "@/utils/csv";
-import { useApprovedRabTotals } from "@/hooks/useRab";
+import { useApprovedRabTotals, useAllRabs } from "@/hooks/useRab";
+import { useInvoices } from "@/hooks/useInvoices";
 import { MultiSelect } from "@/components/MultiSelect";
 import {
   PROJECT_STATUSES,
@@ -45,11 +46,25 @@ export default function ProjectsTable() {
   const { clients } = useClients();
   const { leads } = useLeads();
   const { totals: rabTotals } = useApprovedRabTotals();
+  const { rabs } = useAllRabs();
+  const { invoices } = useInvoices();
 
   const getProjectValue = (p: { lead_id?: string; value?: number }) =>
     p.lead_id && rabTotals[p.lead_id] != null
       ? rabTotals[p.lead_id]
       : (p.value ?? 0);
+
+  const getPaymentStatus = (leadId: string | undefined): 'lunas' | 'belum' | null => {
+    if (!leadId) return null;
+    const leadRabs = (rabs || []).filter(r => r.lead_id === leadId);
+    if (leadRabs.length === 0) return null;
+    for (const rab of leadRabs) {
+      const rabInvoices = (invoices || []).filter(inv => inv.rab_id === rab.id);
+      if (rabInvoices.length === 0) return 'belum';
+      if (!rabInvoices.every(inv => inv.status === 'paid')) return 'belum';
+    }
+    return 'lunas';
+  };
   const [editingProject, setEditingProject] = useState<Project | null | undefined>(undefined);
   const [saving, setSaving] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -169,7 +184,7 @@ export default function ProjectsTable() {
       <div className="bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
         <table className="w-full text-sm">
           <tbody className="divide-y divide-gray-100">
-            {Array.from({ length: 7 }).map((_, i) => <SkeletonRow key={i} cols={9} />)}
+            {Array.from({ length: 7 }).map((_, i) => <SkeletonRow key={i} cols={10} />)}
           </tbody>
         </table>
       </div>
@@ -285,6 +300,7 @@ export default function ProjectsTable() {
                 <SortableHeader label="Deadline" col="deadline" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Assigned To" col="assigned_to" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Progress" col="progress" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Status Pembayaran</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Aksi</th>
               </tr>
             </thead>
@@ -317,6 +333,14 @@ export default function ProjectsTable() {
                       </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
+                      {(() => {
+                        const ps = getPaymentStatus(project.lead_id);
+                        if (ps === null) return <span className="text-gray-400 text-xs">-</span>;
+                        if (ps === 'lunas') return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Lunas</span>;
+                        return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">Belum Lunas</span>;
+                      })()}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex gap-1.5">
                         <Link
                           href={`/projects/${project.id}`}
@@ -346,7 +370,7 @@ export default function ProjectsTable() {
               })}
               {filteredProjects.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-6 py-12 text-center text-gray-400 text-sm">
+                  <td colSpan={10} className="px-6 py-12 text-center text-gray-400 text-sm">
                     Belum ada project. Klik "Tambah Project" untuk memulai.
                   </td>
                 </tr>

@@ -35,9 +35,22 @@ export default function InvoicesTable() {
     p.lead_id && rabTotals[p.lead_id] != null ? rabTotals[p.lead_id] : (p.value ?? 0);
   const toast = useToast();
 
+  const [filterSearch, setFilterSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [filterClientId, setFilterClientId] = useState<string[]>([]);
+  const [filterProjectId, setFilterProjectId] = useState<string[]>([]);
+  const [filterRabId, setFilterRabId] = useState<string[]>([]);
   const [showAdd, setShowAdd] = useState(false);
+
+  const availableRabs = filterProjectId.length === 0
+    ? rabs
+    : (() => {
+        const selectedLeadIds = new Set(
+          projects.filter(p => filterProjectId.includes(p.id)).map(p => p.lead_id).filter(Boolean) as string[]
+        );
+        return rabs.filter(r => selectedLeadIds.has(r.lead_id));
+      })();
+
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -52,10 +65,30 @@ export default function InvoicesTable() {
   const filtered = invoices.filter((inv) => {
     if (filterStatus.length > 0 && !filterStatus.includes(inv.status)) return false;
     if (filterClientId.length > 0 && !filterClientId.includes(inv.client_id ?? "")) return false;
+    if (filterProjectId.length > 0 && !filterProjectId.includes(inv.project_id ?? "")) return false;
+    if (filterRabId.length > 0 && !filterRabId.includes(inv.rab_id ?? "")) return false;
+    if (filterSearch.trim()) {
+      const q = filterSearch.toLowerCase();
+      const projectName = projects.find(p => p.id === inv.project_id)?.name?.toLowerCase() ?? "";
+      const rabName = rabs.find(r => r.id === inv.rab_id)?.nama?.toLowerCase() ?? "";
+      if (!projectName.includes(q) && !rabName.includes(q)) return false;
+    }
     return true;
   });
 
   const { page, totalPages, paged, goTo } = usePagination(filtered, 20);
+
+  const handleProjectFilterChange = (v: string[]) => {
+    setFilterProjectId(v);
+    if (v.length > 0) {
+      const newLeadIds = new Set(
+        projects.filter(p => v.includes(p.id)).map(p => p.lead_id).filter(Boolean) as string[]
+      );
+      const validRabIds = new Set(rabs.filter(r => newLeadIds.has(r.lead_id)).map(r => r.id));
+      setFilterRabId(prev => prev.filter(id => validRabIds.has(id)));
+    }
+    goTo(1);
+  };
 
   async function handleStatusChange(id: string, status: InvoiceStatus) {
     try {
@@ -109,6 +142,18 @@ export default function InvoicesTable() {
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="relative">
+          <svg className="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            value={filterSearch}
+            onChange={e => { setFilterSearch(e.target.value); goTo(1); }}
+            placeholder="Cari project / RAB..."
+            className="pl-8 pr-3 py-2 border border-gray-300 rounded-lg text-sm text-black placeholder:text-gray-400 focus:ring-2 focus:ring-gray-900 outline-none w-52"
+          />
+        </div>
         <MultiSelect
           placeholder="Semua Status"
           options={toOptions(INVOICE_STATUSES, INVOICE_STATUS_LABELS)}
@@ -121,6 +166,20 @@ export default function InvoicesTable() {
           options={clients.map((c) => ({ value: c.id, label: c.name ?? c.id }))}
           value={filterClientId}
           onChange={(v) => { setFilterClientId(v); goTo(1); }}
+          className="w-52"
+        />
+        <MultiSelect
+          placeholder="Semua Project"
+          options={projects.map((p) => ({ value: p.id, label: p.name }))}
+          value={filterProjectId}
+          onChange={handleProjectFilterChange}
+          className="w-52"
+        />
+        <MultiSelect
+          placeholder={filterProjectId.length > 0 ? `RAB (${availableRabs.length})` : "Semua RAB"}
+          options={availableRabs.map((r) => ({ value: r.id, label: r.nama }))}
+          value={filterRabId}
+          onChange={(v) => { setFilterRabId(v); goTo(1); }}
           className="w-52"
         />
         <div className="ml-auto">
