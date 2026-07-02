@@ -97,7 +97,7 @@ export default function ClientProfile({ clientId }: { clientId: string }) {
 
   if (!client) {
     return (
-      <div className="p-6 max-w-4xl mx-auto">
+      <div className="p-6">
         <button onClick={() => router.back()} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition mb-6">
           <span>←</span> Kembali
         </button>
@@ -115,7 +115,7 @@ export default function ClientProfile({ clientId }: { clientId: string }) {
   const activeProjects = clientProjects.filter((p) => p.status !== "Done").length;
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
+    <div className="p-6 space-y-6">
       {/* Back */}
       <Link href="/clients" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition">
         <span>←</span> Kembali ke Clients

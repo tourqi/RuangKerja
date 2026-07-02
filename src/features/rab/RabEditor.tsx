@@ -355,7 +355,7 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
 
   if (!rab) {
     return (
-      <div className="p-6 max-w-4xl mx-auto">
+      <div className="p-6">
         <Link href={`/leads/${leadId}`} className="text-sm text-gray-500 hover:text-gray-800">← Kembali</Link>
         <div className="mt-6 bg-white rounded-xl border border-gray-100 p-12 text-center">
           <p className="text-gray-400 text-sm">RAB tidak ditemukan.</p>
@@ -383,7 +383,7 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
         />
       )}
 
-      <div className="p-6 max-w-6xl mx-auto space-y-6 print:hidden">
+      <div className="p-6 space-y-6 print:hidden">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-gray-400">
           <Link href="/leads" className="hover:text-gray-700">Leads</Link>
