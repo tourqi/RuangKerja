@@ -11,6 +11,8 @@ import Link from "next/link";
 import { LaporanPendapatan } from "./LaporanPendapatan";
 import { LaporanPengeluaran } from "./LaporanPengeluaran";
 import { LaporanArusKas } from "./LaporanArusKas";
+import { computeProjectProfitLoss } from "@/utils/profitLossCalculations";
+import { groupSumByKey } from "@/utils/reportCalculations";
 
 const formatCurrency = (v?: number) =>
   v == null
@@ -839,44 +841,10 @@ export default function ReportsOverview() {
 
       {/* ── TAB: Laba Rugi ── */}
       {tab === "labarugi" && (() => {
-        const expenseByProject = expenses.reduce<Record<string, number>>((acc, e) => {
-          acc[e.project_id] = (acc[e.project_id] ?? 0) + e.jumlah;
-          return acc;
-        }, {});
+        const expenseByCategory = groupSumByKey(expenses, (e) => e.kategori, (e) => e.jumlah);
 
-        const expenseByCategory = expenses.reduce<Record<string, number>>((acc, e) => {
-          acc[e.kategori] = (acc[e.kategori] ?? 0) + e.jumlah;
-          return acc;
-        }, {});
-
-        const paidByProject = invoices.reduce<Record<string, number>>((acc, inv) => {
-          if (inv.project_id) acc[inv.project_id] = (acc[inv.project_id] ?? 0) + inv.paid_amount;
-          return acc;
-        }, {});
-
-        const billedByProject = invoices.reduce<Record<string, number>>((acc, inv) => {
-          if (inv.project_id) acc[inv.project_id] = (acc[inv.project_id] ?? 0) + inv.total_amount;
-          return acc;
-        }, {});
-
-        const rows = projects
-          .filter((p) => (expenseByProject[p.id] ?? 0) > 0 || (paidByProject[p.id] ?? 0) > 0)
-          .map((p) => {
-            const nilai = getProjectValue(p);
-            const tagihan = billedByProject[p.id] ?? 0;
-            const terkumpul = paidByProject[p.id] ?? 0;
-            const pengeluaran = expenseByProject[p.id] ?? 0;
-            const laba = terkumpul - pengeluaran;
-            const margin = terkumpul > 0 ? Math.round((laba / terkumpul) * 100) : null;
-            return { p, nilai, tagihan, terkumpul, pengeluaran, laba, margin };
-          })
-          .sort((a, b) => b.laba - a.laba);
-
-        const totalNilai = rows.reduce((s, r) => s + r.nilai, 0);
-        const totalTerkumpul = rows.reduce((s, r) => s + r.terkumpul, 0);
-        const totalPengeluaran = rows.reduce((s, r) => s + r.pengeluaran, 0);
-        const totalLaba = totalTerkumpul - totalPengeluaran;
-        const totalMargin = totalTerkumpul > 0 ? Math.round((totalLaba / totalTerkumpul) * 100) : 0;
+        const { rows, totals } = computeProjectProfitLoss(projects, expenses, invoices, getProjectValue);
+        const { totalNilai, totalTerkumpul, totalPengeluaran, totalLaba, totalMargin } = totals;
 
         const KATEGORI_LABELS: Record<string, string> = {
           material: "Material", jasa: "Jasa", transport: "Transport", lainnya: "Lainnya",
@@ -936,7 +904,7 @@ export default function ReportsOverview() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
-                      {rows.map(({ p, terkumpul, pengeluaran, laba, margin }) => {
+                      {rows.map(({ project: p, terkumpul, pengeluaran, laba, margin }) => {
                         const cl = clients.find((c) => c.id === p.client_id);
                         const isRugi = laba < 0;
                         return (

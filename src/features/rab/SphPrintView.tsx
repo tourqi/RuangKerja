@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect } from "react";
 import { Rab } from "@/types/db";
+import { groupSubtotal as calcGroupSubtotal, grandTotal as calcGrandTotal } from "@/utils/rabCalculations";
 
 const fmt = (v: number) =>
   new Intl.NumberFormat("id-ID", { minimumFractionDigits: 0 }).format(v);
@@ -70,6 +71,11 @@ function KopFooter() {
   );
 }
 
+/* Thin separator line that appears between kop and body */
+function Separator() {
+  return <div style={{ borderBottom: `1.5px solid ${NAVY}`, marginBottom: "6mm" }} />;
+}
+
 /* ─── Main component ─────────────────────────────────── */
 export default function SphPrintView({ rab, groups, config, onClose }: Props) {
   useEffect(() => {
@@ -78,9 +84,8 @@ export default function SphPrintView({ rab, groups, config, onClose }: Props) {
     return () => window.removeEventListener("afterprint", handleAfterPrint);
   }, [onClose]);
 
-  const groupSubtotal = (g: PrintGroup) =>
-    g.items.reduce((s, i) => s + i.qty * i.harga, 0);
-  const grandTotal = groups.reduce((s, g) => s + groupSubtotal(g), 0);
+  const groupSubtotal = (g: PrintGroup) => calcGroupSubtotal(g);
+  const grandTotal = calcGrandTotal(groups);
   const netTotal = grandTotal - (rab.diskon_nilai ?? 0);
 
   const termin = (rab.skema_pembayaran ?? []).length > 0
@@ -90,11 +95,6 @@ export default function SphPrintView({ rab, groups, config, onClose }: Props) {
   const now   = new Date();
   const nomorSph = config.nomorSph ||
     `001/SPH/${ROMAN_MONTHS[now.getMonth()]}/${now.getFullYear()}`;
-
-  /* Thin separator line that appears between kop and body */
-  const Separator = () => (
-    <div style={{ borderBottom: `1.5px solid ${NAVY}`, marginBottom: "6mm" }} />
-  );
 
   return (
     <div className="hidden print:block sph-print">

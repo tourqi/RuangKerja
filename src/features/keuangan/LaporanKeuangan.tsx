@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import type { Payment, ProjectExpense, GeneralExpense, Invoice, Project, Client } from "@/types/db";
+import { isDateInRange, sumAmounts, sortCashFlowEntries, withRunningBalance } from "@/utils/reportCalculations";
 
 function currentMonthRange() {
   const now = new Date();
@@ -46,9 +47,9 @@ const projectKategoriLabel: Record<string, string> = {
 };
 
 type Row =
-  | { type: "masuk"; date: string; id: string; desc: string; ref: string; meta: string; amount: number }
-  | { type: "keluar-project"; date: string; id: string; desc: string; ref: string; meta: string; amount: number }
-  | { type: "keluar-umum"; date: string; id: string; desc: string; ref: string; meta: string; amount: number };
+  | { type: "masuk"; isInflow: true; date: string; id: string; desc: string; ref: string; meta: string; amount: number }
+  | { type: "keluar-project"; isInflow: false; date: string; id: string; desc: string; ref: string; meta: string; amount: number }
+  | { type: "keluar-umum"; isInflow: false; date: string; id: string; desc: string; ref: string; meta: string; amount: number };
 
 type Tab = "arus-kas" | "pemasukan" | "pengeluaran";
 
@@ -78,10 +79,7 @@ export function LaporanKeuangan({
   const projectMap = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects]);
   const clientMap = useMemo(() => new Map(clients.map((c) => [c.id, c])), [clients]);
 
-  const inRange = (d: string) => {
-    const date = d.slice(0, 10);
-    return date >= dateFrom && date <= dateTo;
-  };
+  const inRange = (d: string) => isDateInRange(d, dateFrom, dateTo);
 
   const rows = useMemo<Row[]>(() => {
     const masuk: Row[] = payments
@@ -97,52 +95,49 @@ export function LaporanKeuangan({
         const desc = client?.name ?? project?.name ?? invoice?.invoice_number ?? "—";
         return {
           type: "masuk",
+          isInflow: true,
           date: p.payment_date.slice(0, 10),
           id: p.id,
           desc,
           ref: invoice?.invoice_number ?? "—",
           meta: methodLabels[p.payment_method] ?? p.payment_method,
           amount: p.amount,
-        };
+        } as const;
       });
 
     const keluarProject: Row[] = projectExpenses
       .filter((e) => inRange(e.tanggal))
       .map((e) => ({
         type: "keluar-project",
+        isInflow: false,
         date: e.tanggal.slice(0, 10),
         id: e.id,
         desc: e.deskripsi,
         ref: projectMap.get(e.project_id)?.name ?? "—",
         meta: projectKategoriLabel[e.kategori] ?? e.kategori,
         amount: e.jumlah,
-      }));
+      } as const));
 
     const keluarUmum: Row[] = generalExpenses
       .filter((e) => inRange(e.tanggal))
       .map((e) => ({
         type: "keluar-umum",
+        isInflow: false,
         date: e.tanggal.slice(0, 10),
         id: e.id,
         desc: e.deskripsi,
         ref: e.vendor ?? "—",
         meta: generalKategoriLabel[e.kategori] ?? e.kategori,
         amount: e.jumlah,
-      }));
+      } as const));
 
-    return [...masuk, ...keluarProject, ...keluarUmum].sort((a, b) => {
-      const cmp = a.date.localeCompare(b.date);
-      if (cmp !== 0) return cmp;
-      if (a.type === "masuk" && b.type !== "masuk") return -1;
-      if (a.type !== "masuk" && b.type === "masuk") return 1;
-      return 0;
-    });
+    return sortCashFlowEntries([...masuk, ...keluarProject, ...keluarUmum]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [payments, projectExpenses, generalExpenses, dateFrom, dateTo, invoiceMap, projectMap, clientMap]);
 
-  const totalMasuk = rows.filter((r) => r.type === "masuk").reduce((s, r) => s + r.amount, 0);
-  const totalKeluarProject = rows.filter((r) => r.type === "keluar-project").reduce((s, r) => s + r.amount, 0);
-  const totalKeluarUmum = rows.filter((r) => r.type === "keluar-umum").reduce((s, r) => s + r.amount, 0);
+  const totalMasuk = sumAmounts(rows.filter((r) => r.type === "masuk"));
+  const totalKeluarProject = sumAmounts(rows.filter((r) => r.type === "keluar-project"));
+  const totalKeluarUmum = sumAmounts(rows.filter((r) => r.type === "keluar-umum"));
   const totalKeluar = totalKeluarProject + totalKeluarUmum;
   const arusBersih = totalMasuk - totalKeluar;
 
@@ -151,6 +146,7 @@ export function LaporanKeuangan({
     if (tab === "pengeluaran") return rows.filter((r) => r.type !== "masuk");
     return rows;
   }, [rows, tab]);
+  const visibleRowsWithBalance = useMemo(() => withRunningBalance(visibleRows), [visibleRows]);
 
   const filterSection = (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
@@ -302,11 +298,8 @@ export function LaporanKeuangan({
             </thead>
             <tbody className="divide-y divide-gray-50">
               {(() => {
-                let running = 0;
-                return visibleRows.map((row, idx) => {
-                  if (row.type === "masuk") running += row.amount;
-                  else running -= row.amount;
-                  const saldo = running;
+                return visibleRowsWithBalance.map((row, idx) => {
+                  const saldo = row.balance;
                   const isMasuk = row.type === "masuk";
                   const isUmum = row.type === "keluar-umum";
 

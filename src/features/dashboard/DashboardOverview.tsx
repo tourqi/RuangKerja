@@ -6,6 +6,7 @@ import { useInvoices } from "@/hooks/useInvoices";
 import { useAllPayments } from "@/hooks/usePayments";
 import { useAllExpenses } from "@/hooks/useExpenses";
 import { useApprovedRabTotals } from "@/hooks/useRab";
+import { computeProjectProfitLoss } from "@/utils/profitLossCalculations";
 import Link from "next/link";
 import {
   PieChart, Pie, Tooltip,
@@ -195,23 +196,9 @@ export default function DashboardOverview() {
   const recentInvoices = [...invoices]
     .sort((a, b) => new Date(b.invoice_date || b.created_at || 0).getTime() - new Date(a.invoice_date || a.created_at || 0).getTime())
     .slice(0, 5);
-  const invoicePaidByProject = invoices.reduce<Record<string, number>>((acc, inv) => {
-    if (inv.project_id) acc[inv.project_id] = (acc[inv.project_id] ?? 0) + inv.paid_amount;
-    return acc;
-  }, {});
-  const expenseByProject = expenses.reduce<Record<string, number>>((acc, e) => {
-    acc[e.project_id] = (acc[e.project_id] ?? 0) + e.jumlah;
-    return acc;
-  }, {});
-  const labaRows = projects
-    .filter((p) => (invoicePaidByProject[p.id] ?? 0) > 0 || (expenseByProject[p.id] ?? 0) > 0)
-    .map((p) => {
-      const t = invoicePaidByProject[p.id] ?? 0;
-      const e = expenseByProject[p.id] ?? 0;
-      return { p, laba: t - e, margin: t > 0 ? Math.round(((t - e) / t) * 100) : null };
-    })
-    .sort((a, b) => b.laba - a.laba)
-    .slice(0, 5);
+  const labaRows = computeProjectProfitLoss(projects, expenses, invoices, getProjectValue).rows
+    .slice(0, 5)
+    .map(({ project: p, laba, margin }) => ({ p, laba, margin }));
 
   return (
     <div className="space-y-4">

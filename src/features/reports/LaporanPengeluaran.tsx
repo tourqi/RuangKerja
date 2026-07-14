@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import type { ProjectExpense, Project, Client } from "@/types/db";
+import { isDateInRange, sumAmounts, groupSumByKey } from "@/utils/reportCalculations";
 
 function currentMonthRange() {
   const now = new Date();
@@ -64,8 +65,7 @@ export function LaporanPengeluaran({
     () =>
       expenses
         .filter((e) => {
-          const d = e.tanggal.slice(0, 10);
-          if (d < dateFrom || d > dateTo) return false;
+          if (!isDateInRange(e.tanggal, dateFrom, dateTo)) return false;
           if (categoryFilter.length > 0 && !categoryFilter.includes(e.kategori)) return false;
           return true;
         })
@@ -73,12 +73,9 @@ export function LaporanPengeluaran({
     [expenses, dateFrom, dateTo, categoryFilter]
   );
 
-  const total = filtered.reduce((s, e) => s + e.jumlah, 0);
+  const total = sumAmounts(filtered.map((e) => ({ amount: e.jumlah })));
 
-  const byCategory = filtered.reduce<Record<string, number>>((acc, e) => {
-    acc[e.kategori] = (acc[e.kategori] || 0) + e.jumlah;
-    return acc;
-  }, {});
+  const byCategory = groupSumByKey(filtered, (e) => e.kategori, (e) => e.jumlah);
 
   const toggleCategory = (cat: string) =>
     setCategoryFilter((prev) =>

@@ -1,5 +1,7 @@
 import { supabase } from './supabase';
-import type { Invoice, InvoiceStatus, Payment } from '@/types/db';
+import type { Invoice, Payment } from '@/types/db';
+import { logActivity } from './activityLog';
+import { sumPayments, determineInvoiceStatus } from '@/utils/invoiceCalculations';
 
 export async function getInvoicesByProject(projectId: string): Promise<Invoice[]> {
   const { data, error } = await supabase
@@ -52,6 +54,12 @@ export async function addInvoice(
     .select()
     .single();
   if (error) throw error;
+  await logActivity({
+    entity_type: 'invoice',
+    entity_id: data.id,
+    action: 'created',
+    description: `Invoice ${data.invoice_number} dibuat`,
+  });
   return data as Invoice;
 }
 
@@ -63,12 +71,29 @@ export async function updateInvoice(id: string, updates: Partial<Invoice>): Prom
     .select()
     .single();
   if (error) throw error;
+  await logActivity({
+    entity_type: 'invoice',
+    entity_id: id,
+    action: updates.status ? 'status_changed' : 'updated',
+    description: updates.status ? `Status invoice diubah menjadi ${updates.status}` : 'Invoice diperbarui',
+  });
   return data as Invoice;
 }
 
 export async function deleteInvoice(id: string): Promise<void> {
+  const { data: existing } = await supabase
+    .from('invoices')
+    .select('invoice_number')
+    .eq('id', id)
+    .single();
   const { error } = await supabase.from('invoices').delete().eq('id', id);
   if (error) throw error;
+  await logActivity({
+    entity_type: 'invoice',
+    entity_id: id,
+    action: 'deleted',
+    description: `Invoice dihapus${existing?.invoice_number ? `: ${existing.invoice_number}` : ''}`,
+  });
 }
 
 export async function getAllPayments(): Promise<Payment[]> {
@@ -100,6 +125,12 @@ export async function addPayment(
     .single();
   if (error) throw error;
   await recalcInvoiceStatus(payment.invoice_id);
+  await logActivity({
+    entity_type: 'invoice',
+    entity_id: payment.invoice_id,
+    action: 'payment_added',
+    description: `Pembayaran Rp${payment.amount.toLocaleString('id-ID')} diterima`,
+  });
   return data as Payment;
 }
 
@@ -107,6 +138,12 @@ export async function deletePayment(id: string, invoiceId: string): Promise<void
   const { error } = await supabase.from('payments').delete().eq('id', id);
   if (error) throw error;
   await recalcInvoiceStatus(invoiceId);
+  await logActivity({
+    entity_type: 'invoice',
+    entity_id: invoiceId,
+    action: 'payment_deleted',
+    description: 'Pembayaran dihapus',
+  });
 }
 
 export async function recalcInvoiceStatus(invoiceId: string): Promise<void> {
@@ -120,21 +157,16 @@ export async function recalcInvoiceStatus(invoiceId: string): Promise<void> {
     .select('amount')
     .eq('invoice_id', invoiceId);
 
-  const totalPaid = (paymentsData ?? []).reduce((sum: number, p: { amount: number }) => sum + p.amount, 0);
+  const totalPaid = sumPayments(paymentsData ?? []);
   const totalAmount = invoice?.total_amount ?? 0;
   const dueDate = invoice?.due_date ? new Date(invoice.due_date) : null;
-  const now = new Date();
 
-  let status: InvoiceStatus;
-  if (totalPaid >= totalAmount && totalAmount > 0) {
-    status = 'paid';
-  } else if (totalPaid > 0) {
-    status = 'partial';
-  } else if (dueDate && dueDate < now) {
-    status = 'overdue';
-  } else {
-    status = (invoice?.status === 'sent' ? 'sent' : 'draft') as InvoiceStatus;
-  }
+  const status = determineInvoiceStatus({
+    totalPaid,
+    totalAmount,
+    dueDate,
+    currentStatus: invoice?.status,
+  });
 
   await supabase
     .from('invoices')

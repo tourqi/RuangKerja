@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useProjects } from "@/hooks/useProjects";
 import { useClients } from "@/hooks/useClients";
 import { useLeads } from "@/hooks/useLeads";
@@ -41,6 +41,7 @@ function SkeletonRow({ cols }: { cols: number }) {
 
 export default function ProjectsTable() {
   const toast = useToast();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const { projects, loading, error, refetch } = useProjects();
   const { clients } = useClients();
@@ -309,7 +310,7 @@ export default function ProjectsTable() {
                 const client = clients.find((c) => c.id === project.client_id);
                 const progress = project.progress ?? 0;
                 return (
-                  <tr key={project.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={project.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onDoubleClick={() => router.push(`/projects/${project.id}`)}>
                     <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">{project.name}</td>
                     <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{client?.name || "-"}</td>
                     <td className="px-4 py-3 text-gray-700 font-medium whitespace-nowrap">{formatRupiah(getProjectValue(project))}</td>
@@ -340,7 +341,7 @@ export default function ProjectsTable() {
                         return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">Belum Lunas</span>;
                       })()}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap" onDoubleClick={(e) => e.stopPropagation()}>
                       <div className="flex gap-1.5">
                         <Link
                           href={`/projects/${project.id}`}

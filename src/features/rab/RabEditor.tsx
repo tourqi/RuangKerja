@@ -19,6 +19,13 @@ import RabPrintView from "@/features/rab/RabPrintView";
 import SphPrintView, { SphConfig } from "@/features/rab/SphPrintView";
 import { generateSphDocx } from "@/features/rab/generateSph";
 import { supabase } from "@/services/supabase";
+import {
+  groupSubtotal as calcGroupSubtotal,
+  grandTotal as calcGrandTotal,
+  netTotal as calcNetTotal,
+  diskonNilaiFromPersen,
+  diskonPersenFromNilai,
+} from "@/utils/rabCalculations";
 
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat("id-ID", { minimumFractionDigits: 0 }).format(v);
@@ -120,22 +127,21 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
   }, [editingName]);
 
   // --- CALCULATIONS ---
-  const groupSubtotal = (group: LocalGroup) =>
-    group.items.reduce((s, item) => s + item.qty * item.harga, 0);
+  const groupSubtotal = (group: LocalGroup) => calcGroupSubtotal(group);
 
-  const grandTotal = groups.reduce((s, g) => s + groupSubtotal(g), 0);
+  const grandTotal = calcGrandTotal(groups);
   const diskonNilaiNum = parseFloat(diskon.nilai) || 0;
-  const netTotal = grandTotal - diskonNilaiNum;
+  const netTotal = calcNetTotal(groups, diskonNilaiNum);
 
   function handleDiskonPersenChange(value: string) {
     const persen = parseFloat(value) || 0;
-    const nilai = grandTotal > 0 ? Math.round(grandTotal * persen / 100) : 0;
+    const nilai = diskonNilaiFromPersen(grandTotal, persen);
     setDiskon({ persen: value, nilai: nilai > 0 ? String(nilai) : "" });
   }
 
   function handleDiskonNilaiChange(value: string) {
     const nilai = parseFloat(value) || 0;
-    const persen = grandTotal > 0 ? ((nilai / grandTotal) * 100).toFixed(2) : "";
+    const persen = grandTotal > 0 ? diskonPersenFromNilai(grandTotal, nilai).toFixed(2) : "";
     setDiskon({ nilai: value, persen: persen });
   }
 

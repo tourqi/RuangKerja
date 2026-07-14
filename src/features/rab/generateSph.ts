@@ -7,6 +7,7 @@ import {
 import { saveAs } from "file-saver";
 import { Rab } from "@/types/db";
 import type { SphConfig } from "./SphPrintView";
+import { groupSubtotal as calcGroupSubtotal, grandTotal as calcGrandTotal } from "@/utils/rabCalculations";
 
 /* ─── Constants ──────────────────────────────────── */
 const BLACK = "000000";
@@ -132,9 +133,8 @@ interface PrintGroup {
 }
 
 function buildRabTable(groups: PrintGroup[], rab: Rab): Table {
-  const groupSubtotal = (g: PrintGroup) =>
-    g.items.reduce((s, i) => s + i.qty * i.harga, 0);
-  const grandTotal = groups.reduce((s, g) => s + groupSubtotal(g), 0);
+  const groupSubtotal = (g: PrintGroup) => calcGroupSubtotal(g);
+  const grandTotal = calcGrandTotal(groups);
   const diskon     = rab.diskon_nilai ?? 0;
   const netTotal   = grandTotal - diskon;
 
@@ -306,9 +306,7 @@ export async function generateSphDocx(
   const nomorSph = config.nomorSph ||
     `001/SPH/${ROMAN_MONTHS[now.getMonth()]}/${now.getFullYear()}`;
 
-  const groupSubtotal = (g: PrintGroup) =>
-    g.items.reduce((s, i) => s + i.qty * i.harga, 0);
-  const grandTotal = groups.reduce((s, g) => s + groupSubtotal(g), 0);
+  const grandTotal = calcGrandTotal(groups);
   const netTotal   = grandTotal - (rab.diskon_nilai ?? 0);
 
   // Fetch header & footer images

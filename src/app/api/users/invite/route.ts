@@ -1,4 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
 export async function POST(req: Request) {
@@ -6,6 +8,36 @@ export async function POST(req: Request) {
 
   if (!email || !role) {
     return NextResponse.json({ error: 'Email dan role wajib diisi' }, { status: 400 })
+  }
+
+  // This route uses the service role key below, which bypasses RLS entirely.
+  // Without an explicit check here, anyone who can reach this (unauthenticated)
+  // endpoint could invite themselves as 'owner'.
+  const cookieStore = await cookies()
+  const supabaseSession = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => cookieStore.getAll(),
+        setAll: () => {},
+      },
+    }
+  )
+
+  const { data: { user } } = await supabaseSession.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Tidak terautentikasi' }, { status: 401 })
+  }
+
+  const { data: requesterProfile } = await supabaseSession
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (requesterProfile?.role !== 'owner') {
+    return NextResponse.json({ error: 'Hanya owner yang boleh mengundang pengguna' }, { status: 403 })
   }
 
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY

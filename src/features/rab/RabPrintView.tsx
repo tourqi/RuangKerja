@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect } from "react";
 import { Rab } from "@/types/db";
+import { groupSubtotal as calcGroupSubtotal, grandTotal as calcGrandTotal } from "@/utils/rabCalculations";
 
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat("id-ID", { minimumFractionDigits: 0 }).format(v);
@@ -15,8 +16,8 @@ interface Props {
 }
 
 export default function RabPrintView({ rab, groups, onClose }: Props) {
-  const groupSubtotal = (g: PrintGroup) => g.items.reduce((s, i) => s + i.qty * i.harga, 0);
-  const grandTotal = groups.reduce((s, g) => s + groupSubtotal(g), 0);
+  const groupSubtotal = (g: PrintGroup) => calcGroupSubtotal(g);
+  const grandTotal = calcGrandTotal(groups);
   useEffect(() => {
     const handleAfterPrint = () => onClose();
     window.addEventListener("afterprint", handleAfterPrint);

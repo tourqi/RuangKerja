@@ -1,5 +1,7 @@
 import { supabase } from '@/services/supabase';
 import { Rab, RabGroup, RabItem } from '@/types/db';
+import { logActivity } from '@/services/activityLog';
+import { grandTotal } from '@/utils/rabCalculations';
 
 export async function getApprovedRabTotals(): Promise<Record<string, number>> {
   const { data: rabs, error: e1 } = await supabase
@@ -18,8 +20,7 @@ export async function getApprovedRabTotals(): Promise<Record<string, number>> {
 
   const grossByRab: Record<string, number> = {};
   for (const g of (groups ?? []) as Array<{ rab_id: string; rab_items: Array<{ qty: number; harga: number }> }>) {
-    grossByRab[g.rab_id] = (grossByRab[g.rab_id] ?? 0) +
-      (g.rab_items ?? []).reduce((s, it) => s + it.qty * it.harga, 0);
+    grossByRab[g.rab_id] = (grossByRab[g.rab_id] ?? 0) + grandTotal([{ items: g.rab_items ?? [] }]);
   }
 
   const totals: Record<string, number> = {};
@@ -69,6 +70,12 @@ export async function addRab(leadId: string, nama: string): Promise<Rab> {
     .select()
     .single();
   if (error) throw error;
+  await logActivity({
+    entity_type: 'rab',
+    entity_id: data.id,
+    action: 'created',
+    description: `RAB baru dibuat: ${nama}`,
+  });
   return data as Rab;
 }
 
@@ -80,12 +87,29 @@ export async function updateRab(id: string, updates: Partial<Pick<Rab, 'nama' | 
     .select()
     .single();
   if (error) throw error;
+  await logActivity({
+    entity_type: 'rab',
+    entity_id: id,
+    action: updates.status ? 'status_changed' : 'updated',
+    description: updates.status ? `Status RAB diubah menjadi ${updates.status}` : 'RAB diperbarui',
+  });
   return data as Rab;
 }
 
 export async function deleteRab(id: string): Promise<void> {
+  const { data: existing } = await supabase
+    .from('rab')
+    .select('nama')
+    .eq('id', id)
+    .single();
   const { error } = await supabase.from('rab').delete().eq('id', id);
   if (error) throw error;
+  await logActivity({
+    entity_type: 'rab',
+    entity_id: id,
+    action: 'deleted',
+    description: `RAB dihapus${existing?.nama ? `: ${existing.nama}` : ''}`,
+  });
 }
 
 export async function addRabGroup(rabId: string, no: number, deskripsi: string): Promise<RabGroup> {

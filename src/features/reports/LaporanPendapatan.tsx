@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import type { Payment, Invoice, Project, Client } from "@/types/db";
+import { isDateInRange, sumAmounts, groupSumByKey } from "@/utils/reportCalculations";
 
 function currentMonthRange() {
   const now = new Date();
@@ -54,20 +55,14 @@ export function LaporanPendapatan({
   const filtered = useMemo(
     () =>
       payments
-        .filter((p) => {
-          const d = p.payment_date.slice(0, 10);
-          return d >= dateFrom && d <= dateTo;
-        })
+        .filter((p) => isDateInRange(p.payment_date, dateFrom, dateTo))
         .sort((a, b) => a.payment_date.localeCompare(b.payment_date)),
     [payments, dateFrom, dateTo]
   );
 
-  const total = filtered.reduce((s, p) => s + p.amount, 0);
+  const total = sumAmounts(filtered);
 
-  const byMethod = filtered.reduce<Record<string, number>>((acc, p) => {
-    acc[p.payment_method] = (acc[p.payment_method] || 0) + p.amount;
-    return acc;
-  }, {});
+  const byMethod = groupSumByKey(filtered, (p) => p.payment_method, (p) => p.amount);
 
   return (
     <div className="space-y-4">

@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import type { Payment, ProjectExpense, Invoice, Project, Client } from "@/types/db";
+import { isDateInRange, sumAmounts, sortCashFlowEntries, withRunningBalance } from "@/utils/reportCalculations";
 
 function currentMonthRange() {
   const now = new Date();
@@ -21,8 +22,8 @@ function fmt(v: number) {
 }
 
 type CashFlowRow =
-  | { type: "masuk"; date: string; id: string; desc: string; ref: string; method: string; amount: number }
-  | { type: "keluar"; date: string; id: string; desc: string; ref: string; kategori: string; amount: number };
+  | { type: "masuk"; isInflow: true; date: string; id: string; desc: string; ref: string; method: string; amount: number }
+  | { type: "keluar"; isInflow: false; date: string; id: string; desc: string; ref: string; kategori: string; amount: number };
 
 const methodLabels: Record<string, string> = {
   transfer: "Transfer",
@@ -60,10 +61,7 @@ export function LaporanArusKas({
 
   const rows = useMemo<CashFlowRow[]>(() => {
     const masuk: CashFlowRow[] = payments
-      .filter((p) => {
-        const d = p.payment_date.slice(0, 10);
-        return d >= dateFrom && d <= dateTo;
-      })
+      .filter((p) => isDateInRange(p.payment_date, dateFrom, dateTo))
       .map((p) => {
         const invoice = invoiceMap.get(p.invoice_id);
         const project = invoice?.project_id ? projectMap.get(invoice.project_id) : undefined;
@@ -75,45 +73,39 @@ export function LaporanArusKas({
         const desc = client?.name ?? project?.name ?? invoice?.invoice_number ?? "—";
         return {
           type: "masuk",
+          isInflow: true,
           date: p.payment_date.slice(0, 10),
           id: p.id,
           desc,
           ref: invoice?.invoice_number ?? "—",
           method: p.payment_method,
           amount: p.amount,
-        };
+        } as const;
       });
 
     const keluar: CashFlowRow[] = expenses
-      .filter((e) => {
-        const d = e.tanggal.slice(0, 10);
-        return d >= dateFrom && d <= dateTo;
-      })
+      .filter((e) => isDateInRange(e.tanggal, dateFrom, dateTo))
       .map((e) => {
         const project = projectMap.get(e.project_id);
         return {
           type: "keluar",
+          isInflow: false,
           date: e.tanggal.slice(0, 10),
           id: e.id,
           desc: e.deskripsi,
           ref: project?.name ?? "—",
           kategori: e.kategori,
           amount: e.jumlah,
-        };
+        } as const;
       });
 
-    return [...masuk, ...keluar].sort((a, b) => {
-      const cmp = a.date.localeCompare(b.date);
-      if (cmp !== 0) return cmp;
-      if (a.type === "masuk" && b.type === "keluar") return -1;
-      if (a.type === "keluar" && b.type === "masuk") return 1;
-      return 0;
-    });
+    return sortCashFlowEntries([...masuk, ...keluar]);
   }, [payments, expenses, dateFrom, dateTo, invoiceMap, projectMap, clientMap]);
 
-  const totalMasuk = rows.filter((r) => r.type === "masuk").reduce((s, r) => s + r.amount, 0);
-  const totalKeluar = rows.filter((r) => r.type === "keluar").reduce((s, r) => s + r.amount, 0);
+  const totalMasuk = sumAmounts(rows.filter((r) => r.type === "masuk"));
+  const totalKeluar = sumAmounts(rows.filter((r) => r.type === "keluar"));
   const arusBersih = totalMasuk - totalKeluar;
+  const rowsWithBalance = useMemo(() => withRunningBalance(rows), [rows]);
 
   return (
     <div className="space-y-4">
@@ -245,11 +237,8 @@ export function LaporanArusKas({
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {(() => {
-                  let running = 0;
-                  return rows.map((row, idx) => {
-                    if (row.type === "masuk") running += row.amount;
-                    else running -= row.amount;
-                    const saldo = running;
+                  return rowsWithBalance.map((row, idx) => {
+                    const saldo = row.balance;
                     return (
                       <tr
                         key={row.id}

@@ -1,6 +1,7 @@
 "use client";
 import { useState, type ChangeEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useClients } from "@/hooks/useClients";
 import { useLeads } from "@/hooks/useLeads";
 import { deleteClient } from "@/services/clients";
@@ -41,6 +42,7 @@ function SkeletonRow({ cols }: { cols: number }) {
 
 export default function ClientsTable() {
   const toast = useToast();
+  const router = useRouter();
   const { clients, loading, error, refetch } = useClients();
   const { leads } = useLeads();
   const [editingClient, setEditingClient] = useState<Client | null | undefined>(undefined);
@@ -253,7 +255,7 @@ export default function ClientsTable() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {pagedClients.map((client) => (
-                  <tr key={client.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={client.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onDoubleClick={() => router.push(`/clients/${client.id}`)}>
                     <td className="px-4 py-3 whitespace-nowrap max-w-[150px] truncate">
                       <Link href={`/clients/${client.id}`} className="font-medium text-gray-900 hover:text-blue-600 hover:underline transition-colors">
                         {client.name}
@@ -280,7 +282,7 @@ export default function ClientsTable() {
                       ) : "-"}
                     </td>
                     <td className="px-4 py-3 text-gray-500 max-w-[180px] truncate">{client.notes || "-"}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap" onDoubleClick={(e) => e.stopPropagation()}>
                       <div className="flex gap-2">
                         <button
                           className="px-3 py-1 text-xs font-medium bg-gray-50 text-gray-600 rounded-md hover:bg-gray-100 transition"

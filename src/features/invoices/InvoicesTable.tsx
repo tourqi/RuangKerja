@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useInvoices } from "@/hooks/useInvoices";
 import { useClients } from "@/hooks/useClients";
 import { useProjects } from "@/hooks/useProjects";
@@ -23,6 +24,7 @@ import { InvoiceFormModal } from "./InvoiceFormModal";
 import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
 
 export default function InvoicesTable() {
+  const router = useRouter();
   const { invoices, loading, refetch } = useInvoices();
   const { clients } = useClients();
   const { projects } = useProjects();
@@ -231,7 +233,7 @@ export default function InvoicesTable() {
                 const client = clients.find((c) => c.id === inv.client_id);
                 const outstanding = inv.total_amount - inv.paid_amount;
                 return (
-                  <tr key={inv.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={inv.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onDoubleClick={() => router.push(`/invoices/${inv.id}`)}>
                     <td className="px-4 py-3">
                       <Link href={`/invoices/${inv.id}`} className="font-medium text-gray-900 hover:underline">
                         {inv.invoice_number}
@@ -267,7 +269,7 @@ export default function InvoicesTable() {
                         {formatRupiah(inv.paid_amount)}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" onDoubleClick={(e) => e.stopPropagation()}>
                       <select
                         value={inv.status}
                         onChange={(e) => handleStatusChange(inv.id, e.target.value as InvoiceStatus)}
@@ -278,7 +280,7 @@ export default function InvoicesTable() {
                         ))}
                       </select>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-right" onDoubleClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
                         <Link
                           href={`/invoices/${inv.id}`}

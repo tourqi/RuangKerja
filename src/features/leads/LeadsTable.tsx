@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useLeads } from "@/hooks/useLeads";
 import { useClients } from "@/hooks/useClients";
 import { deleteLead } from "@/services/leads";
@@ -41,6 +42,7 @@ function SkeletonRow({ cols }: { cols: number }) {
 
 export default function LeadsTable() {
   const toast = useToast();
+  const router = useRouter();
 
   const { leads, loading, error, refetch } = useLeads();
   const { clients } = useClients();
@@ -317,7 +319,7 @@ export default function LeadsTable() {
               {pagedLeads.map((lead) => {
                 const client = clients.find((c) => c.id === lead.client_id);
                 return (
-                  <tr key={lead.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={lead.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onDoubleClick={() => router.push(`/leads/${lead.id}`)}>
                     <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">
                       <div>{client?.name || "-"}</div>
                       {client?.phone && <div className="text-xs text-gray-400">{client.phone}</div>}
@@ -341,7 +343,7 @@ export default function LeadsTable() {
                     <td className="px-4 py-3 text-gray-600 whitespace-nowrap text-sm">{formatDate(lead.closed_at)}</td>
                     <td className="px-4 py-3 text-gray-600 whitespace-nowrap text-sm">{formatDate(lead.updated_at)}</td>
                     <td className="px-4 py-3 text-gray-500 max-w-[160px] truncate text-sm">{lead.notes || "-"}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap" onDoubleClick={(e) => e.stopPropagation()}>
                       <div className="flex gap-1.5">
                         <Link
                           href={`/leads/${lead.id}`}
