@@ -942,6 +942,20 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                                   <span>Total</span>
                                   <span>{formatCurrency(total)}</span>
                                 </div>
+                                {project.lead_id && (
+                                  <div className="pt-2">
+                                    <Link
+                                      href={`/leads/${project.lead_id}/rab/${rab.id}`}
+                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition w-full justify-center"
+                                      onClick={() => setShowRabModal(false)}
+                                    >
+                                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                      </svg>
+                                      Lihat / Edit RAB
+                                    </Link>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           )}
