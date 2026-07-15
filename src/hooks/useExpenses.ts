@@ -5,7 +5,7 @@ import type { ProjectExpense } from "@/types/db";
 import { useFetch } from "./useFetch";
 
 export function useAllExpenses() {
-  const { data: expenses, loading, error, refetch } = useFetch<ProjectExpense[]>(getAllExpenses, []);
+  const { data: expenses, loading, error, refetch } = useFetch<ProjectExpense[]>("project-expenses", getAllExpenses, []);
   return { expenses, loading, error, refetch };
 }
 

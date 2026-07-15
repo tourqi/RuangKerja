@@ -2,32 +2,19 @@
 import { useEffect, useState, useCallback } from 'react';
 import { getAllRabs, getApprovedRabTotals, getRabByLead, getRabWithGroups } from '@/services/rab';
 import { Rab, RabGroup } from '@/types/db';
+import { useFetch } from './useFetch';
 
 export function useApprovedRabTotals() {
-  const [totals, setTotals] = useState<Record<string, number>>({});
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    getApprovedRabTotals()
-      .then(setTotals)
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
-
+  const { data: totals, loading } = useFetch<Record<string, number>>(
+    "rab-totals",
+    getApprovedRabTotals,
+    {}
+  );
   return { totals, loading };
 }
 
 export function useAllRabs() {
-  const [rabs, setRabs] = useState<Rab[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    getAllRabs()
-      .then(setRabs)
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
-
+  const { data: rabs, loading } = useFetch<Rab[]>("rabs", getAllRabs, []);
   return { rabs, loading };
 }
 

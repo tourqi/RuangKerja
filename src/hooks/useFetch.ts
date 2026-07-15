@@ -1,34 +1,19 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import useSWR from "swr";
 
 /**
- * Generic data-fetch hook.
- * fetcherRef pattern memastikan `refetch` stabil (tidak trigger re-render)
- * meski fetcher berubah referensi setiap render.
+ * Generic data-fetch hook backed by SWR's shared cache. Components that call
+ * this with the same `key` (e.g. TopBar and a page both requesting "clients")
+ * dedupe into a single request and share the cached result, instead of each
+ * firing its own independent fetch.
  */
-export function useFetch<T>(fetcher: () => Promise<T>, initialData: T) {
-  const [data, setData] = useState<T>(initialData);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export function useFetch<T>(key: string, fetcher: () => Promise<T>, initialData: T) {
+  const { data, error, isLoading, mutate } = useSWR<T>(key, fetcher);
 
-  const fetcherRef = useRef(fetcher);
-  fetcherRef.current = fetcher;
-
-  const refetch = useCallback(() => {
-    setLoading(true);
-    setError(null);
-    fetcherRef
-      .current()
-      .then(setData)
-      .catch((err: unknown) =>
-        setError(err instanceof Error ? err.message : String(err))
-      )
-      .finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    refetch();
-  }, [refetch]);
-
-  return { data, loading, error, refetch };
+  return {
+    data: data ?? initialData,
+    loading: isLoading,
+    error: error ? (error instanceof Error ? error.message : String(error)) : null,
+    refetch: () => mutate(),
+  };
 }

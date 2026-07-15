@@ -5,6 +5,7 @@ import type { GeneralExpense } from "@/types/db";
 
 export function useGeneralExpenses() {
   const { data: expenses, loading, error, refetch } = useFetch<GeneralExpense[]>(
+    "general-expenses",
     getGeneralExpenses,
     []
   );

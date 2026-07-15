@@ -5,7 +5,7 @@ import { getAllPayments, getPaymentsByInvoice } from "@/services/invoices";
 import { useFetch } from "./useFetch";
 
 export function useAllPayments() {
-  const { data: payments, loading, error, refetch } = useFetch<Payment[]>(getAllPayments, []);
+  const { data: payments, loading, error, refetch } = useFetch<Payment[]>("payments", getAllPayments, []);
   return { payments, loading, error, refetch };
 }
 
