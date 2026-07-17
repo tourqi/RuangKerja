@@ -1,0 +1,142 @@
+---
+title: "Aplikasi ERP - Ruang Kerja"
+description: "Merancang dan membangun ERP internal untuk kantor Konstruksi dan Interior: leads, RAB, invoice, dan laporan keuangan dalam satu sistem"
+category: "webdev"
+tags: ["Next.js", "Supabase", "TypeScript", "Tailwind CSS"]
+coverImage: "/projects/portfolio/cover.jpg"
+coverColor: "#45B7D1"
+year: "2026"
+featured: true
+role: "Designer & Developer"
+timeline: "2 bulan"
+tools: ["Next.js 16", "TypeScript", "Supabase", "Tailwind CSS v4", "Recharts", "Netlify"]
+outcome: "Menggantikan pencatatan manual Excel dengan satu sistem terpusat: leads, RAB/SPH, invoice, dan laporan keuangan"
+liveUrl: "https://app-bogorinteriorgarage.netlify.app/"
+githubUrl: "https://github.com/tourqi/RuangKerja"
+---
+
+## Latar Belakang
+
+Setelah satu tahun bekerja dengan banyak dokumen Excel untuk pencatatan Leads, Project, dan laporan keuangan, saya memutuskan membuat sistem yang bisa menggantikan seluruh alur kerja itu di satu tempat. Ruang Kerja dibangun untuk kantor Konstruksi dan Interior tempat saya bekerja sendiri.
+
+Tantangannya bukan cuma membuat aplikasinya, tapi juga sekaligus merumuskan alur bisnis yang selama ini berjalan informal: bagaimana lead masuk, kapan sebuah lead layak dibuatkan RAB (Rencana Anggaran Biaya) dan SPH (Surat Penawaran Harga), bagaimana lead yang deal berubah menjadi project, sampai bagaimana project menghasilkan invoice dan tercatat di laporan keuangan.
+
+<ProjectStats stats={[
+  { label: "Timeline", value: "2 Bulan" },
+  { label: "Tech Stack", value: "Next.js 16" },
+  { label: "Modul Utama", value: "8" },
+  { label: "Role Akses", value: "3" }
+]} />
+
+---
+
+## Goals & Constraints
+
+### Yang Ingin Dicapai
+
+1. **Satu alur data yang utuh** — Lead → Survey → RAB/SPH → Deal → Project → Invoice → Pembayaran → Laporan, tanpa data yang harus disalin manual antar spreadsheet.
+2. **Dokumen yang siap dikirim ke klien** — SPH dan invoice harus bisa diekspor sebagai file Word yang tampilannya sama persis dengan dokumen kertas yang biasa dipakai perusahaan.
+3. **Akses sesuai peran** — Owner, Designer, dan Sales tidak boleh punya visibilitas dan kewenangan yang sama terhadap data klien dan keuangan.
+4. **Bisa dipercaya sebagai sumber laporan keuangan** — Laporan arus kas, pendapatan, dan pengeluaran harus konsisten dengan data invoice dan pengeluaran project, bukan rekap manual terpisah.
+
+### Constraints
+
+<Callout type="info">
+Saya mengerjakan ini sendirian, di luar jam kerja utama, dengan target **2 bulan dari konsep sampai dipakai sehari-hari** oleh tim di kantor. Karena aplikasinya langsung dipakai untuk mencatat transaksi dan klien nyata, tidak ada ruang untuk "nanti diperbaiki belakangan" pada bagian keamanan data.
+</Callout>
+
+---
+
+## Proses & Arsitektur Data
+
+### Memetakan Alur Bisnis Menjadi Skema Data
+
+<ProcessStep number={1} title="Dari Lead ke Project">
+Alur intinya: sebuah **Lead** melewati status `New Lead → Contacted → Survey → Deal → Lost`. Begitu sebuah lead layak ditawari harga, saya membuatkan **RAB** — terdiri dari beberapa grup pekerjaan, masing-masing berisi item dengan qty, satuan, dan harga — lengkap dengan diskon (persen atau nilai) dan skema pembayaran bertahap. RAB yang disetujui klien menghasilkan **SPH**, dan lead yang deal dikonversi menjadi **Project** dengan status `Planning → Design → Produksi → Instalasi → Selesai`.
+</ProcessStep>
+
+<ProcessStep number={2} title="Dari Project ke Laporan Keuangan">
+Setiap Project bisa menghasilkan satu atau lebih **Invoice**, yang statusnya berubah otomatis mengikuti pembayaran yang tercatat: `draft → sent → partial → paid`, atau `overdue` jika melewati jatuh tempo. Pengeluaran project dan pengeluaran umum kantor dicatat terpisah, sehingga laba-rugi per project, laporan arus kas, pendapatan, dan pengeluaran bisa dihitung langsung dari data transaksi — bukan direkap ulang manual di akhir bulan.
+</ProcessStep>
+
+<ProcessStep number={3} title="Role Access: Owner, Designer, Sales">
+Bukan semua orang di tim perlu melihat semua hal. Saya membagi akses menjadi tiga role — **Owner** (akses penuh, termasuk keuangan dan manajemen user), **Designer**, dan **Sales** — dan user baru hanya bisa masuk lewat undangan email dari Owner, bukan pendaftaran bebas.
+</ProcessStep>
+
+---
+
+## Arsitektur Teknis
+
+### Stack & Keputusan Teknis
+
+<Callout type="insight">
+Karena ini aplikasi internal yang dipakai tim untuk kerja sehari-hari — tabel data, form, modal, dashboard interaktif — sebagian besar komponen fitur memang sengaja jadi **Client Components**. Halaman di App Router hanya berperan sebagai pembungkus tipis yang meneruskan `params` (misalnya id invoice atau lead) ke komponen fitur di baliknya.
+</Callout>
+
+**Backend & Data:**
+- **Supabase** (Postgres + Auth) sebagai satu-satunya sumber data — tidak ada backend terpisah.
+- **Row Level Security (RLS)** diterapkan di setiap tabel domain: `clients`, `leads`, `rab`, `projects`, `invoices`, `payments`, `project_expenses`, `activity_logs`, dan `profiles` — supaya pembatasan akses antar role benar-benar ditegakkan di database, bukan hanya di UI.
+- **SWR** untuk fetching dan caching data di sisi client (`useLeads`, `useProjects`, `useInvoices`, `useRab`, dan sejenisnya), lewat lapisan `services/*` yang membungkus query Supabase.
+- Middleware Next.js memanggil `updateSession` dari `@supabase/ssr` di setiap request untuk menjaga sesi login tetap valid.
+
+<ToolsUsed tools={["Next.js 16", "TypeScript", "Supabase", "Tailwind CSS v4", "Recharts", "docx", "SWR", "Netlify"]} />
+
+### Dashboard & Laporan
+
+Dashboard utama memakai **Recharts** untuk menampilkan sebaran lead per status, pipeline project, status invoice, serta tren pendapatan dan pengeluaran bulanan — semuanya dihitung dari data live lewat hooks SWR, dengan format mata uang Rupiah (`Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" })`).
+
+### Generate Dokumen: RAB, SPH, dan Invoice
+
+Bagian yang paling detail justru bukan animasi, tapi presisi dokumen. RAB, SPH, dan invoice bisa diekspor sebagai file **.docx** menggunakan library `docx`, dengan layout yang dihitung dalam milimeter (`convertMillimetersToTwip`) mengikuti ukuran kertas A4 — lengkap dengan header, footer, dan lebar kolom tabel yang meniru format dokumen kertas yang sudah biasa dikirim ke klien. Tujuannya supaya tim tidak perlu mengubah kebiasaan kerja mereka hanya karena berpindah ke sistem baru.
+
+---
+
+## Tantangan Teknis
+
+<ProcessStep number={4} title="Menjaga Batasan Role di Level Database">
+Pengecekan role di UI saja tidak cukup — request ke Supabase bisa dipanggil langsung dari client. Solusinya: setiap tabel punya RLS policy sendiri, dan khusus untuk perubahan role user, saya menambahkan trigger Postgres (`prevent_role_self_escalation`) yang menolak perubahan kolom `role` kecuali yang melakukannya adalah Owner — jadi seorang Sales atau Designer tidak bisa menaikkan role dirinya sendiri lewat request langsung ke API Supabase.
+</ProcessStep>
+
+<ProcessStep number={5} title="Struktur RAB Bertingkat (Grup & Item)">
+RAB bukan daftar harga datar — satu RAB berisi beberapa grup pekerjaan, dan tiap grup berisi beberapa item dengan qty, satuan, dan harga sendiri. Subtotal per grup, grand total, diskon (yang bisa diinput sebagai persen atau nilai rupiah dan saling mengonversi), serta total bersih dihitung lewat util terpisah (`rabCalculations`) supaya logikanya konsisten antara tampilan edit, print, dan ekspor Word.
+</ProcessStep>
+
+<ProcessStep number={6} title="Dokumen Word yang Presisi Milimeter">
+Membuat file .docx yang layoutnya konsisten dengan dokumen kertas asli lebih rumit dari yang terlihat — lebar kolom, orientasi halaman, dan penempatan logo perusahaan semua harus dihitung manual dalam satuan milimeter lalu dikonversi ke twip. Solusinya: konstanta layout (lebar kolom, margin, ukuran konten A4) didefinisikan sekali di awal file generator, supaya perubahan kecil pada format tidak perlu mengubah logika di banyak tempat.
+</ProcessStep>
+
+---
+
+## Keandalan & Audit
+
+Karena aplikasi ini mencatat data klien dan transaksi keuangan nyata, beberapa hal yang jadi perhatian di luar fitur utama:
+
+- **Activity log** — perubahan penting dicatat sebagai jejak audit, bukan hanya overwrite data.
+- **Undangan user, bukan pendaftaran bebas** — akun baru dibuat lewat endpoint API server-side (`/api/users/invite`) yang memakai Supabase service role key, sehingga pembuatan profil pengguna tidak bisa dilakukan langsung dari client.
+- **RLS di seluruh tabel domain** — bukan hanya di tabel yang "terasa sensitif", tapi diterapkan menyeluruh lewat migration terpisah per area (clients & leads, projects, RAB, invoices & payments, project expenses, activity logs, profiles).
+
+---
+
+## Hasil
+
+Ruang Kerja sekarang dipakai sehari-hari untuk mencatat leads, membuat RAB dan SPH, mengelola project, menerbitkan invoice, dan memantau laporan keuangan — menggantikan kombinasi banyak file Excel yang sebelumnya terpisah-pisah dan rawan tidak sinkron satu sama lain.
+
+<BeforeAfter
+  before="https://placehold.co/800x600/cccccc/666666?text=Pencatatan+Manual+(Excel)"
+  after="https://placehold.co/800x600/45B7D1/white?text=Ruang+Kerja+(Dashboard+Terpusat)"
+  alt="Perbandingan pencatatan manual Excel dengan dashboard Ruang Kerja"
+/>
+
+<Callout type="result">
+Proyek ini mengajarkan saya bahwa membangun ERP internal berarti merancang dua hal sekaligus: perangkat lunaknya, dan proses bisnis yang direpresentasikannya. Keputusan skema data — bagaimana lead berhubungan dengan RAB, project, dan invoice — jauh lebih menentukan keberhasilan sistem ini dibanding pilihan library atau tampilan UI.
+</Callout>
+
+---
+
+## Takeaways
+
+**Bangun sistemnya bersamaan dengan proses bisnisnya, bukan sesudahnya.** Karena proses lead-ke-invoice sebelumnya tidak pernah dituliskan secara formal, mendesain skema data justru memaksa saya merumuskan alur kerja yang selama ini hanya ada di kepala.
+
+**Dokumen keluaran adalah fitur inti, bukan pelengkap.** Untuk aplikasi bisnis, tampilan SPH dan invoice yang dikirim ke klien sama pentingnya dengan dashboard internal — bahkan sering kali lebih terlihat oleh orang di luar tim.
+
+**Keamanan akses harus ditegakkan di database, bukan hanya di UI.** Pengecekan role di komponen React memudahkan pengalaman pengguna, tapi tidak menggantikan RLS policy dan trigger di level Postgres — dua-duanya perlu ada bersamaan.
