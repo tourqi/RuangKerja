@@ -67,6 +67,10 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
   });
   const [editingName, setEditingName] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const [draggedGroupId, setDraggedGroupId] = useState<string | null>(null);
+  const [dragOverGroupId, setDragOverGroupId] = useState<string | null>(null);
+  const [draggedItem, setDraggedItem] = useState<{ groupId: string; itemId: string } | null>(null);
+  const [dragOverItem, setDragOverItem] = useState<{ groupId: string; itemId: string } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -320,6 +324,96 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
     }
   }
 
+  // --- REORDER (drag & drop) ---
+  async function persistGroupOrder(orderedGroups: LocalGroup[]) {
+    try {
+      await Promise.all(orderedGroups.map((g) => updateRabGroup(g.id, { no: g.no })));
+    } catch {
+      toast("Gagal menyimpan urutan section", "error");
+    }
+  }
+
+  function handleGroupDragStart(e: React.DragEvent, groupId: string) {
+    setDraggedGroupId(groupId);
+    e.dataTransfer.effectAllowed = "move";
+  }
+
+  function handleGroupDragOver(e: React.DragEvent, groupId: string) {
+    e.preventDefault();
+    if (draggedGroupId && draggedGroupId !== groupId) setDragOverGroupId(groupId);
+  }
+
+  function handleGroupDrop(e: React.DragEvent, targetGroupId: string) {
+    e.preventDefault();
+    setDragOverGroupId(null);
+    const sourceId = draggedGroupId;
+    setDraggedGroupId(null);
+    if (!sourceId || sourceId === targetGroupId) return;
+    setGroups((prev) => {
+      const fromIdx = prev.findIndex((g) => g.id === sourceId);
+      const toIdx = prev.findIndex((g) => g.id === targetGroupId);
+      if (fromIdx === -1 || toIdx === -1) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, moved);
+      const renumbered = next.map((g, i) => ({ ...g, no: i + 1 }));
+      persistGroupOrder(renumbered);
+      return renumbered;
+    });
+  }
+
+  function handleGroupDragEnd() {
+    setDraggedGroupId(null);
+    setDragOverGroupId(null);
+  }
+
+  async function persistItemOrder(orderedItems: LocalItem[]) {
+    try {
+      await Promise.all(orderedItems.map((it) => updateRabItem(it.id, { sort_order: it.sort_order })));
+    } catch {
+      toast("Gagal menyimpan urutan item", "error");
+    }
+  }
+
+  function handleItemDragStart(e: React.DragEvent, groupId: string, itemId: string) {
+    setDraggedItem({ groupId, itemId });
+    e.dataTransfer.effectAllowed = "move";
+  }
+
+  function handleItemDragOver(e: React.DragEvent, groupId: string, itemId: string) {
+    e.preventDefault();
+    if (draggedItem && draggedItem.groupId === groupId && draggedItem.itemId !== itemId) {
+      setDragOverItem({ groupId, itemId });
+    }
+  }
+
+  function handleItemDrop(e: React.DragEvent, groupId: string, targetItemId: string) {
+    e.preventDefault();
+    setDragOverItem(null);
+    const source = draggedItem;
+    setDraggedItem(null);
+    if (!source || source.groupId !== groupId || source.itemId === targetItemId) return;
+    setGroups((prev) =>
+      prev.map((g) => {
+        if (g.id !== groupId) return g;
+        const fromIdx = g.items.findIndex((i) => i.id === source.itemId);
+        const toIdx = g.items.findIndex((i) => i.id === targetItemId);
+        if (fromIdx === -1 || toIdx === -1) return g;
+        const nextItems = [...g.items];
+        const [moved] = nextItems.splice(fromIdx, 1);
+        nextItems.splice(toIdx, 0, moved);
+        const renumbered = nextItems.map((it, i) => ({ ...it, sort_order: i }));
+        persistItemOrder(renumbered);
+        return { ...g, items: renumbered };
+      })
+    );
+  }
+
+  function handleItemDragEnd() {
+    setDraggedItem(null);
+    setDragOverItem(null);
+  }
+
   // --- PRINT ---
   function handlePrint() {
     setShowSph(false);
@@ -486,8 +580,26 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                 {groups.map((group) => (
                   <React.Fragment key={group.id}>
                     {/* Group Header Row */}
-                    <tr key={`group-${group.id}`} className="bg-gray-50 border-t border-gray-200">
-                      <td className="px-3 py-2 font-semibold text-gray-700 text-sm">{group.no}</td>
+                    <tr
+                      key={`group-${group.id}`}
+                      className={`bg-gray-50 border-t border-gray-200 transition ${draggedGroupId === group.id ? "opacity-40" : ""} ${dragOverGroupId === group.id ? "border-t-2 border-t-blue-400" : ""}`}
+                      onDragOver={(e) => handleGroupDragOver(e, group.id)}
+                      onDrop={(e) => handleGroupDrop(e, group.id)}
+                    >
+                      <td className="px-3 py-2 font-semibold text-gray-700 text-sm">
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            draggable
+                            onDragStart={(e) => handleGroupDragStart(e, group.id)}
+                            onDragEnd={handleGroupDragEnd}
+                            className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 select-none"
+                            title="Geser untuk urutkan section"
+                          >
+                            ⠿
+                          </span>
+                          {group.no}
+                        </div>
+                      </td>
                       <td colSpan={5} className="px-3 py-2">
                         <input
                           type="text"
@@ -512,8 +624,23 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
 
                     {/* Items */}
                     {group.items.map((item) => (
-                      <tr key={item.id} className="border-t border-gray-100 hover:bg-gray-50 transition-colors group/row">
-                        <td className="px-3 py-2" />
+                      <tr
+                        key={item.id}
+                        className={`border-t border-gray-100 hover:bg-gray-50 transition-colors group/row ${draggedItem?.itemId === item.id ? "opacity-40" : ""} ${dragOverItem?.itemId === item.id ? "border-t-2 border-t-blue-400" : ""}`}
+                        onDragOver={(e) => handleItemDragOver(e, group.id, item.id)}
+                        onDrop={(e) => handleItemDrop(e, group.id, item.id)}
+                      >
+                        <td className="px-3 py-2 text-center">
+                          <span
+                            draggable
+                            onDragStart={(e) => handleItemDragStart(e, group.id, item.id)}
+                            onDragEnd={handleItemDragEnd}
+                            className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 select-none inline-block opacity-0 group-hover/row:opacity-100 transition"
+                            title="Geser untuk urutkan item"
+                          >
+                            ⠿
+                          </span>
+                        </td>
                         <td className="px-3 py-2" />
                         <td className="px-3 py-2">
                           <input
