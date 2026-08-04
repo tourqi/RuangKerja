@@ -5,7 +5,7 @@ import ActivityTimeline from "@/components/ActivityTimeline";
 import { useLeads } from "@/hooks/useLeads";
 import { useClients } from "@/hooks/useClients";
 import { useRabList } from "@/hooks/useRab";
-import { addRab, deleteRab, updateRab } from "@/services/rab";
+import { addRab, deleteRab, duplicateRab, updateRab } from "@/services/rab";
 import { useToast } from "@/components/Toast";
 import { useState } from "react";
 import { Rab } from "@/types/db";
@@ -56,6 +56,7 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
   const [newRabNama, setNewRabNama] = useState("");
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
 
   const loading = ll || lc;
 
@@ -111,6 +112,20 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
       toast("Gagal menghapus RAB", "error");
     } finally {
       setDeletingId(null);
+    }
+  }
+
+  async function handleDuplicateRab(id: string) {
+    setDuplicatingId(id);
+    try {
+      await duplicateRab(id);
+      await refetchRab();
+      toast("RAB berhasil diduplikasi", "success");
+    } catch (err: unknown) {
+      const msg = (err as Error)?.message ?? String(err);
+      toast(`Gagal menduplikasi RAB: ${msg}`, "error");
+    } finally {
+      setDuplicatingId(null);
     }
   }
 
@@ -297,6 +312,14 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
                   >
                     Buka
                   </Link>
+                  <button
+                    onClick={() => handleDuplicateRab(rab.id)}
+                    disabled={duplicatingId === rab.id}
+                    title="Duplikasi RAB (untuk membuat penawaran harga alternatif dengan komponen yang sama)"
+                    className="px-3 py-1.5 text-xs font-medium text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 hover:text-gray-800 transition disabled:opacity-50"
+                  >
+                    {duplicatingId === rab.id ? "..." : "Duplikasi"}
+                  </button>
                   <button
                     onClick={() => handleDeleteRab(rab.id)}
                     disabled={deletingId === rab.id}

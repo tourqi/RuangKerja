@@ -96,6 +96,66 @@ export async function updateRab(id: string, updates: Partial<Pick<Rab, 'nama' | 
   return data as Rab;
 }
 
+export async function duplicateRab(rabId: string): Promise<Rab> {
+  const { data: source, error: e0 } = await supabase
+    .from('rab')
+    .select('*')
+    .eq('id', rabId)
+    .single();
+  if (e0) throw e0;
+
+  const { data: newRab, error: e1 } = await supabase
+    .from('rab')
+    .insert([{
+      lead_id: source.lead_id,
+      nama: `${source.nama} (Copy)`,
+      status: 'draft',
+      diskon_persen: source.diskon_persen,
+      diskon_nilai: source.diskon_nilai,
+      skema_pembayaran: source.skema_pembayaran,
+    }])
+    .select()
+    .single();
+  if (e1) throw e1;
+
+  const groups = await getRabWithGroups(rabId);
+  await Promise.all(
+    groups.map(async (g) => {
+      const { data: newGroup, error: eg } = await supabase
+        .from('rab_groups')
+        .insert([{ rab_id: newRab.id, no: g.no, deskripsi: g.deskripsi }])
+        .select()
+        .single();
+      if (eg) throw eg;
+
+      const items = g.items ?? [];
+      if (items.length === 0) return;
+      const { error: ei } = await supabase.from('rab_items').insert(
+        items.map((it) => ({
+          group_id: newGroup.id,
+          spesifikasi: it.spesifikasi,
+          qty: it.qty,
+          unit: it.unit,
+          harga: it.harga,
+          sort_order: it.sort_order,
+          dimensi_p: it.dimensi_p,
+          dimensi_l: it.dimensi_l,
+        }))
+      );
+      if (ei) throw ei;
+    })
+  );
+
+  await logActivity({
+    entity_type: 'rab',
+    entity_id: newRab.id,
+    action: 'created',
+    description: `RAB diduplikasi dari: ${source.nama}`,
+  });
+
+  return newRab as Rab;
+}
+
 export async function deleteRab(id: string): Promise<void> {
   const { data: existing } = await supabase
     .from('rab')
