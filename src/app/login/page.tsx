@@ -28,10 +28,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 bg-gray-900 text-white text-sm font-bold px-4 py-2 rounded-xl mb-5">
-            <span className="text-base">▦</span>
-            Interior ERP
-          </div>
+          <img src="/logo.png" alt="RuangKerja" className="h-16 w-auto mx-auto mb-5" />
           <h1 className="text-2xl font-bold text-gray-900">Masuk ke RuangKerja</h1>
           <p className="text-sm text-gray-500 mt-1">Masukkan email dan password Anda</p>
         </div>
