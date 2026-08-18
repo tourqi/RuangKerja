@@ -18,6 +18,7 @@ import { Rab, RabGroup, RabItem, SkemaPembayaran } from "@/types/db";
 import RabPrintView from "@/features/rab/RabPrintView";
 import SphPrintView, { SphConfig } from "@/features/rab/SphPrintView";
 import { generateSphDocx } from "@/features/rab/generateSph";
+import { generateRabExcel } from "@/features/rab/generateRabExcel";
 import { supabase } from "@/services/supabase";
 import {
   groupSubtotal as calcGroupSubtotal,
@@ -414,6 +415,16 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
     setDragOverItem(null);
   }
 
+  // --- EXPORT EXCEL ---
+  async function handleExportExcel() {
+    if (!rab) return;
+    try {
+      await generateRabExcel(rab, groups);
+    } catch {
+      toast("Gagal membuat file Excel", "error");
+    }
+  }
+
   // --- PRINT ---
   function handlePrint() {
     setShowSph(false);
@@ -536,6 +547,12 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                 className="px-4 py-2 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition font-medium"
               >
                 ⎙ Print RAB
+              </button>
+              <button
+                onClick={handleExportExcel}
+                className="px-4 py-2 bg-green-700 text-white text-sm rounded-lg hover:bg-green-800 transition font-medium"
+              >
+                ↓ Excel RAB
               </button>
               <button
                 onClick={() => openSphDialog("print")}
