@@ -16,6 +16,7 @@ import { useApprovedRabTotals } from "@/hooks/useRab";
 import { useInvoices } from "@/hooks/useInvoices";
 import { MultiSelect } from "@/components/MultiSelect";
 import { ActionDropdown } from "@/components/ActionDropdown";
+import { MobileCardList, MobileCard, MobileCardHeader, MobileCardRow, MobileCardIconButton, EyeIcon, PencilIcon, TrashIcon } from "@/components/MobileCard";
 import {
   PROJECT_STATUSES,
   PROJECT_STATUS_LABELS,
@@ -190,7 +191,7 @@ export default function ProjectsTable() {
   return (
     <div>
       {/* Toolbar */}
-      <div className="sticky top-0 z-10 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 bg-gray-50/95 backdrop-blur-sm py-3 mb-2 flex items-center justify-between">
+      <div className="sticky top-0 z-10 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 bg-gray-50/95 backdrop-blur-sm py-3 mb-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
         <div className="flex items-center gap-4">
           <p className="text-sm text-gray-500">{filteredProjects.length} project</p>
           <p className="text-sm font-semibold text-green-700">
@@ -277,8 +278,8 @@ export default function ProjectsTable() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
+      {/* Table (desktop) */}
+      <div className="hidden sm:block bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
           <h3 className="text-base font-semibold text-gray-800">Daftar Project</h3>
         </div>
@@ -378,6 +379,75 @@ export default function ProjectsTable() {
               )}
             </tbody>
           </table>
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            from={from}
+            to={to}
+            total={total}
+            pageSize={pageSize}
+            onPageChange={goTo}
+            onPageSizeChange={changePageSize}
+          />
+        </div>
+      </div>
+
+      {/* Cards (mobile) */}
+      <div className="sm:hidden">
+        <MobileCardList>
+          {pagedProjects.map((project) => {
+            const client = clients.find((c) => c.id === project.client_id);
+            const progress = project.progress ?? 0;
+            const ps = getPaymentStatus(project.id);
+            return (
+              <MobileCard key={project.id} onClick={() => router.push(`/projects/${project.id}`)}>
+                <MobileCardHeader
+                  title={project.name}
+                  subtitle={<span className="text-xs text-gray-400">{client?.name || "-"}</span>}
+                  actions={
+                    <>
+                      <MobileCardIconButton title="Lihat Detail" onClick={() => router.push(`/projects/${project.id}`)}><EyeIcon /></MobileCardIconButton>
+                      <MobileCardIconButton title="Edit" onClick={() => handleEdit(project)}><PencilIcon /></MobileCardIconButton>
+                      <MobileCardIconButton title="Hapus" danger onClick={() => confirmDelete(project.id)}><TrashIcon /></MobileCardIconButton>
+                    </>
+                  }
+                />
+                <MobileCardRow label="Nilai Project">{formatRupiah(getProjectValue(project))}</MobileCardRow>
+                <MobileCardRow label="Status">
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${PROJECT_STATUS_COLORS[project.status]}`}>
+                    {PROJECT_STATUS_LABELS[project.status]}
+                  </span>
+                </MobileCardRow>
+                <MobileCardRow label="Start Date">{formatDate(project.start_date)}</MobileCardRow>
+                <MobileCardRow label="Deadline">{formatDate(project.deadline)}</MobileCardRow>
+                <MobileCardRow label="Assigned To">{project.assigned_to || "-"}</MobileCardRow>
+                <MobileCardRow label="Progress">
+                  <span className="inline-flex items-center gap-2">
+                    <span className="w-16 bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                      <span className="block bg-green-500 h-1.5 rounded-full" style={{ width: `${progress}%` }} />
+                    </span>
+                    {progress}%
+                  </span>
+                </MobileCardRow>
+                <MobileCardRow label="Status Pembayaran">
+                  {ps === null ? (
+                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">Belum Ada Invoice</span>
+                  ) : ps === "lunas" ? (
+                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Lunas</span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">Belum Lunas</span>
+                  )}
+                </MobileCardRow>
+              </MobileCard>
+            );
+          })}
+          {filteredProjects.length === 0 && (
+            <div className="py-12 text-center text-gray-400 text-sm bg-white rounded-2xl border border-gray-100">
+              Belum ada project. Klik &quot;Tambah Project&quot; untuk memulai.
+            </div>
+          )}
+        </MobileCardList>
+        <div className="mt-3 bg-white rounded-2xl border border-gray-100 overflow-hidden">
           <Pagination
             page={page}
             totalPages={totalPages}

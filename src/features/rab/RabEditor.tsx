@@ -21,6 +21,7 @@ import SphPrintView, { SphConfig } from "@/features/rab/SphPrintView";
 import { generateSphDocx } from "@/features/rab/generateSph";
 import { generateRabExcel } from "@/features/rab/generateRabExcel";
 import { supabase } from "@/services/supabase";
+import { ActionDropdown } from "@/components/ActionDropdown";
 import {
   groupSubtotal as calcGroupSubtotal,
   grandTotal as calcGrandTotal,
@@ -74,6 +75,13 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
   const [dragOverGroupId, setDragOverGroupId] = useState<string | null>(null);
   const [draggedItem, setDraggedItem] = useState<{ groupId: string; itemId: string } | null>(null);
   const [dragOverItem, setDragOverItem] = useState<{ groupId: string; itemId: string } | null>(null);
+
+  // Mobile-only: popup input untuk Tambah Section / Tambah Item, biar tidak
+  // perlu edit inline di tabel yang sempit di layar HP.
+  const [showAddSectionModal, setShowAddSectionModal] = useState(false);
+  const [newSectionName, setNewSectionName] = useState("");
+  const [addItemGroupId, setAddItemGroupId] = useState<string | null>(null);
+  const [newItemForm, setNewItemForm] = useState({ spesifikasi: "", qty: "", unit: "m2", harga: "" });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -213,15 +221,18 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
   }
 
   // --- GROUP OPERATIONS ---
-  async function handleAddGroup() {
+  async function handleAddGroup(nama?: string) {
     const nextNo = groups.length > 0 ? Math.max(...groups.map((g) => g.no)) + 1 : 1;
+    const deskripsi = nama?.trim() || "Pekerjaan Baru";
     setSaving(true);
     try {
-      const created = await addRabGroup(rabId, nextNo, "Pekerjaan Baru");
+      const created = await addRabGroup(rabId, nextNo, deskripsi);
       setGroups((prev) => [
         ...prev,
-        { id: created.id, rab_id: rabId, no: nextNo, deskripsi: "Pekerjaan Baru", items: [] },
+        { id: created.id, rab_id: rabId, no: nextNo, deskripsi, items: [] },
       ]);
+      setShowAddSectionModal(false);
+      setNewSectionName("");
     } catch {
       toast("Gagal menambah group", "error");
     } finally {
@@ -258,17 +269,20 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
   }
 
   // --- ITEM OPERATIONS ---
-  async function handleAddItem(groupId: string) {
+  async function handleAddItem(
+    groupId: string,
+    overrides?: { spesifikasi?: string; qty?: number; unit?: string; harga?: number }
+  ) {
     const group = groups.find((g) => g.id === groupId);
     if (!group) return;
     const nextOrder = group.items.length;
     setSaving(true);
     try {
       const created = await addRabItem(groupId, {
-        spesifikasi: "Item Baru",
-        qty: 0,
-        unit: "m2",
-        harga: 0,
+        spesifikasi: overrides?.spesifikasi?.trim() || "Item Baru",
+        qty: overrides?.qty ?? 0,
+        unit: overrides?.unit?.trim() || "m2",
+        harga: overrides?.harga ?? 0,
         sort_order: nextOrder,
       });
       setGroups((prev) =>
@@ -278,6 +292,8 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
             : g
         )
       );
+      setAddItemGroupId(null);
+      setNewItemForm({ spesifikasi: "", qty: "", unit: "m2", harga: "" });
     } catch {
       toast("Gagal menambah item", "error");
     } finally {
@@ -523,71 +539,108 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
         )}
 
         {/* Header */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-6">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0 flex-1">
               {editingName ? (
-                <div className="flex items-center gap-2">
-                  <input
-                    ref={nameInputRef}
-                    type="text"
-                    value={rabName}
-                    onChange={(e) => setRabName(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleSaveName()}
-                    onBlur={handleSaveName}
-                    className="text-2xl font-bold text-gray-900 border-b-2 border-gray-900 outline-none bg-transparent w-72"
-                  />
-                </div>
+                <input
+                  ref={nameInputRef}
+                  type="text"
+                  value={rabName}
+                  onChange={(e) => setRabName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSaveName()}
+                  onBlur={handleSaveName}
+                  className="text-lg sm:text-2xl font-bold text-gray-900 border-b-2 border-gray-900 outline-none bg-transparent w-full"
+                />
               ) : (
                 <h1
-                  className={`text-2xl font-bold text-gray-900 transition group ${isLunas ? "" : "cursor-pointer hover:text-gray-600"}`}
+                  className={`text-lg sm:text-2xl font-bold text-gray-900 transition group truncate ${isLunas ? "" : "cursor-pointer hover:text-gray-600"}`}
                   onClick={() => !isLunas && setEditingName(true)}
                 >
                   {rab.nama}
                   {!isLunas && (
-                    <span className="ml-2 text-sm font-normal text-gray-400 opacity-0 group-hover:opacity-100 transition">klik untuk edit</span>
+                    <span className="hidden sm:inline ml-2 text-sm font-normal text-gray-400 opacity-0 group-hover:opacity-100 transition">klik untuk edit</span>
                   )}
                 </h1>
               )}
-              <p className="text-sm text-gray-400 mt-1">
-                {groups.length} section · {groups.reduce((s, g) => s + g.items.length, 0)} item
-              </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               <div className="text-right">
-                <p className="text-xs text-gray-400">Total RAB</p>
-                <p className="text-xl font-bold text-gray-900">Rp {formatCurrency(netTotal)}</p>
+                <p className="text-[10px] sm:text-xs text-gray-400">Total RAB</p>
+                <p className="text-sm sm:text-xl font-bold text-gray-900 whitespace-nowrap">Rp {formatCurrency(netTotal)}</p>
                 {diskonNilaiNum > 0 && (
-                  <p className="text-xs text-gray-400 line-through">Rp {formatCurrency(grandTotal)}</p>
+                  <p className="hidden sm:block text-xs text-gray-400 line-through">Rp {formatCurrency(grandTotal)}</p>
                 )}
               </div>
-              <button
-                onClick={handlePrint}
-                className="px-4 py-2 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition font-medium"
-              >
-                ⎙ Print RAB
-              </button>
-              <button
-                onClick={handleExportExcel}
-                className="px-4 py-2 bg-green-700 text-white text-sm rounded-lg hover:bg-green-800 transition font-medium"
-              >
-                ↓ Excel RAB
-              </button>
-              <button
-                onClick={() => openSphDialog("print")}
-                className="px-4 py-2 bg-amber-600 text-white text-sm rounded-lg hover:bg-amber-700 transition font-medium"
-              >
-                ⎙ Print SPH
-              </button>
-              <button
-                onClick={() => openSphDialog("word")}
-                className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition font-medium"
-              >
-                ↓ Word SPH
-              </button>
+
+              {/* Mobile: 4 aksi digabung jadi satu dropdown biar rapi */}
+              <div className="sm:hidden">
+                <ActionDropdown
+                  align="right"
+                  label="⋯"
+                  buttonClassName="px-2.5 py-1.5 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50"
+                  items={[
+                    {
+                      key: "print-rab",
+                      label: "Print RAB",
+                      onClick: handlePrint,
+                      icon: <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 9V4a1 1 0 011-1h10a1 1 0 011 1v5M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2m-10 0h8v4H7v-4z" /></svg>,
+                    },
+                    {
+                      key: "excel-rab",
+                      label: "Excel RAB",
+                      onClick: handleExportExcel,
+                      icon: <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" /></svg>,
+                    },
+                    {
+                      key: "print-sph",
+                      label: "Print SPH",
+                      onClick: () => openSphDialog("print"),
+                      icon: <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 9V4a1 1 0 011-1h10a1 1 0 011 1v5M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2m-10 0h8v4H7v-4z" /></svg>,
+                    },
+                    {
+                      key: "word-sph",
+                      label: "Word SPH",
+                      onClick: () => openSphDialog("word"),
+                      icon: <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" /></svg>,
+                    },
+                  ]}
+                />
+              </div>
+
+              {/* Desktop: 4 tombol terpisah */}
+              <div className="hidden sm:flex items-center gap-3">
+                <button
+                  onClick={handlePrint}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition font-medium"
+                >
+                  ⎙ Print RAB
+                </button>
+                <button
+                  onClick={handleExportExcel}
+                  className="px-4 py-2 bg-green-700 text-white text-sm rounded-lg hover:bg-green-800 transition font-medium"
+                >
+                  ↓ Excel RAB
+                </button>
+                <button
+                  onClick={() => openSphDialog("print")}
+                  className="px-4 py-2 bg-amber-600 text-white text-sm rounded-lg hover:bg-amber-700 transition font-medium"
+                >
+                  ⎙ Print SPH
+                </button>
+                <button
+                  onClick={() => openSphDialog("word")}
+                  className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition font-medium"
+                >
+                  ↓ Word SPH
+                </button>
+              </div>
             </div>
           </div>
+          <p className="text-xs sm:text-sm text-gray-400 mt-1">
+            {groups.length} section · {groups.reduce((s, g) => s + g.items.length, 0)} item
+          </p>
         </div>
 
         {/* RAB Table */}
@@ -747,12 +800,21 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                       <td />
                       <td />
                       <td colSpan={4} className="px-3 py-1.5">
+                        {/* Desktop: langsung tambah baris kosong, isi inline di tabel */}
                         <button
                           onClick={() => handleAddItem(group.id)}
                           disabled={saving || isLunas}
-                          className="text-xs text-gray-400 hover:text-gray-700 transition disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-gray-400"
+                          className="hidden sm:inline text-xs text-gray-400 hover:text-gray-700 transition disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-gray-400"
                         >
                           + Tambah item
+                        </button>
+                        {/* Mobile: buka popup biar sekalian isi lengkap tanpa geser tabel */}
+                        <button
+                          onClick={() => setAddItemGroupId(group.id)}
+                          disabled={saving || isLunas}
+                          className="sm:hidden inline-flex items-center gap-1 px-2.5 py-1 bg-black text-white text-xs font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          + Tambah Item
                         </button>
                       </td>
                       {/* Subtotal */}
@@ -767,12 +829,21 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                 {/* Tambah Section — above subtotal */}
                 <tr className="border-t border-dashed border-gray-200">
                   <td colSpan={8} className="px-4 py-3">
+                    {/* Desktop: langsung tambah section kosong, isi nama inline di tabel */}
                     <button
-                      onClick={handleAddGroup}
+                      onClick={() => handleAddGroup()}
                       disabled={saving || isLunas}
-                      className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="hidden sm:flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <span className="text-lg leading-none">+</span> Tambah Section
+                    </button>
+                    {/* Mobile: buka popup biar sekalian isi nama section */}
+                    <button
+                      onClick={() => setShowAddSectionModal(true)}
+                      disabled={saving || isLunas}
+                      className="sm:hidden inline-flex items-center gap-1.5 px-3 py-1.5 bg-black text-white text-xs font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      + Tambah Section
                     </button>
                   </td>
                 </tr>
@@ -936,6 +1007,130 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
           </div>
         </div>
       </div>
+
+      {/* Tambah Section — popup mobile */}
+      {showAddSectionModal && (
+        <div
+          className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 print:hidden"
+          onClick={() => setShowAddSectionModal(false)}
+        >
+          <div
+            className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl p-5 w-full sm:max-w-md"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-base font-bold text-gray-900 mb-4">Tambah Section</h2>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Nama Section</label>
+              <input
+                type="text"
+                autoFocus
+                value={newSectionName}
+                onChange={(e) => setNewSectionName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAddGroup(newSectionName)}
+                placeholder="Contoh: Pekerjaan Dinding"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none focus:border-gray-500"
+              />
+            </div>
+            <div className="flex gap-3 mt-5">
+              <button
+                onClick={() => setShowAddSectionModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition"
+              >
+                Batal
+              </button>
+              <button
+                onClick={() => handleAddGroup(newSectionName)}
+                disabled={saving}
+                className="flex-1 px-4 py-2 bg-black text-white text-sm rounded-lg hover:bg-gray-800 transition disabled:opacity-50"
+              >
+                Tambah
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tambah Item — popup mobile */}
+      {addItemGroupId && (
+        <div
+          className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 print:hidden"
+          onClick={() => setAddItemGroupId(null)}
+        >
+          <div
+            className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl p-5 w-full sm:max-w-md space-y-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-base font-bold text-gray-900 mb-1">Tambah Item</h2>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Spesifikasi</label>
+              <input
+                type="text"
+                autoFocus
+                value={newItemForm.spesifikasi}
+                onChange={(e) => setNewItemForm((f) => ({ ...f, spesifikasi: e.target.value }))}
+                placeholder="Contoh: Cat dinding interior"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none focus:border-gray-500"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Qty</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={newItemForm.qty}
+                  onChange={(e) => setNewItemForm((f) => ({ ...f, qty: e.target.value }))}
+                  placeholder="0"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none focus:border-gray-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Unit</label>
+                <input
+                  type="text"
+                  value={newItemForm.unit}
+                  onChange={(e) => setNewItemForm((f) => ({ ...f, unit: e.target.value }))}
+                  placeholder="m2"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none focus:border-gray-500"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Harga Satuan</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={newItemForm.harga ? formatCurrency(parseCurrency(newItemForm.harga)) : ""}
+                onChange={(e) => setNewItemForm((f) => ({ ...f, harga: e.target.value }))}
+                placeholder="0"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none focus:border-gray-500"
+              />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setAddItemGroupId(null)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition"
+              >
+                Batal
+              </button>
+              <button
+                onClick={() =>
+                  handleAddItem(addItemGroupId, {
+                    spesifikasi: newItemForm.spesifikasi,
+                    qty: parseFloat(newItemForm.qty) || 0,
+                    unit: newItemForm.unit,
+                    harga: parseCurrency(newItemForm.harga),
+                  })
+                }
+                disabled={saving}
+                className="flex-1 px-4 py-2 bg-black text-white text-sm rounded-lg hover:bg-gray-800 transition disabled:opacity-50"
+              >
+                Tambah
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* SPH Config Dialog */}
       {showSphDialog && (

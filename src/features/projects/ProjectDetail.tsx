@@ -321,20 +321,20 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
           </div>
         </div>
         {/* KPI row */}
-        <div className="grid grid-cols-3 gap-3 pt-3 border-t border-gray-50">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-gray-50">
           <div className="bg-gray-50 rounded-lg px-4 py-3">
             <p className="text-xs text-gray-400 mb-1">Nilai Project</p>
-            <p className="text-base font-bold text-gray-900 truncate">{projectValue ? formatCurrency(projectValue) : "-"}</p>
+            <p className="text-base font-bold text-gray-900">{projectValue ? formatCurrency(projectValue) : "-"}</p>
           </div>
           <div className="bg-red-50 rounded-lg px-4 py-3">
             <p className="text-xs text-red-400 mb-1">Total Pengeluaran</p>
-            <p className="text-base font-bold text-red-500 truncate">{formatCurrency(totalPengeluaran)}</p>
+            <p className="text-base font-bold text-red-500">{formatCurrency(totalPengeluaran)}</p>
           </div>
           <div className={`rounded-lg px-4 py-3 ${estimasiProfit >= 0 ? "bg-green-50" : "bg-red-50"}`}>
             <p className={`text-xs mb-1 ${estimasiProfit >= 0 ? "text-green-500" : "text-red-400"}`}>
               Estimasi Profit{marginPct ? ` (${marginPct}%)` : ""}
             </p>
-            <p className={`text-base font-bold truncate ${estimasiProfit >= 0 ? "text-green-600" : "text-red-500"}`}>
+            <p className={`text-base font-bold ${estimasiProfit >= 0 ? "text-green-600" : "text-red-500"}`}>
               {formatCurrency(estimasiProfit)}
             </p>
           </div>
@@ -457,13 +457,14 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
           {loadingExp ? (
             <div className="py-10 text-center text-xs text-gray-400">Memuat...</div>
           ) : (
-            <table className="w-full text-sm border-collapse">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] text-sm border-collapse">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100">
                   <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide w-28">Tanggal</th>
                   <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Deskripsi</th>
-                  <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide w-28 hidden sm:table-cell">Kategori</th>
-                  <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide w-32 hidden md:table-cell">Vendor</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide w-28">Kategori</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide w-32">Vendor</th>
                   <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide w-36">Jumlah (IDR)</th>
                   <th className="w-8" />
                 </tr>
@@ -500,7 +501,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                       />
                     </td>
                     {/* Kategori */}
-                    <td className="px-2 py-1.5 hidden sm:table-cell">
+                    <td className="px-2 py-1.5">
                       <select
                         value={exp.kategori}
                         onChange={(e) => {
@@ -519,7 +520,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                     {/* Vendor — datalist saran dari vendor yang sudah pernah diinput
                         di project ini (vendorOptions), tapi tetap bisa diketik bebas
                         kalau vendornya baru. */}
-                    <td className="px-2 py-1.5 hidden md:table-cell">
+                    <td className="px-2 py-1.5">
                       <input
                         type="text"
                         list="vendor-options"
@@ -567,6 +568,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                 </tfoot>
               )}
             </table>
+            </div>
           )}
         </div>
 
@@ -693,16 +695,17 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
               <button onClick={() => setShowInvoiceModal(true)} className="text-gray-700 underline">Buat Invoice</button>
             </div>
           ) : (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[1000px] text-sm">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100">
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">No. Invoice</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide hidden sm:table-cell">RAB</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide hidden md:table-cell">Termin / Catatan</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide hidden lg:table-cell">Tgl Tagih</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide hidden lg:table-cell">Jatuh Tempo</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">RAB</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Termin / Catatan</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Tgl Tagih</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Jatuh Tempo</th>
                   <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Tagihan</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide hidden sm:table-cell">Diterima</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Diterima</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Status</th>
                   <th className="w-8" />
                 </tr>
@@ -727,7 +730,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                             {inv.invoice_number}
                           </a>
                         </td>
-                        <td className="px-4 py-3 hidden sm:table-cell">
+                        <td className="px-4 py-3">
                           {inv.rab_id ? (
                             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blue-50 text-blue-700 font-medium">
                               {approvedRabs.find((r) => r.id === inv.rab_id)?.nama ?? "RAB"}
@@ -736,13 +739,13 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                             <span className="text-gray-300 text-xs">—</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-gray-500 text-xs hidden md:table-cell max-w-[180px] truncate">
+                        <td className="px-4 py-3 text-gray-500 text-xs max-w-[180px] truncate">
                           {inv.notes ?? "—"}
                         </td>
-                        <td className="px-4 py-3 text-gray-500 text-xs hidden lg:table-cell">
+                        <td className="px-4 py-3 text-gray-500 text-xs">
                           {inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString("id-ID") : "—"}
                         </td>
-                        <td className="px-4 py-3 text-xs hidden lg:table-cell">
+                        <td className="px-4 py-3 text-xs">
                           {inv.due_date ? (
                             <span className={new Date(inv.due_date) < new Date() && inv.status !== "paid" ? "text-red-500 font-medium" : "text-gray-500"}>
                               {new Date(inv.due_date).toLocaleDateString("id-ID")}
@@ -752,7 +755,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                         <td className="px-4 py-3 text-right font-medium text-gray-900">
                           {formatCurrency(inv.total_amount)}
                         </td>
-                        <td className="px-4 py-3 text-right hidden sm:table-cell">
+                        <td className="px-4 py-3 text-right">
                           <div>
                             <span className={inv.paid_amount > 0 ? "text-green-600 font-medium" : "text-gray-300"}>
                               {formatCurrency(inv.paid_amount)}
@@ -807,18 +810,18 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
               </tbody>
               <tfoot>
                 <tr className="bg-gray-50 border-t border-gray-100">
-                  <td colSpan={5} className="px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell">Total</td>
-                  <td colSpan={5} className="px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide lg:hidden">Total</td>
+                  <td colSpan={5} className="px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Total</td>
                   <td className="px-4 py-2.5 text-right font-bold text-gray-900">
                     {formatCurrency(projectInvoices.reduce((s, i) => s + i.total_amount, 0))}
                   </td>
-                  <td className="px-4 py-2.5 text-right font-bold text-green-600 hidden sm:table-cell">
+                  <td className="px-4 py-2.5 text-right font-bold text-green-600">
                     {formatCurrency(projectInvoices.reduce((s, i) => s + i.paid_amount, 0))}
                   </td>
                   <td colSpan={2} />
                 </tr>
               </tfoot>
             </table>
+            </div>
           )}
         </div>
       </div>

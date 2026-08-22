@@ -25,6 +25,7 @@ import { InvoiceFormModal } from "./InvoiceFormModal";
 import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
 import { ActionDropdown } from "@/components/ActionDropdown";
 import Pagination from "@/components/Pagination";
+import { MobileCardList, MobileCard, MobileCardHeader, MobileCardRow, MobileCardIconButton, EyeIcon, TrashIcon } from "@/components/MobileCard";
 
 export default function InvoicesTable() {
   const router = useRouter();
@@ -131,21 +132,21 @@ export default function InvoicesTable() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6">
         {[
           { label: "Total Tagihan", value: totalTagihan, color: "text-gray-900" },
           { label: "Total Lunas", value: totalLunas, color: "text-green-600" },
           { label: "Outstanding", value: totalOutstanding, color: "text-red-600" },
         ].map((c) => (
-          <div key={c.label} className="bg-white rounded-xl border border-gray-100 px-4 py-3">
-            <p className="text-xs text-gray-500">{c.label}</p>
-            <p className={`text-base font-bold mt-0.5 ${c.color}`}>{formatRupiah(c.value)}</p>
+          <div key={c.label} className="bg-white rounded-xl border border-gray-100 px-3 sm:px-4 py-2.5 sm:py-3 min-w-0">
+            <p className="text-[11px] sm:text-xs text-gray-500 truncate">{c.label}</p>
+            <p className={`text-sm sm:text-base font-bold mt-0.5 truncate ${c.color}`}>{formatRupiah(c.value)}</p>
           </div>
         ))}
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-3 mb-4">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 mb-4">
         <div className="relative">
           <svg className="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -155,7 +156,7 @@ export default function InvoicesTable() {
             value={filterSearch}
             onChange={e => { setFilterSearch(e.target.value); goTo(1); }}
             placeholder="Cari project / RAB..."
-            className="pl-8 pr-3 py-2 border border-gray-300 rounded-lg text-sm text-black placeholder:text-gray-400 focus:ring-2 focus:ring-gray-900 outline-none w-52"
+            className="pl-8 pr-3 py-2 border border-gray-300 rounded-lg text-sm text-black placeholder:text-gray-400 focus:ring-2 focus:ring-gray-900 outline-none w-full sm:w-52"
           />
         </div>
         <MultiSelect
@@ -163,33 +164,33 @@ export default function InvoicesTable() {
           options={toOptions(INVOICE_STATUSES, INVOICE_STATUS_LABELS)}
           value={filterStatus}
           onChange={(v) => { setFilterStatus(v); goTo(1); }}
-          className="w-44"
+          className="w-full sm:w-44"
         />
         <MultiSelect
           placeholder="Semua Client"
           options={clients.map((c) => ({ value: c.id, label: c.name ?? c.id }))}
           value={filterClientId}
           onChange={(v) => { setFilterClientId(v); goTo(1); }}
-          className="w-52"
+          className="w-full sm:w-52"
         />
         <MultiSelect
           placeholder="Semua Project"
           options={projects.map((p) => ({ value: p.id, label: p.name }))}
           value={filterProjectId}
           onChange={handleProjectFilterChange}
-          className="w-52"
+          className="w-full sm:w-52"
         />
         <MultiSelect
           placeholder={filterProjectId.length > 0 ? `RAB (${availableRabs.length})` : "Semua RAB"}
           options={availableRabs.map((r) => ({ value: r.id, label: r.nama }))}
           value={filterRabId}
           onChange={(v) => { setFilterRabId(v); goTo(1); }}
-          className="w-52"
+          className="w-full sm:w-52"
         />
-        <div className="ml-auto">
+        <div className="sm:ml-auto">
           <button
             onClick={() => setShowAdd(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -199,8 +200,8 @@ export default function InvoicesTable() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+      {/* Table (desktop) */}
+      <div className="hidden sm:block bg-white rounded-xl border border-gray-100 overflow-hidden">
         {loading ? (
           <div className="divide-y divide-gray-50">
             {[...Array(5)].map((_, i) => (
@@ -331,6 +332,91 @@ export default function InvoicesTable() {
           onPageChange={goTo}
           onPageSizeChange={changePageSize}
         />
+      </div>
+
+      {/* Cards (mobile) */}
+      <div className="sm:hidden">
+        {loading ? (
+          <div className="space-y-3">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-40 bg-white rounded-2xl border border-gray-100 animate-pulse" />
+            ))}
+          </div>
+        ) : paged.length === 0 ? (
+          <div className="py-16 text-center text-sm text-gray-400 bg-white rounded-2xl border border-gray-100">
+            {filtered.length === 0 && invoices.length > 0 ? "Tidak ada invoice yang sesuai filter" : "Belum ada invoice"}
+          </div>
+        ) : (
+          <>
+            <MobileCardList>
+              {paged.map((inv: import("@/types/db").Invoice) => {
+                const client = clients.find((c) => c.id === inv.client_id);
+                const project = projects.find((p) => p.id === inv.project_id);
+                const outstanding = inv.total_amount - inv.paid_amount;
+                return (
+                  <MobileCard key={inv.id} onClick={() => router.push(`/invoices/${inv.id}`)}>
+                    <MobileCardHeader
+                      title={inv.invoice_number}
+                      subtitle={
+                        <span className="text-xs text-gray-400">
+                          {project ? project.name : client?.name ?? "—"}
+                          {project && client && <> · {client.name}</>}
+                        </span>
+                      }
+                      actions={
+                        <>
+                          <MobileCardIconButton title="Detail" onClick={() => router.push(`/invoices/${inv.id}`)}><EyeIcon /></MobileCardIconButton>
+                          <MobileCardIconButton title="Hapus" danger onClick={() => setDeletingId(inv.id)}><TrashIcon /></MobileCardIconButton>
+                        </>
+                      }
+                    />
+                    {inv.rab_id && (
+                      <MobileCardRow label="RAB">
+                        {rabs.find((r) => r.id === inv.rab_id)?.nama ?? "RAB"}
+                      </MobileCardRow>
+                    )}
+                    <MobileCardRow label="Tgl Invoice">
+                      {inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString("id-ID") : "—"}
+                    </MobileCardRow>
+                    <MobileCardRow label="Jatuh Tempo">
+                      {inv.due_date ? new Date(inv.due_date).toLocaleDateString("id-ID") : "—"}
+                    </MobileCardRow>
+                    <MobileCardRow label="Total">{formatRupiah(inv.total_amount)}</MobileCardRow>
+                    <MobileCardRow label="Terbayar">
+                      <span className={outstanding > 0 ? "text-red-600" : "text-green-600"}>
+                        {formatRupiah(inv.paid_amount)}
+                      </span>
+                    </MobileCardRow>
+                    <div className="flex items-center justify-between gap-3 pt-2 text-sm" onClick={(e) => e.stopPropagation()}>
+                      <span className="text-gray-400">Status</span>
+                      <select
+                        value={inv.status}
+                        onChange={(e) => handleStatusChange(inv.id, e.target.value as InvoiceStatus)}
+                        className={`text-xs font-medium px-2 py-1 rounded-full border-0 outline-none cursor-pointer ${INVOICE_STATUS_COLORS[inv.status]}`}
+                      >
+                        {INVOICE_STATUSES.map((s) => (
+                          <option key={s} value={s}>{INVOICE_STATUS_LABELS[s]}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </MobileCard>
+                );
+              })}
+            </MobileCardList>
+            <div className="mt-3 bg-white rounded-2xl border border-gray-100 overflow-hidden">
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                from={from}
+                to={to}
+                total={total}
+                pageSize={pageSize}
+                onPageChange={goTo}
+                onPageSizeChange={changePageSize}
+              />
+            </div>
+          </>
+        )}
       </div>
 
       {showAdd && (

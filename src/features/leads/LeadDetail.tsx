@@ -15,6 +15,7 @@ import { useState } from "react";
 import { Rab, LeadContactChannel } from "@/types/db";
 import { LEAD_CONTACT_CHANNELS, LEAD_CONTACT_CHANNEL_LABELS } from "@/constants/options";
 import { LeadFormModal } from "./LeadFormModal";
+import { ActionDropdown } from "@/components/ActionDropdown";
 
 const formatDate = (s?: string) =>
   s ? new Date(s).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "-";
@@ -425,7 +426,7 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
             {rabList.map((rab) => {
               const lunas = isRabLunas(rab.id);
               return (
-              <div key={rab.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex items-center justify-between gap-4">
+              <div key={rab.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-semibold text-gray-900 truncate">{rab.nama}</p>
@@ -437,7 +438,7 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
                   </div>
                   <p className="text-xs text-gray-400 mt-0.5">Dibuat {formatDate(rab.created_at)}</p>
                 </div>
-                <div className="flex items-center gap-3 flex-shrink-0">
+                <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                   <select
                     value={rab.status}
                     onChange={(e) => handleStatusChange(rab, e.target.value as Rab["status"])}
@@ -455,11 +456,13 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
                   >
                     Buka
                   </Link>
+
+                  {/* Desktop: Duplikasi & Hapus sebagai tombol terpisah */}
                   <button
                     onClick={() => handleDuplicateRab(rab.id)}
                     disabled={duplicatingId === rab.id}
                     title="Duplikasi RAB (untuk membuat penawaran harga alternatif dengan komponen yang sama)"
-                    className="px-3 py-1.5 text-xs font-medium text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 hover:text-gray-800 transition disabled:opacity-50"
+                    className="hidden sm:inline-flex px-3 py-1.5 text-xs font-medium text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 hover:text-gray-800 transition disabled:opacity-50"
                   >
                     {duplicatingId === rab.id ? "..." : "Duplikasi"}
                   </button>
@@ -467,10 +470,40 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
                     onClick={() => handleDeleteRab(rab.id)}
                     disabled={deletingId === rab.id || lunas}
                     title={lunas ? "RAB sudah lunas dan tidak dapat dihapus" : undefined}
-                    className="px-3 py-1.5 text-xs font-medium text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                    className="hidden sm:inline-flex px-3 py-1.5 text-xs font-medium text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                   >
                     {deletingId === rab.id ? "..." : "Hapus"}
                   </button>
+
+                  {/* Mobile: Duplikasi & Hapus digabung jadi satu dropdown biar tidak sesak */}
+                  <div className="sm:hidden">
+                    <ActionDropdown
+                      align="right"
+                      label="⋯"
+                      buttonClassName="px-2.5 py-1.5 text-sm font-medium text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 hover:text-gray-800 transition"
+                      items={[
+                        {
+                          key: "duplicate",
+                          label: duplicatingId === rab.id ? "Menduplikasi..." : "Duplikasi",
+                          disabled: duplicatingId === rab.id,
+                          onClick: () => handleDuplicateRab(rab.id),
+                          icon: (
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                          ),
+                        },
+                        {
+                          key: "delete",
+                          label: deletingId === rab.id ? "Menghapus..." : "Hapus",
+                          disabled: deletingId === rab.id || lunas,
+                          danger: true,
+                          onClick: () => handleDeleteRab(rab.id),
+                          icon: (
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          ),
+                        },
+                      ]}
+                    />
+                  </div>
                 </div>
               </div>
               );

@@ -19,6 +19,7 @@ import Pagination from "@/components/Pagination";
 import { exportCSV } from "@/utils/csv";
 import { MultiSelect } from "@/components/MultiSelect";
 import { ActionDropdown } from "@/components/ActionDropdown";
+import { MobileCardList, MobileCard, MobileCardHeader, MobileCardRow, MobileCardIconButton, EyeIcon, PencilIcon, TrashIcon } from "@/components/MobileCard";
 import {
   CLIENT_LEAD_STATUSES,
   CLIENT_LEAD_STATUS_COLORS,
@@ -235,8 +236,8 @@ export default function ClientsTable() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
+      {/* Table (desktop) */}
+      <div className="hidden sm:block bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
           <h3 className="text-base font-semibold text-gray-800">Daftar Client</h3>
         </div>
@@ -372,6 +373,93 @@ export default function ClientsTable() {
             onPageSizeChange={changePageSize}
           />
         </div>
+      </div>
+
+      {/* Cards (mobile) */}
+      <div className="sm:hidden">
+        {loading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-32 bg-white rounded-2xl border border-gray-100 animate-pulse" />
+            ))}
+          </div>
+        ) : error ? (
+          <div className="px-6 py-8 text-center text-red-500 text-sm bg-white rounded-2xl border border-gray-100">{error}</div>
+        ) : (
+          <>
+            <MobileCardList>
+              {pagedClients.map((client) => (
+                <MobileCard key={client.id} onClick={() => router.push(`/clients/${client.id}`)}>
+                  <MobileCardHeader
+                    title={client.name}
+                    subtitle={client.phone ? <span className="text-xs text-gray-400">{client.phone}</span> : undefined}
+                    actions={
+                      <>
+                        <MobileCardIconButton title="Lihat Detail" onClick={() => setViewingClient(client)}><EyeIcon /></MobileCardIconButton>
+                        <MobileCardIconButton title="Edit" onClick={() => handleEdit(client)}><PencilIcon /></MobileCardIconButton>
+                        <MobileCardIconButton title="Hapus" danger onClick={() => confirmDelete(client.id)}><TrashIcon /></MobileCardIconButton>
+                      </>
+                    }
+                  />
+                  <MobileCardRow label="Alamat">{client.address || "-"}</MobileCardRow>
+                  <MobileCardRow label="Nama Project">{client.project_name || "-"}</MobileCardRow>
+                  <MobileCardRow label="Tipe Properti">{client.property_type || "-"}</MobileCardRow>
+                  <MobileCardRow label="Budget">{client.budget_range || "-"}</MobileCardRow>
+                  <MobileCardRow label="Status">
+                    {client.lead_status ? (
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${CLIENT_LEAD_STATUS_COLORS[client.lead_status] || "bg-gray-100 text-gray-700"}`}>
+                        {client.lead_status}
+                      </span>
+                    ) : "-"}
+                  </MobileCardRow>
+                  <MobileCardRow label="Follow-up">
+                    {(() => {
+                      const latestLead = getLatestLead(client.id);
+                      if (!latestLead) return "-";
+                      const overdue = !!latestLead.follow_up_date
+                        && latestLead.follow_up_date < new Date().toISOString().slice(0, 10)
+                        && latestLead.status !== "Deal Won" && latestLead.status !== "Deal Lost";
+                      return (
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className={overdue ? "text-red-600 font-medium" : ""}>{formatDate(latestLead.follow_up_date)}</span>
+                          {latestLead.is_stale && (
+                            <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-gray-200 text-gray-700">Stale</span>
+                          )}
+                        </span>
+                      );
+                    })()}
+                  </MobileCardRow>
+                  <MobileCardRow label="Sumber">{client.source || "-"}</MobileCardRow>
+                  <MobileCardRow label="Prioritas">
+                    {client.priority ? (
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${PRIORITY_COLORS[client.priority] || "bg-gray-100 text-gray-700"}`}>
+                        {client.priority}
+                      </span>
+                    ) : "-"}
+                  </MobileCardRow>
+                  {client.notes && <MobileCardRow label="Catatan">{client.notes}</MobileCardRow>}
+                </MobileCard>
+              ))}
+              {filteredClients.length === 0 && (
+                <div className="py-12 text-center text-gray-400 text-sm bg-white rounded-2xl border border-gray-100">
+                  Tidak ada client yang ditemukan
+                </div>
+              )}
+            </MobileCardList>
+            <div className="mt-3 bg-white rounded-2xl border border-gray-100 overflow-hidden">
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                from={from}
+                to={to}
+                total={total}
+                pageSize={pageSize}
+                onPageChange={goTo}
+                onPageSizeChange={changePageSize}
+              />
+            </div>
+          </>
+        )}
       </div>
 
       {showModal && (

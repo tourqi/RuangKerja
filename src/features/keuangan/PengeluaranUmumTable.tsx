@@ -6,6 +6,7 @@ import { GeneralExpenseFormModal } from "./GeneralExpenseFormModal";
 import { ActionDropdown } from "@/components/ActionDropdown";
 import Pagination from "@/components/Pagination";
 import { usePagination } from "@/hooks/usePagination";
+import { MobileCardList, MobileCard, MobileCardHeader, MobileCardRow, MobileCardIconButton, PencilIcon, TrashIcon } from "@/components/MobileCard";
 
 const fmt = (v: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(v);
@@ -127,8 +128,8 @@ export function PengeluaranUmumTable({ expenses, loading, onRefresh }: Props) {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+      {/* Table (desktop) */}
+      <div className="hidden sm:block bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-10 text-center text-sm text-gray-400">Memuat data...</div>
         ) : filtered.length === 0 ? (
@@ -227,6 +228,70 @@ export function PengeluaranUmumTable({ expenses, loading, onRefresh }: Props) {
             onPageChange={goTo}
             onPageSizeChange={changePageSize}
           />
+        )}
+      </div>
+
+      {/* Cards (mobile) */}
+      <div className="sm:hidden">
+        {loading ? (
+          <div className="space-y-3">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-28 bg-white rounded-2xl border border-gray-100 animate-pulse" />
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="p-10 text-center text-sm text-gray-400 bg-white rounded-2xl border border-gray-100">
+            {expenses.length === 0
+              ? "Belum ada pengeluaran. Klik \"Tambah Pengeluaran\" untuk mulai mencatat."
+              : "Tidak ada data yang cocok dengan filter."}
+          </div>
+        ) : (
+          <>
+            <MobileCardList>
+              {paged.map((expense) => (
+                <MobileCard key={expense.id}>
+                  <MobileCardHeader
+                    title={expense.deskripsi}
+                    subtitle={expense.sub_kategori ? <span className="text-xs text-gray-400">{expense.sub_kategori}</span> : undefined}
+                    actions={
+                      <>
+                        <MobileCardIconButton title="Edit" onClick={() => { setEditing(expense); setModalOpen(true); }}><PencilIcon /></MobileCardIconButton>
+                        <MobileCardIconButton title="Hapus" danger disabled={deleting === expense.id} onClick={() => handleDelete(expense.id)}><TrashIcon /></MobileCardIconButton>
+                      </>
+                    }
+                  />
+                  <MobileCardRow label="Tanggal">
+                    {new Date(expense.tanggal).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                  </MobileCardRow>
+                  <MobileCardRow label="Kategori">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${KATEGORI_BADGE[expense.kategori]}`}>
+                      {KATEGORI_LABEL[expense.kategori]}
+                    </span>
+                  </MobileCardRow>
+                  <MobileCardRow label="Vendor">{expense.vendor ?? "—"}</MobileCardRow>
+                  <MobileCardRow label="Jumlah">
+                    <span className="text-red-600 font-semibold">{fmt(expense.jumlah)}</span>
+                  </MobileCardRow>
+                </MobileCard>
+              ))}
+            </MobileCardList>
+            <div className="bg-white rounded-2xl border border-gray-100 px-4 py-3 flex items-center justify-between text-xs text-gray-500">
+              <span>Total ({filtered.length} item)</span>
+              <span className="font-bold text-red-600">{fmt(total)}</span>
+            </div>
+            <div className="mt-3 bg-white rounded-2xl border border-gray-100 overflow-hidden">
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                from={from}
+                to={to}
+                total={totalCount}
+                pageSize={pageSize}
+                onPageChange={goTo}
+                onPageSizeChange={changePageSize}
+              />
+            </div>
+          </>
         )}
       </div>
 

@@ -13,6 +13,7 @@ import Pagination from "@/components/Pagination";
 import { exportCSV } from "@/utils/csv";
 import { MultiSelect } from "@/components/MultiSelect";
 import { ActionDropdown } from "@/components/ActionDropdown";
+import { MobileCardList, MobileCard, MobileCardHeader, MobileCardRow, MobileCardIconButton, EyeIcon, PencilIcon, TrashIcon } from "@/components/MobileCard";
 import {
   LEAD_STATUSES,
   LEAD_STATUS_COLORS,
@@ -297,8 +298,8 @@ export default function LeadsTable() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
+      {/* Table (desktop) */}
+      <div className="hidden sm:block bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
           <h3 className="text-base font-semibold text-gray-800">Pipeline Lead</h3>
         </div>
@@ -433,6 +434,87 @@ export default function LeadsTable() {
               )}
             </tbody>
           </table>
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            from={from}
+            to={to}
+            total={total}
+            pageSize={pageSize}
+            onPageChange={goTo}
+            onPageSizeChange={changePageSize}
+          />
+        </div>
+      </div>
+
+      {/* Cards (mobile) */}
+      <div className="sm:hidden">
+        <MobileCardList>
+          {pagedLeads.map((lead) => {
+            const client = clients.find((c) => c.id === lead.client_id);
+            const overdue = !!lead.follow_up_date
+              && lead.follow_up_date < new Date().toISOString().slice(0, 10)
+              && lead.status !== "Deal Won" && lead.status !== "Deal Lost";
+            return (
+              <MobileCard key={lead.id} onClick={() => router.push(`/leads/${lead.id}`)}>
+                <MobileCardHeader
+                  title={client?.name || "-"}
+                  subtitle={client?.phone ? <span className="text-xs text-gray-400">{client.phone}</span> : undefined}
+                  actions={
+                    <>
+                      <MobileCardIconButton title="Lihat" onClick={() => setViewingLead(lead)}><EyeIcon /></MobileCardIconButton>
+                      <MobileCardIconButton title="Edit" onClick={() => handleEdit(lead)}><PencilIcon /></MobileCardIconButton>
+                      <MobileCardIconButton title="Hapus" danger onClick={() => confirmDelete(lead.id)}><TrashIcon /></MobileCardIconButton>
+                    </>
+                  }
+                />
+                <MobileCardRow label="Nama Project">{lead.project_name || "-"}</MobileCardRow>
+                <MobileCardRow label="Status">
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${LEAD_STATUS_COLORS[lead.status] || "bg-gray-100 text-gray-700"}`}>
+                      {lead.status}
+                    </span>
+                    {lead.is_stale && (
+                      <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-gray-200 text-gray-700">Stale</span>
+                    )}
+                  </span>
+                </MobileCardRow>
+                <MobileCardRow label="Priority">
+                  {lead.priority ? (
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${PRIORITY_COLORS[lead.priority] || "bg-gray-100 text-gray-600"}`}>
+                      {lead.priority}
+                    </span>
+                  ) : "-"}
+                </MobileCardRow>
+                <MobileCardRow label="Nilai">
+                  {lead.nominal_deal != null
+                    ? formatRupiah(lead.nominal_deal)
+                    : lead.budget != null ? formatRupiah(lead.budget) : "-"}
+                </MobileCardRow>
+                <MobileCardRow label="No Response">
+                  {lead.no_response_count ? (
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${lead.no_response_count >= 2 ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-600"}`}>
+                      {lead.no_response_count}
+                    </span>
+                  ) : "-"}
+                </MobileCardRow>
+                <MobileCardRow label="Source">{lead.source || client?.source || "-"}</MobileCardRow>
+                <MobileCardRow label="Follow Up">
+                  <span className={overdue ? "text-red-600 font-medium" : ""}>{formatDate(lead.follow_up_date)}</span>
+                </MobileCardRow>
+                <MobileCardRow label="Last Contact">{formatDate(lead.last_contacted_at)}</MobileCardRow>
+                <MobileCardRow label="Updated At">{formatDate(lead.updated_at)}</MobileCardRow>
+                {lead.notes && <MobileCardRow label="Catatan">{lead.notes}</MobileCardRow>}
+              </MobileCard>
+            );
+          })}
+          {filteredLeads.length === 0 && (
+            <div className="py-12 text-center text-gray-400 text-sm bg-white rounded-2xl border border-gray-100">
+              Belum ada lead. Klik &quot;Tambah Lead&quot; untuk memulai.
+            </div>
+          )}
+        </MobileCardList>
+        <div className="mt-3 bg-white rounded-2xl border border-gray-100 overflow-hidden">
           <Pagination
             page={page}
             totalPages={totalPages}
