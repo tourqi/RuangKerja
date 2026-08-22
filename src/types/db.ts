@@ -8,19 +8,40 @@ export interface Client {
   project_name?: string;
   property_type?: string;
   budget_range?: string;
-  lead_status?: string;
+  /**
+   * Derived read-only: di-sync otomatis dari status Lead paling terakhir milik
+   * client ini (trigger sync_client_lead_status di DB). Jangan di-set manual
+   * dari form — lihat ClientFormModal.
+   */
+  lead_status?: LeadStatus;
   source?: string;
-  priority?: string;
+  /**
+   * Derived read-only: di-sync otomatis dari priority Lead paling terakhir
+   * milik client ini (sync_client_lead_status di DB, lihat
+   * client_priority_from_lead.sql). Jangan di-set manual dari form.
+   */
+  priority?: Priority;
 }
 
-export type LeadStatus = 'New Lead' | 'Contacted' | 'Survey' | 'Deal' | 'Lost';
+// "Deal" = tahap negosiasi (belum final). "Deal Won"/"Deal Lost" = hasil akhir,
+// masing-masing butuh field syarat sendiri sebelum lead boleh pindah ke sana —
+// lihat guard_lead_status_transition() di supabase/migrations/lead_state_machine.sql.
+export type LeadStatus = 'New Lead' | 'Contacted' | 'Survey' | 'Deal' | 'Deal Won' | 'Deal Lost';
 
+// 'urgent' dipertahankan cuma buat kompatibilitas data lama (mis. seed) —
+// formula compute_lead_priority() di lead_priority_formula.sql cuma pernah
+// menghasilkan low/medium/high, tidak pernah 'urgent'.
 export type Priority = 'low' | 'medium' | 'high' | 'urgent';
 
 export interface Lead {
   id: string;
   client_id: string;
   status: LeadStatus;
+  /**
+   * Derived read-only: di-hitung otomatis dari budget/source/riwayat Deal Won
+   * client/no_response_count lewat trigger set_lead_priority() di DB. Jangan
+   * di-set manual dari form — lihat LeadFormModal.
+   */
   priority?: Priority;
   source?: string;
   project_name?: string;
@@ -31,6 +52,32 @@ export interface Lead {
   notes?: string;
   stage_order?: number;
   assigned_to?: string;
+  created_by?: string;
+  created_at?: string;
+  /** Syarat transisi Contacted → Survey. */
+  lokasi_survey?: string;
+  /** Estimasi budget client, syarat transisi Survey → Deal & input formula priority. */
+  budget?: number;
+  /** Nilai deal final, syarat transisi Deal → Deal Won. */
+  nominal_deal?: number;
+  /** Alasan/catatan lost, syarat transisi Deal → Deal Lost. */
+  alasan_lost?: string;
+  /** Berapa kali follow-up tanpa respon — input formula priority (rule #2) & auto-lost (rule #3). */
+  no_response_count?: number;
+  /** Auto-flag oleh cron run_lead_escalation(): status Contacted > 7 hari tanpa kontak terbaru (rule #3). */
+  is_stale?: boolean;
+  /** Internal bookkeeping oleh cron run_lead_escalation() — cegah alert Survey-overdue berulang tiap hari. */
+  survey_overdue_alerted?: boolean;
+}
+
+export type LeadContactChannel = 'call' | 'whatsapp' | 'email' | 'meeting' | 'other';
+
+/** Log kontak (call/WA/dll) — syarat minimal 1 record sebelum lead boleh pindah ke Contacted. */
+export interface LeadContact {
+  id: string;
+  lead_id: string;
+  channel: LeadContactChannel;
+  notes?: string;
   created_by?: string;
   created_at?: string;
 }
@@ -171,7 +218,13 @@ export interface GeneralExpense {
   created_at?: string;
 }
 
-export type NotificationType = 'follow_up_due' | 'project_overdue' | 'invoice_overdue';
+export type NotificationType =
+  | 'follow_up_due'
+  | 'project_overdue'
+  | 'invoice_overdue'
+  | 'lead_stale'
+  | 'lead_survey_overdue'
+  | 'lead_auto_lost';
 
 export interface Notification {
   id: string;

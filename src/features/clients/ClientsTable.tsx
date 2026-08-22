@@ -18,15 +18,19 @@ import { usePagination } from "@/hooks/usePagination";
 import Pagination from "@/components/Pagination";
 import { exportCSV } from "@/utils/csv";
 import { MultiSelect } from "@/components/MultiSelect";
+import { ActionDropdown } from "@/components/ActionDropdown";
 import {
   CLIENT_LEAD_STATUSES,
   CLIENT_LEAD_STATUS_COLORS,
+  PRIORITIES,
+  PRIORITY_LABELS,
   PRIORITY_COLORS,
   PROPERTY_TYPES,
   BUDGET_RANGES,
   SOURCES,
   toOptions,
 } from "@/constants/options";
+import { formatDate } from "@/utils/format";
 
 function SkeletonRow({ cols }: { cols: number }) {
   return (
@@ -59,8 +63,22 @@ export default function ClientsTable() {
   const [projectFlowLeadId, setProjectFlowLeadId] = useState<string | null>(null);
   const [showProjectFlow, setShowProjectFlow] = useState(false);
 
-  const wonClientIds = new Set((leads ?? []).filter((l) => l.status === "Deal").map((l) => l.client_id));
+  const wonClientIds = new Set((leads ?? []).filter((l) => l.status === "Deal Won").map((l) => l.client_id));
   const wonClients = (clients ?? []).filter((c) => wonClientIds.has(c.id));
+
+  // Lead paling aktif per client — sama pola "latest lead" yang dipakai
+  // sync_client_lead_status() di DB buat nurunin lead_status/priority, dipakai
+  // di sini buat nampilin next-action (follow-up date) & Stale tanpa perlu
+  // klik ke detail client.
+  const getLatestLead = (clientId: string) => {
+    const clientLeads = (leads ?? []).filter((l) => l.client_id === clientId);
+    if (clientLeads.length === 0) return undefined;
+    return [...clientLeads].sort((a, b) => {
+      const at = new Date(a.updated_at ?? a.created_at ?? 0).getTime();
+      const bt = new Date(b.updated_at ?? b.created_at ?? 0).getTime();
+      return bt - at;
+    })[0];
+  };
 
   const [filter, setFilter] = useState({
     name: "",
@@ -204,12 +222,7 @@ export default function ClientsTable() {
           />
           <MultiSelect
             placeholder="Semua Prioritas"
-            options={[
-              { value: "Low", label: "Low" },
-              { value: "Medium", label: "Medium" },
-              { value: "High", label: "High" },
-              { value: "Urgent", label: "Urgent" },
-            ]}
+            options={toOptions(PRIORITIES, PRIORITY_LABELS)}
             value={filter.priority}
             onChange={(v) => setFilter((prev) => ({ ...prev, priority: v }))}
           />
@@ -231,7 +244,7 @@ export default function ClientsTable() {
           {loading ? (
             <table className="w-full min-w-[960px] text-sm">
               <tbody className="divide-y divide-gray-100">
-                {Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} cols={11} />)}
+                {Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} cols={12} />)}
               </tbody>
             </table>
           ) : error ? (
@@ -240,6 +253,7 @@ export default function ClientsTable() {
             <table className="w-full min-w-[960px] text-sm">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Aksi</th>
                   <SortableHeader label="Nama" col="name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <SortableHeader label="No. HP" col="phone" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Alamat</th>
@@ -247,15 +261,47 @@ export default function ClientsTable() {
                   <SortableHeader label="Tipe" col="property_type" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <SortableHeader label="Budget" col="budget_range" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <SortableHeader label="Status" col="lead_status" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Follow-up</th>
                   <SortableHeader label="Sumber" col="source" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <SortableHeader label="Prioritas" col="priority" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Catatan</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {pagedClients.map((client) => (
                   <tr key={client.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onDoubleClick={() => router.push(`/clients/${client.id}`)}>
+                    <td className="px-4 py-3 whitespace-nowrap" onDoubleClick={(e) => e.stopPropagation()}>
+                      <ActionDropdown
+                        align="left"
+                        items={[
+                          {
+                            key: "detail",
+                            label: "Lihat Detail",
+                            icon: (
+                              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                            ),
+                            onClick: () => setViewingClient(client),
+                          },
+                          {
+                            key: "edit",
+                            label: "Edit",
+                            icon: (
+                              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                            ),
+                            onClick: () => handleEdit(client),
+                          },
+                          {
+                            key: "delete",
+                            label: "Hapus",
+                            danger: true,
+                            icon: (
+                              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            ),
+                            onClick: () => confirmDelete(client.id),
+                          },
+                        ]}
+                      />
+                    </td>
                     <td className="px-4 py-3 whitespace-nowrap max-w-[150px] truncate">
                       <Link href={`/clients/${client.id}`} className="font-medium text-gray-900 hover:text-blue-600 hover:underline transition-colors">
                         {client.name}
@@ -273,42 +319,41 @@ export default function ClientsTable() {
                         </span>
                       ) : "-"}
                     </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {(() => {
+                        const latestLead = getLatestLead(client.id);
+                        if (!latestLead) return <span className="text-gray-400 text-sm">-</span>;
+                        const overdue = !!latestLead.follow_up_date
+                          && latestLead.follow_up_date < new Date().toISOString().slice(0, 10)
+                          && latestLead.status !== "Deal Won" && latestLead.status !== "Deal Lost";
+                        return (
+                          <div className="flex items-center gap-1.5">
+                            <span className={`text-sm ${overdue ? "text-red-600 font-medium" : "text-gray-600"}`}>
+                              {formatDate(latestLead.follow_up_date)}
+                            </span>
+                            {latestLead.is_stale && (
+                              <span title="Contacted > 7 hari tanpa kontak terbaru" className="px-1.5 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-700">
+                                Stale
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </td>
                     <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{client.source || "-"}</td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       {client.priority ? (
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${PRIORITY_COLORS[client.priority] || "bg-gray-100 text-gray-700"}`}>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${PRIORITY_COLORS[client.priority] || "bg-gray-100 text-gray-700"}`}>
                           {client.priority}
                         </span>
                       ) : "-"}
                     </td>
                     <td className="px-4 py-3 text-gray-500 max-w-[180px] truncate">{client.notes || "-"}</td>
-                    <td className="px-4 py-3 whitespace-nowrap" onDoubleClick={(e) => e.stopPropagation()}>
-                      <div className="flex gap-2">
-                        <button
-                          className="px-3 py-1 text-xs font-medium bg-gray-50 text-gray-600 rounded-md hover:bg-gray-100 transition"
-                          onClick={() => setViewingClient(client)}
-                        >
-                          Lihat
-                        </button>
-                        <button
-                          className="px-3 py-1 text-xs font-medium bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition"
-                          onClick={() => handleEdit(client)}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          className="px-3 py-1 text-xs font-medium bg-red-50 text-red-600 rounded-md hover:bg-red-100 transition"
-                          onClick={() => confirmDelete(client.id)}
-                        >
-                          Hapus
-                        </button>
-                      </div>
-                    </td>
                   </tr>
                 ))}
                 {filteredClients.length === 0 && (
                   <tr>
-                    <td colSpan={11} className="px-6 py-12 text-center text-gray-400 text-sm">
+                    <td colSpan={12} className="px-6 py-12 text-center text-gray-400 text-sm">
                       Tidak ada client yang ditemukan
                     </td>
                   </tr>

@@ -13,6 +13,7 @@ import { LaporanPengeluaran } from "./LaporanPengeluaran";
 import { LaporanArusKas } from "./LaporanArusKas";
 import { computeProjectProfitLoss } from "@/utils/profitLossCalculations";
 import { groupSumByKey } from "@/utils/reportCalculations";
+import { getProjectValue as computeProjectValue } from "@/utils/projectValue";
 
 const formatCurrency = (v?: number) =>
   v == null
@@ -22,22 +23,24 @@ const formatCurrency = (v?: number) =>
 const pct = (part: number, total: number) =>
   total === 0 ? 0 : Math.round((part / total) * 100);
 
-const LEAD_STATUSES = ["New Lead", "Contacted", "Survey", "Deal", "Lost"] as const;
+const LEAD_STATUSES = ["New Lead", "Contacted", "Survey", "Deal", "Deal Won", "Deal Lost"] as const;
 const PROJECT_STATUSES = ["Planning", "Design", "Production", "Installation", "Done"] as const;
 
 const leadColors: Record<string, string> = {
   "New Lead": "bg-blue-500",
   Contacted: "bg-yellow-500",
   Survey: "bg-purple-500",
-  Deal: "bg-green-500",
-  Lost: "bg-red-400",
+  Deal: "bg-indigo-500",
+  "Deal Won": "bg-green-500",
+  "Deal Lost": "bg-red-400",
 };
 const leadBadge: Record<string, string> = {
   "New Lead": "bg-blue-100 text-blue-700",
   Contacted: "bg-yellow-100 text-yellow-700",
   Survey: "bg-purple-100 text-purple-700",
-  Deal: "bg-green-100 text-green-700",
-  Lost: "bg-red-100 text-red-700",
+  Deal: "bg-indigo-100 text-indigo-700",
+  "Deal Won": "bg-green-100 text-green-700",
+  "Deal Lost": "bg-red-100 text-red-700",
 };
 const projectColors: Record<string, string> = {
   Planning: "bg-gray-400",
@@ -147,8 +150,7 @@ export default function ReportsOverview() {
   const { totals: rabTotals } = useApprovedRabTotals();
   const [tab, setTab] = useState("ringkasan");
 
-  const getProjectValue = (p: { lead_id?: string; value?: number }) =>
-    p.lead_id && rabTotals[p.lead_id] != null ? rabTotals[p.lead_id] : (p.value ?? 0);
+  const getProjectValue = (p: { lead_id?: string; value?: number }) => computeProjectValue(p, rabTotals);
 
   const loading = lc || ll || lp || li;
 
@@ -164,7 +166,7 @@ export default function ReportsOverview() {
   const totalProjectValue = projects.reduce((s, p) => s + getProjectValue(p), 0);
   const doneValue = projects.filter((p) => p.status === "Done").reduce((s, p) => s + getProjectValue(p), 0);
   const activeValue = projects.filter((p) => p.status !== "Done").reduce((s, p) => s + getProjectValue(p), 0);
-  const dealLeads = leads.filter((l) => l.status === "Deal").length;
+  const dealLeads = leads.filter((l) => l.status === "Deal Won").length;
   const conversionRate = pct(dealLeads, leads.length);
   const avgProgress =
     projects.length === 0 ? 0 : Math.round(projects.reduce((s, p) => s + (p.progress ?? 0), 0) / projects.length);
@@ -307,7 +309,7 @@ export default function ReportsOverview() {
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard label="Total Klien" value={clients.length} sub={`${clients.filter((c) => c.lead_status === "Deal Won").length} deal won`} />
-            <StatCard label="Total Lead" value={leads.length} sub={`${leads.filter((l) => l.status === "Lost").length} lost`} />
+            <StatCard label="Total Lead" value={leads.length} sub={`${leads.filter((l) => l.status === "Deal Lost").length} lost`} />
             <StatCard label="Avg Progress Proyek" value={`${avgProgress}%`} sub="rata-rata semua proyek" />
             <StatCard label="Proyek Overdue" value={overdueProjects.length} sub={`${nearDeadline.length} mepet deadline`} />
           </div>
@@ -366,7 +368,7 @@ export default function ReportsOverview() {
       {/* ── TAB: Pipeline Lead ── */}
       {tab === "lead" && (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
             {LEAD_STATUSES.map((s) => {
               const c = leads.filter((l) => l.status === s).length;
               return (
@@ -444,7 +446,7 @@ export default function ReportsOverview() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {LEAD_STATUSES.filter((s) => s !== "Lost").map((s, i, arr) => {
+                  {LEAD_STATUSES.filter((s) => s !== "Deal Lost").map((s, i, arr) => {
                     const cnt = leads.filter((l) => l.status === s).length;
                     const nextStatus = arr[i + 1];
                     const nextCnt = nextStatus ? leads.filter((l) => l.status === nextStatus).length : null;

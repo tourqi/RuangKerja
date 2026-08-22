@@ -18,7 +18,7 @@ async function generateNotifications(
   const tasks: Promise<void>[] = [];
 
   for (const l of leads) {
-    if (l.status !== 'Deal' && l.status !== 'Lost' && l.follow_up_date) {
+    if (l.status !== 'Deal Won' && l.status !== 'Deal Lost' && l.follow_up_date) {
       const due = new Date(l.follow_up_date);
       if (due <= today) {
         const client = clients.find(c => c.id === l.client_id);

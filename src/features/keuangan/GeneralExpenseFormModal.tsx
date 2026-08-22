@@ -2,6 +2,8 @@
 import { useState, useEffect } from "react";
 import type { GeneralExpense, GeneralExpenseKategori } from "@/types/db";
 import { addGeneralExpense, updateGeneralExpense } from "@/services/generalExpenses";
+import { Select } from "@/components/Select";
+import { NumberInput } from "@/components/NumberInput";
 
 const KATEGORI_OPTIONS: { value: GeneralExpenseKategori; label: string }[] = [
   { value: "operasional", label: "Operasional Kantor" },
@@ -129,15 +131,12 @@ export function GeneralExpenseFormModal({ open, onClose, onSaved, expense }: Pro
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Kategori</label>
-              <select
+              <Select
                 value={form.kategori}
-                onChange={(e) => set("kategori", e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900/10"
-              >
-                {KATEGORI_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
+                onChange={(v) => set("kategori", v)}
+                options={KATEGORI_OPTIONS}
+                includeEmptyOption={false}
+              />
             </div>
           </div>
 
@@ -166,13 +165,10 @@ export function GeneralExpenseFormModal({ open, onClose, onSaved, expense }: Pro
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Jumlah (Rp)</label>
-              <input
-                type="number"
+              <NumberInput
                 value={form.jumlah}
-                onChange={(e) => set("jumlah", e.target.value)}
+                onValueChange={(v) => set("jumlah", v)}
                 placeholder="0"
-                min="0"
-                step="1000"
                 required
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900/10"
               />

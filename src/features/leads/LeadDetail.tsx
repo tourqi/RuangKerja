@@ -5,21 +5,30 @@ import ActivityTimeline from "@/components/ActivityTimeline";
 import { useLeads } from "@/hooks/useLeads";
 import { useClients } from "@/hooks/useClients";
 import { useRabList } from "@/hooks/useRab";
+import { useInvoices } from "@/hooks/useInvoices";
+import { useLeadContacts } from "@/hooks/useLeadContacts";
 import { addRab, deleteRab, duplicateRab, updateRab } from "@/services/rab";
+import { addLeadContact } from "@/services/leadContacts";
+import { updateLead } from "@/services/leads";
 import { useToast } from "@/components/Toast";
 import { useState } from "react";
-import { Rab } from "@/types/db";
+import { Rab, LeadContactChannel } from "@/types/db";
+import { LEAD_CONTACT_CHANNELS, LEAD_CONTACT_CHANNEL_LABELS } from "@/constants/options";
 import { LeadFormModal } from "./LeadFormModal";
 
 const formatDate = (s?: string) =>
   s ? new Date(s).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "-";
 
+const formatCurrency = (n?: number) =>
+  n == null ? "-" : new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
+
 const statusColors: Record<string, string> = {
   "New Lead": "bg-blue-100 text-blue-800",
   Contacted: "bg-yellow-100 text-yellow-800",
   Survey: "bg-purple-100 text-purple-800",
-  Deal: "bg-green-100 text-green-800",
-  Lost: "bg-red-100 text-red-800",
+  Deal: "bg-indigo-100 text-indigo-800",
+  "Deal Won": "bg-green-100 text-green-800",
+  "Deal Lost": "bg-red-100 text-red-800",
 };
 
 const priorityColors: Record<string, string> = {
@@ -50,6 +59,8 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
   const { leads, loading: ll, refetch: refetchLeads } = useLeads();
   const { clients, loading: lc } = useClients();
   const { rabList, loading: lr, refetch: refetchRab } = useRabList(leadId);
+  const { invoices } = useInvoices();
+  const { contacts, refetch: refetchContacts } = useLeadContacts(leadId);
 
   const [editOpen, setEditOpen] = useState(false);
   const [showAddRab, setShowAddRab] = useState(false);
@@ -57,6 +68,9 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  const [contactChannel, setContactChannel] = useState<LeadContactChannel>("call");
+  const [contactNotes, setContactNotes] = useState("");
+  const [savingContact, setSavingContact] = useState(false);
 
   const loading = ll || lc;
 
@@ -102,7 +116,16 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
     }
   }
 
+  function isRabLunas(rabId: string) {
+    const rabInvoices = (invoices ?? []).filter((inv) => inv.rab_id === rabId);
+    return rabInvoices.length > 0 && rabInvoices.every((inv) => inv.status === "paid");
+  }
+
   async function handleDeleteRab(id: string) {
+    if (isRabLunas(id)) {
+      toast("RAB sudah lunas dan tidak dapat dihapus", "warning");
+      return;
+    }
     setDeletingId(id);
     try {
       await deleteRab(id);
@@ -129,7 +152,38 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
     }
   }
 
+  async function handleNoResponseChange(delta: 1 | -1) {
+    if (!lead) return;
+    const next = Math.max(0, (lead.no_response_count ?? 0) + delta);
+    try {
+      await updateLead(lead.id, { no_response_count: next });
+      await refetchLeads();
+    } catch (err: unknown) {
+      const msg = (err as Error)?.message ?? String(err);
+      toast(`Gagal update No Response Count: ${msg}`, "error");
+    }
+  }
+
+  async function handleAddContact() {
+    setSavingContact(true);
+    try {
+      await addLeadContact({ lead_id: leadId, channel: contactChannel, notes: contactNotes.trim() || undefined });
+      await refetchContacts();
+      setContactNotes("");
+      toast("Kontak dicatat", "success");
+    } catch (err: unknown) {
+      const msg = (err as Error)?.message ?? String(err);
+      toast(`Gagal mencatat kontak: ${msg}`, "error");
+    } finally {
+      setSavingContact(false);
+    }
+  }
+
   async function handleStatusChange(rab: Rab, status: Rab["status"]) {
+    if (isRabLunas(rab.id)) {
+      toast("RAB sudah lunas dan tidak dapat diubah", "warning");
+      return;
+    }
     try {
       await updateRab(rab.id, { status });
       await refetchRab();
@@ -157,6 +211,11 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
               <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${statusColors[lead.status] ?? "bg-gray-100 text-gray-700"}`}>
                 {lead.status}
               </span>
+              {lead.is_stale && (
+                <span title="Contacted > 7 hari tanpa kontak terbaru" className="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-200 text-gray-700">
+                  Stale
+                </span>
+              )}
               {lead.priority && (
                 <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${priorityColors[lead.priority] ?? "bg-gray-100 text-gray-600"}`}>
                   {lead.priority}
@@ -182,7 +241,7 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
                 <p className="text-xs text-gray-400 mt-0.5">Disetujui</p>
               </div>
             </div>
-            {lead.status === "Deal" && (
+            {lead.status === "Deal Won" && (
               <Link
                 href={`/projects?client_id=${lead.client_id}&lead_id=${leadId}`}
                 className="inline-flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition"
@@ -224,10 +283,31 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
           <InfoRow label="Sumber" value={lead.source} />
           <InfoRow label="Status" value={lead.status} />
           <InfoRow label="Prioritas" value={lead.priority} />
+          <div>
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-0.5">No Response Count</p>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-800">{lead.no_response_count ?? 0}</span>
+              <button
+                onClick={() => handleNoResponseChange(1)}
+                title="Tandai follow-up tanpa respon (+1)"
+                className="w-5 h-5 flex items-center justify-center rounded bg-gray-100 text-gray-600 hover:bg-gray-200 text-xs leading-none"
+              >+</button>
+              <button
+                onClick={() => handleNoResponseChange(-1)}
+                title="Kurangi (mis. client akhirnya merespon)"
+                disabled={(lead.no_response_count ?? 0) === 0}
+                className="w-5 h-5 flex items-center justify-center rounded bg-gray-100 text-gray-600 hover:bg-gray-200 text-xs leading-none disabled:opacity-40 disabled:cursor-not-allowed"
+              >−</button>
+            </div>
+          </div>
           <InfoRow label="Ditugaskan ke" value={lead.assigned_to} />
           <InfoRow label="Follow-up" value={formatDate(lead.follow_up_date)} />
           <InfoRow label="Last Contact" value={formatDate(lead.last_contacted_at)} />
           <InfoRow label="Ditutup" value={formatDate(lead.closed_at)} />
+          <InfoRow label="Lokasi Survey" value={lead.lokasi_survey} />
+          <InfoRow label="Budget" value={formatCurrency(lead.budget)} />
+          <InfoRow label="Nominal Deal" value={formatCurrency(lead.nominal_deal)} />
+          {lead.status === "Deal Lost" && <InfoRow label="Alasan Lost" value={lead.alasan_lost} />}
         </div>
         {lead.notes && (
           <div className="pt-5 border-t border-gray-100">
@@ -235,6 +315,58 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
             <p className="text-sm text-gray-700 whitespace-pre-wrap">{lead.notes}</p>
           </div>
         )}
+      </div>
+
+      {/* Log Kontak — syarat New Lead → Contacted: minimal 1 record */}
+      <div className="space-y-4">
+        <h2 className="text-sm font-semibold text-gray-800">
+          Log Kontak
+          <span className="ml-2 px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-xs font-medium">{contacts.length}</span>
+        </h2>
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-3">
+          <div className="flex flex-col sm:flex-row gap-2">
+            <select
+              value={contactChannel}
+              onChange={(e) => setContactChannel(e.target.value as LeadContactChannel)}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900"
+            >
+              {LEAD_CONTACT_CHANNELS.map((c) => (
+                <option key={c} value={c}>{LEAD_CONTACT_CHANNEL_LABELS[c]}</option>
+              ))}
+            </select>
+            <input
+              type="text"
+              placeholder="Catatan kontak (opsional)"
+              value={contactNotes}
+              onChange={(e) => setContactNotes(e.target.value)}
+              className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900"
+            />
+            <button
+              onClick={handleAddContact}
+              disabled={savingContact}
+              className="px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-700 disabled:opacity-50 transition shrink-0"
+            >
+              {savingContact ? "Menyimpan..." : "Catat Kontak"}
+            </button>
+          </div>
+          {contacts.length === 0 ? (
+            <p className="text-sm text-gray-400">Belum ada kontak tercatat. Wajib ada minimal 1 sebelum status bisa pindah ke Contacted.</p>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {contacts.map((c) => (
+                <div key={c.id} className="py-2 flex items-start justify-between gap-3">
+                  <div>
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                      {LEAD_CONTACT_CHANNEL_LABELS[c.channel]}
+                    </span>
+                    {c.notes && <p className="text-sm text-gray-700 mt-1">{c.notes}</p>}
+                  </div>
+                  <p className="text-xs text-gray-400 shrink-0">{formatDate(c.created_at)}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* RAB */}
@@ -290,17 +422,28 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
           </div>
         ) : (
           <div className="space-y-3">
-            {rabList.map((rab) => (
+            {rabList.map((rab) => {
+              const lunas = isRabLunas(rab.id);
+              return (
               <div key={rab.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-900 truncate">{rab.nama}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{rab.nama}</p>
+                    {lunas && (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700 shrink-0">
+                        ✓ Lunas
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-gray-400 mt-0.5">Dibuat {formatDate(rab.created_at)}</p>
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0">
                   <select
                     value={rab.status}
                     onChange={(e) => handleStatusChange(rab, e.target.value as Rab["status"])}
-                    className={`text-xs font-medium px-2.5 py-1 rounded-full border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-300 ${rabStatusColors[rab.status]}`}
+                    disabled={lunas}
+                    title={lunas ? "RAB sudah lunas, status tidak dapat diubah" : undefined}
+                    className={`text-xs font-medium px-2.5 py-1 rounded-full border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-300 disabled:cursor-not-allowed disabled:opacity-70 ${rabStatusColors[rab.status]}`}
                   >
                     <option value="draft">Draft</option>
                     <option value="sent">Terkirim</option>
@@ -322,14 +465,16 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
                   </button>
                   <button
                     onClick={() => handleDeleteRab(rab.id)}
-                    disabled={deletingId === rab.id}
-                    className="px-3 py-1.5 text-xs font-medium text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition disabled:opacity-50"
+                    disabled={deletingId === rab.id || lunas}
+                    title={lunas ? "RAB sudah lunas dan tidak dapat dihapus" : undefined}
+                    className="px-3 py-1.5 text-xs font-medium text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                   >
                     {deletingId === rab.id ? "..." : "Hapus"}
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

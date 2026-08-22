@@ -60,29 +60,51 @@ on conflict (id) do nothing;
 -- STEP 2: clients
 -- ---------------------------------------------------------------------------
 insert into clients (id, name, phone, address, notes, project_name, property_type, budget_range, lead_status, source, priority) values
-  ('c1000000-0000-0000-0000-000000000001', 'Budi Santoso',    '0812-3456-7001', 'Jl. Kemang Raya No. 12, Jakarta Selatan',        'Referral dari klien lama',       'Renovasi Rumah Kemang',        'Rumah Tinggal', '100jt - 200jt', 'Deal',       'Referral',      'high'),
+  ('c1000000-0000-0000-0000-000000000001', 'Budi Santoso',    '0812-3456-7001', 'Jl. Kemang Raya No. 12, Jakarta Selatan',        'Referral dari klien lama',       'Renovasi Rumah Kemang',        'Rumah Tinggal', '100jt - 200jt', 'Deal Won',   'Referral',      'high'),
   ('c1000000-0000-0000-0000-000000000002', 'Siti Rahma',      '0813-2345-6002', 'Apartemen Taman Anggrek Tower B, Jakarta Barat', 'Ingin desain minimalis',         'Interior Apartemen 2BR',       'Apartemen',      '50jt - 100jt',  'Survey',     'Instagram Ads', 'medium'),
   ('c1000000-0000-0000-0000-000000000003', 'Andi Wijaya',     '0812-9988-1003', 'Jl. Sudirman Kav 45, Jakarta Pusat',              'Butuh desain kantor cepat',      'Fit Out Kantor Startup',       'Kantor',         '200jt - 500jt', 'New Lead',   'Website',       'urgent'),
   ('c1000000-0000-0000-0000-000000000004', 'Dewi Lestari',    '0857-1122-3004', 'Perumahan Grand Wisata, Bekasi',                  null,                              'Renovasi Dapur & Ruang Keluarga','Rumah Tinggal', '50jt - 100jt',  'Contacted',  'Facebook',      'low'),
-  ('c1000000-0000-0000-0000-000000000005', 'Rudi Hartono',    '0811-4455-6005', 'Jl. Panjang No. 8, Jakarta Barat',                'Pemilik ruko 3 lantai',           'Interior Ruko Komersial',      'Ruko',           '100jt - 200jt', 'Deal',       'Referral',      'medium'),
-  ('c1000000-0000-0000-0000-000000000006', 'Maya Kusuma',     '0812-7788-9006', 'Apartemen Casa Grande, Jakarta Selatan',          'Deadline pindahan bulan depan',  'Interior Apartemen Studio',    'Apartemen',      '< 50jt',        'Lost',       'Instagram Ads', 'low'),
+  ('c1000000-0000-0000-0000-000000000005', 'Rudi Hartono',    '0811-4455-6005', 'Jl. Panjang No. 8, Jakarta Barat',                'Pemilik ruko 3 lantai',           'Interior Ruko Komersial',      'Ruko',           '100jt - 200jt', 'Deal Won',   'Referral',      'medium'),
+  ('c1000000-0000-0000-0000-000000000006', 'Maya Kusuma',     '0812-7788-9006', 'Apartemen Casa Grande, Jakarta Selatan',          'Deadline pindahan bulan depan',  'Interior Apartemen Studio',    'Apartemen',      '< 50jt',        'Deal Lost',  'Instagram Ads', 'low'),
   ('c1000000-0000-0000-0000-000000000007', 'Eko Prasetyo',    '0813-6677-8007', 'Jl. Margonda Raya, Depok',                        null,                              'Renovasi Total Rumah 2 Lantai','Rumah Tinggal',  '200jt - 500jt', 'Survey',     'Website',       'high'),
-  ('c1000000-0000-0000-0000-000000000008', 'Fitri Handayani', '0821-3344-5008', 'Jl. Riau No. 20, Bandung',                        'Cafe konsep industrial',         'Interior Cafe & Resto',        'Komersial',      '100jt - 200jt', 'Deal',       'Referral',      'high')
+  ('c1000000-0000-0000-0000-000000000008', 'Fitri Handayani', '0821-3344-5008', 'Jl. Riau No. 20, Bandung',                        'Cafe konsep industrial',         'Interior Cafe & Resto',        'Komersial',      '100jt - 200jt', 'Deal Won',   'Referral',      'high')
 on conflict (id) do nothing;
 
 -- ---------------------------------------------------------------------------
 -- STEP 3: leads (one per client above)
+--
+-- lokasi_survey/budget/nominal_deal/alasan_lost diisi sesuai syarat guard
+-- transisi status di lead_state_machine.sql (status di sini adalah status
+-- akhir hasil INSERT langsung, jadi guard -- yang cuma jalan di UPDATE --
+-- tidak berlaku buat baris seed ini, tapi datanya tetap diisi realistis).
+--
+-- Kolom `priority` di insert ini cuma placeholder -- kalau
+-- lead_priority_formula.sql sudah dijalankan, trigger set_lead_priority()
+-- akan langsung menimpanya dengan hasil hitungan otomatis (rule #2), jadi
+-- nilai yang ditulis di sini tidak berarti apa-apa lagi setelah insert.
 -- ---------------------------------------------------------------------------
-insert into leads (id, client_id, status, priority, source, project_name, follow_up_date, last_contacted_at, closed_at, notes, stage_order, assigned_to, created_by, created_at) values
-  ('1e000000-0000-0000-0000-000000000001', 'c1000000-0000-0000-0000-000000000001', 'Deal',      'high',   'Referral',      'Renovasi Rumah Kemang',         '2026-08-20', '2026-08-10', '2026-08-12', null,                          4, 'a0000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000003', '2026-07-01'),
-  ('1e000000-0000-0000-0000-000000000002', 'c1000000-0000-0000-0000-000000000002', 'Survey',    'medium', 'Instagram Ads', 'Interior Apartemen 2BR',        '2026-08-18', '2026-08-14', null,         null,                          2, 'a0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000003', '2026-08-01'),
-  ('1e000000-0000-0000-0000-000000000003', 'c1000000-0000-0000-0000-000000000003', 'New Lead',  'urgent', 'Website',       'Fit Out Kantor Startup',        '2026-08-17', null,         null,         null,                          0, 'a0000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000003', '2026-08-14'),
-  ('1e000000-0000-0000-0000-000000000004', 'c1000000-0000-0000-0000-000000000004', 'Contacted', 'low',    'Facebook',      'Renovasi Dapur & Ruang Keluarga','2026-08-19', '2026-08-15', null,         null,                          1, 'a0000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000003', '2026-08-10'),
-  ('1e000000-0000-0000-0000-000000000005', 'c1000000-0000-0000-0000-000000000005', 'Deal',      'medium', 'Referral',      'Interior Ruko Komersial',       null,         '2026-08-01', '2026-08-05', null,                          4, 'a0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000003', '2026-07-15'),
-  ('1e000000-0000-0000-0000-000000000006', 'c1000000-0000-0000-0000-000000000006', 'Lost',      'low',    'Instagram Ads', 'Interior Apartemen Studio',     null,         '2026-07-18', '2026-07-20', 'Budget tidak cukup',          4, 'a0000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000003', '2026-07-10'),
-  ('1e000000-0000-0000-0000-000000000007', 'c1000000-0000-0000-0000-000000000007', 'Survey',    'high',   'Website',       'Renovasi Total Rumah 2 Lantai',  '2026-08-21', '2026-08-13', null,         null,                          2, 'a0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000003', '2026-08-05'),
-  ('1e000000-0000-0000-0000-000000000008', 'c1000000-0000-0000-0000-000000000008', 'Deal',      'high',   'Referral',      'Interior Cafe & Resto',         null,         '2026-07-28', '2026-08-01', null,                          4, 'a0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000003', '2026-06-20')
+insert into leads (id, client_id, status, priority, source, project_name, follow_up_date, last_contacted_at, closed_at, notes, stage_order, assigned_to, created_by, created_at, lokasi_survey, budget, nominal_deal, alasan_lost) values
+  ('1e000000-0000-0000-0000-000000000001', 'c1000000-0000-0000-0000-000000000001', 'Deal Won',  'high',   'Referral',      'Renovasi Rumah Kemang',         '2026-08-20', '2026-08-10', '2026-08-12', null,                 4, 'a0000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000003', '2026-07-01', 'Jl. Kemang Raya No. 12, Jakarta Selatan',        190000000, 180000000, null),
+  ('1e000000-0000-0000-0000-000000000002', 'c1000000-0000-0000-0000-000000000002', 'Survey',    'medium', 'Instagram Ads', 'Interior Apartemen 2BR',        '2026-08-18', '2026-08-14', null,         null,                 2, 'a0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000003', '2026-08-01', 'Apartemen Taman Anggrek Tower B, Jakarta Barat', null,      null,      null),
+  ('1e000000-0000-0000-0000-000000000003', 'c1000000-0000-0000-0000-000000000003', 'New Lead',  'urgent', 'Website',       'Fit Out Kantor Startup',        '2026-08-17', null,         null,         null,                 0, 'a0000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000003', '2026-08-14', null,                                              null,      null,      null),
+  ('1e000000-0000-0000-0000-000000000004', 'c1000000-0000-0000-0000-000000000004', 'Contacted', 'low',    'Facebook',      'Renovasi Dapur & Ruang Keluarga','2026-08-19', '2026-08-15', null,         null,                 1, 'a0000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000003', '2026-08-10', null,                                              null,      null,      null),
+  ('1e000000-0000-0000-0000-000000000005', 'c1000000-0000-0000-0000-000000000005', 'Deal Won',  'medium', 'Referral',      'Interior Ruko Komersial',       null,         '2026-08-01', '2026-08-05', null,                 4, 'a0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000003', '2026-07-15', 'Jl. Panjang No. 8, Jakarta Barat',               160000000, 150000000, null),
+  ('1e000000-0000-0000-0000-000000000006', 'c1000000-0000-0000-0000-000000000006', 'Deal Lost', 'low',    'Instagram Ads', 'Interior Apartemen Studio',     null,         '2026-07-18', '2026-07-20', 'Budget tidak cukup', 4, 'a0000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000003', '2026-07-10', 'Apartemen Casa Grande, Jakarta Selatan',         null,      null,      'Budget client tidak cukup untuk scope yang diminta'),
+  ('1e000000-0000-0000-0000-000000000007', 'c1000000-0000-0000-0000-000000000007', 'Survey',    'high',   'Website',       'Renovasi Total Rumah 2 Lantai',  '2026-08-21', '2026-08-13', null,         null,                 2, 'a0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000003', '2026-08-05', 'Jl. Margonda Raya, Depok',                        null,      null,      null),
+  ('1e000000-0000-0000-0000-000000000008', 'c1000000-0000-0000-0000-000000000008', 'Deal Won',  'high',   'Referral',      'Interior Cafe & Resto',         null,         '2026-07-28', '2026-08-01', null,                 4, 'a0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000003', '2026-06-20', 'Jl. Riau No. 20, Bandung',                        185000000, 175000000, null)
 on conflict (id) do nothing;
+
+-- Log kontak minimum (syarat New Lead -> Contacted) untuk lead yang sudah
+-- lewat tahap New Lead.
+insert into lead_contacts (lead_id, channel, notes, created_by, created_at) values
+  ('1e000000-0000-0000-0000-000000000001', 'call',      'Kontak awal, client tertarik renovasi total', 'a0000000-0000-0000-0000-000000000003', '2026-07-02'),
+  ('1e000000-0000-0000-0000-000000000002', 'whatsapp',  'Follow up dari Instagram Ads',                 'a0000000-0000-0000-0000-000000000003', '2026-08-02'),
+  ('1e000000-0000-0000-0000-000000000004', 'whatsapp',  'Balas chat dari Facebook Ads',                 'a0000000-0000-0000-0000-000000000003', '2026-08-11'),
+  ('1e000000-0000-0000-0000-000000000005', 'call',      'Diskusi kebutuhan interior ruko',              'a0000000-0000-0000-0000-000000000003', '2026-07-16'),
+  ('1e000000-0000-0000-0000-000000000006', 'whatsapp',  'Tanya-tanya paket interior studio',            'a0000000-0000-0000-0000-000000000003', '2026-07-11'),
+  ('1e000000-0000-0000-0000-000000000007', 'call',      'Kontak awal dari Website',                      'a0000000-0000-0000-0000-000000000003', '2026-08-06'),
+  ('1e000000-0000-0000-0000-000000000008', 'meeting',   'Meeting awal bahas konsep cafe',                'a0000000-0000-0000-0000-000000000003', '2026-06-21')
+on conflict do nothing;
 
 -- ---------------------------------------------------------------------------
 -- STEP 4: projects
@@ -180,7 +202,7 @@ on conflict (id) do nothing;
 -- ---------------------------------------------------------------------------
 insert into activity_logs (entity_type, entity_id, user_id, user_name, action, description, created_at) values
   ('lead',            '1e000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000003', 'Rizky Pratama', 'created',        'Lead baru dibuat: Renovasi Rumah Kemang',                 '2026-07-01'),
-  ('lead',             '1e000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000003', 'Rizky Pratama', 'status_changed', 'Status diubah menjadi Deal',                              '2026-08-12'),
+  ('lead',             '1e000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000003', 'Rizky Pratama', 'status_changed', 'Status diubah menjadi Deal Won',                          '2026-08-12'),
   ('rab',              'ab000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000002', 'Sarah Amelia',  'created',        'RAB baru dibuat: RAB Renovasi Rumah Kemang',              '2026-07-05'),
   ('rab',              'ab000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001', 'Andi Nugroho',  'status_changed', 'Status RAB diubah menjadi approved',                      '2026-07-10'),
   ('project',          '90000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000003', 'Rizky Pratama', 'created',        'Project baru dibuat: Renovasi Rumah Kemang - Budi Santoso','2026-07-01'),
@@ -188,7 +210,7 @@ insert into activity_logs (entity_type, entity_id, user_id, user_name, action, d
   ('invoice',          '10000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001', 'Andi Nugroho',  'payment_added',  'Pembayaran Rp90.000.000 diterima',                        '2026-08-01'),
   ('expense',          '90000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000002', 'Sarah Amelia',  'created',        'Pengeluaran ditambahkan: Pembelian kayu jati (Rp12.000.000)', '2026-07-05'),
   ('general_expense',  'ee000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001', 'Andi Nugroho',  'created',        'Pengeluaran umum ditambahkan: Sewa kantor bulan Agustus (Rp15.000.000)', '2026-08-01'),
-  ('lead',             '1e000000-0000-0000-0000-000000000006', 'a0000000-0000-0000-0000-000000000003', 'Rizky Pratama', 'status_changed', 'Status diubah menjadi Lost',                              '2026-07-20')
+  ('lead',             '1e000000-0000-0000-0000-000000000006', 'a0000000-0000-0000-0000-000000000003', 'Rizky Pratama', 'status_changed', 'Status diubah menjadi Deal Lost',                         '2026-07-20')
 on conflict do nothing;
 
 -- ---------------------------------------------------------------------------

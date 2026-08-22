@@ -20,8 +20,11 @@ import {
   toOptions,
 } from "@/constants/options";
 import { formatRupiah } from "@/utils/format";
+import { getProjectValue as computeProjectValue } from "@/utils/projectValue";
 import { InvoiceFormModal } from "./InvoiceFormModal";
 import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
+import { ActionDropdown } from "@/components/ActionDropdown";
+import Pagination from "@/components/Pagination";
 
 export default function InvoicesTable() {
   const router = useRouter();
@@ -33,8 +36,7 @@ export default function InvoicesTable() {
   const { totals: rabTotals } = useApprovedRabTotals();
   const { user } = useAuth();
 
-  const getProjectValue = (p: { lead_id?: string; value?: number }) =>
-    p.lead_id && rabTotals[p.lead_id] != null ? rabTotals[p.lead_id] : (p.value ?? 0);
+  const getProjectValue = (p: { lead_id?: string; value?: number }) => computeProjectValue(p, rabTotals);
   const toast = useToast();
 
   const [filterSearch, setFilterSearch] = useState("");
@@ -78,7 +80,7 @@ export default function InvoicesTable() {
     return true;
   });
 
-  const { page, totalPages, paged, goTo } = usePagination(filtered, 20);
+  const { paged, page, goTo, pageSize, changePageSize, totalPages, from, to, total } = usePagination(filtered, 20);
 
   const handleProjectFilterChange = (v: string[]) => {
     setFilterProjectId(v);
@@ -187,7 +189,7 @@ export default function InvoicesTable() {
         <div className="ml-auto">
           <button
             onClick={() => setShowAdd(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -217,6 +219,7 @@ export default function InvoicesTable() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Aksi</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">No. Invoice</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Project / Client</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden xl:table-cell">RAB</th>
@@ -225,7 +228,6 @@ export default function InvoicesTable() {
                 <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Total</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden sm:table-cell">Terbayar</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
-                <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -234,6 +236,39 @@ export default function InvoicesTable() {
                 const outstanding = inv.total_amount - inv.paid_amount;
                 return (
                   <tr key={inv.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onDoubleClick={() => router.push(`/invoices/${inv.id}`)}>
+                    <td className="px-4 py-3" onDoubleClick={(e) => e.stopPropagation()}>
+                      <ActionDropdown
+                        align="left"
+                        items={[
+                          {
+                            key: "detail",
+                            label: "Detail",
+                            href: `/invoices/${inv.id}`,
+                            icon: (
+                              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                            ),
+                          },
+                          {
+                            key: "print",
+                            label: "Cetak",
+                            href: `/invoices/${inv.id}/print`,
+                            target: "_blank",
+                            icon: (
+                              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                            ),
+                          },
+                          {
+                            key: "delete",
+                            label: "Hapus",
+                            danger: true,
+                            icon: (
+                              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            ),
+                            onClick: () => setDeletingId(inv.id),
+                          },
+                        ]}
+                      />
+                    </td>
                     <td className="px-4 py-3">
                       <Link href={`/invoices/${inv.id}`} className="font-medium text-gray-900 hover:underline">
                         {inv.invoice_number}
@@ -280,84 +315,23 @@ export default function InvoicesTable() {
                         ))}
                       </select>
                     </td>
-                    <td className="px-4 py-3 text-right" onDoubleClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-1">
-                        <Link
-                          href={`/invoices/${inv.id}`}
-                          className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-800 px-2 py-1 rounded hover:bg-gray-100 transition-colors"
-                        >
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                          Detail
-                        </Link>
-                        <Link
-                          href={`/invoices/${inv.id}/print`}
-                          target="_blank"
-                          className="inline-flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700 px-2 py-1 rounded hover:bg-blue-50 transition-colors"
-                        >
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-                          Cetak
-                        </Link>
-                        <button
-                          onClick={() => setDeletingId(inv.id)}
-                          className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50 transition-colors"
-                        >
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                          Hapus
-                        </button>
-                      </div>
-                    </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
         )}
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          from={from}
+          to={to}
+          total={total}
+          pageSize={pageSize}
+          onPageChange={goTo}
+          onPageSizeChange={changePageSize}
+        />
       </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4 text-xs text-gray-500">
-          <span>Halaman {page} dari {totalPages} · {filtered.length} invoice</span>
-          <div className="flex gap-1">
-            <button
-              onClick={() => goTo(Math.max(1, page - 1))}
-              disabled={page === 1}
-              className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
-            >
-              ← Prev
-            </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
-              .reduce<(number | "…")[]>((acc, p, i, arr) => {
-                if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push("…");
-                acc.push(p);
-                return acc;
-              }, [])
-              .map((p, i) =>
-                p === "…" ? (
-                  <span key={`e${i}`} className="px-2 py-1.5">…</span>
-                ) : (
-                  <button
-                    key={p}
-                    onClick={() => goTo(p as number)}
-                    className={`px-3 py-1.5 rounded-lg border transition ${
-                      page === p ? "bg-gray-900 text-white border-gray-900" : "border-gray-200 hover:bg-gray-50"
-                    }`}
-                  >
-                    {p}
-                  </button>
-                )
-              )}
-            <button
-              onClick={() => goTo(Math.min(totalPages, page + 1))}
-              disabled={page === totalPages}
-              className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
-            >
-              Next →
-            </button>
-          </div>
-        </div>
-      )}
 
       {showAdd && (
         <InvoiceFormModal

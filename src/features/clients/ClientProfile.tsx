@@ -5,6 +5,7 @@ import { useLeads } from "@/hooks/useLeads";
 import { useProjects } from "@/hooks/useProjects";
 import { useInvoices } from "@/hooks/useInvoices";
 import { useApprovedRabTotals } from "@/hooks/useRab";
+import { getProjectValue as computeProjectValue } from "@/utils/projectValue";
 import { ClientFormModal } from "./ClientFormModal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -79,8 +80,7 @@ export default function ClientProfile({ clientId }: { clientId: string }) {
   const { totals: rabTotals } = useApprovedRabTotals();
   const router = useRouter();
 
-  const getProjectValue = (p: { lead_id?: string; value?: number }) =>
-    p.lead_id && rabTotals[p.lead_id] != null ? rabTotals[p.lead_id] : (p.value ?? 0);
+  const getProjectValue = (p: { lead_id?: string; value?: number }) => computeProjectValue(p, rabTotals);
   const [editOpen, setEditOpen] = useState(false);
 
   const loading = lc || ll || lp || li;
@@ -136,7 +136,7 @@ export default function ClientProfile({ clientId }: { clientId: string }) {
                 </span>
               )}
               {client.priority && (
-                <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${priorityColors[client.priority] || "bg-gray-100 text-gray-700"}`}>
+                <span className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize ${priorityColors[client.priority] || "bg-gray-100 text-gray-700"}`}>
                   Prioritas: {client.priority}
                 </span>
               )}
@@ -247,7 +247,7 @@ export default function ClientProfile({ clientId }: { clientId: string }) {
                     </td>
                     <td className="px-4 py-3">
                       {lead.priority ? (
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${priorityColors[lead.priority] || "bg-gray-100 text-gray-600"}`}>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${priorityColors[lead.priority] || "bg-gray-100 text-gray-600"}`}>
                           {lead.priority}
                         </span>
                       ) : "-"}
@@ -406,7 +406,7 @@ export default function ClientProfile({ clientId }: { clientId: string }) {
                   date: l.closed_at,
                   label: `Lead ditutup`,
                   sub: `Status akhir: ${l.status}`,
-                  color: l.status === "Deal" ? "bg-green-500" : "bg-red-400",
+                  color: l.status === "Deal Won" ? "bg-green-500" : "bg-red-400",
                 })),
               ...clientProjects.map((p) => ({
                 date: p.created_at,

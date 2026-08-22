@@ -38,7 +38,7 @@ export function ClientViewModal({ client, onClose, onEdit }: Props) {
             <div>
               <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-0.5">Prioritas</p>
               {client.priority ? (
-                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${PRIORITY_COLORS[client.priority] || "bg-gray-100 text-gray-700"}`}>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${PRIORITY_COLORS[client.priority] || "bg-gray-100 text-gray-700"}`}>
                   {client.priority}
                 </span>
               ) : <p className="text-sm text-gray-800">-</p>}

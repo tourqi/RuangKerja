@@ -14,6 +14,7 @@ import {
   updateRab,
 } from "@/services/rab";
 import { getRabByLead } from "@/services/rab";
+import { useInvoices } from "@/hooks/useInvoices";
 import { Rab, RabGroup, RabItem, SkemaPembayaran } from "@/types/db";
 import RabPrintView from "@/features/rab/RabPrintView";
 import SphPrintView, { SphConfig } from "@/features/rab/SphPrintView";
@@ -47,6 +48,7 @@ const tempId = () => `temp_${++tempCounter}`;
 
 export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: string }) {
   const toast = useToast();
+  const { invoices } = useInvoices();
   const [rab, setRab] = useState<Rab | null>(null);
   const [groups, setGroups] = useState<LocalGroup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -137,6 +139,10 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
   const grandTotal = calcGrandTotal(groups);
   const diskonNilaiNum = parseFloat(diskon.nilai) || 0;
   const netTotal = calcNetTotal(groups, diskonNilaiNum);
+
+  // RAB dianggap lunas jika sudah punya invoice dan semua invoice-nya berstatus "paid"
+  const rabInvoices = (invoices ?? []).filter((inv) => inv.rab_id === rabId);
+  const isLunas = rabInvoices.length > 0 && rabInvoices.every((inv) => inv.status === "paid");
 
   function handleDiskonPersenChange(value: string) {
     const persen = parseFloat(value) || 0;
@@ -504,6 +510,18 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
           <span className="text-gray-700">{rab.nama}</span>
         </div>
 
+        {/* Lunas banner */}
+        {isLunas && (
+          <div className="flex items-center gap-2 px-4 py-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-800">
+            <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>
+              <span className="font-semibold">RAB ini sudah lunas.</span> Item, diskon, dan skema pembayaran tidak dapat diubah atau dihapus lagi karena sudah terbayarkan penuh.
+            </span>
+          </div>
+        )}
+
         {/* Header */}
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -522,11 +540,13 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                 </div>
               ) : (
                 <h1
-                  className="text-2xl font-bold text-gray-900 cursor-pointer hover:text-gray-600 transition group"
-                  onClick={() => setEditingName(true)}
+                  className={`text-2xl font-bold text-gray-900 transition group ${isLunas ? "" : "cursor-pointer hover:text-gray-600"}`}
+                  onClick={() => !isLunas && setEditingName(true)}
                 >
                   {rab.nama}
-                  <span className="ml-2 text-sm font-normal text-gray-400 opacity-0 group-hover:opacity-100 transition">klik untuk edit</span>
+                  {!isLunas && (
+                    <span className="ml-2 text-sm font-normal text-gray-400 opacity-0 group-hover:opacity-100 transition">klik untuk edit</span>
+                  )}
                 </h1>
               )}
               <p className="text-sm text-gray-400 mt-1">
@@ -606,11 +626,11 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                       <td className="px-3 py-2 font-semibold text-gray-700 text-sm">
                         <div className="flex items-center gap-1.5">
                           <span
-                            draggable
+                            draggable={!isLunas}
                             onDragStart={(e) => handleGroupDragStart(e, group.id)}
                             onDragEnd={handleGroupDragEnd}
-                            className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 select-none"
-                            title="Geser untuk urutkan section"
+                            className={`text-gray-300 select-none ${isLunas ? "" : "cursor-grab active:cursor-grabbing hover:text-gray-500"}`}
+                            title={isLunas ? undefined : "Geser untuk urutkan section"}
                           >
                             ⠿
                           </span>
@@ -623,7 +643,8 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                           value={group.deskripsi}
                           onChange={(e) => updateGroupLocal(group.id, "deskripsi", e.target.value)}
                           onBlur={() => handleBlurGroup(group, "deskripsi")}
-                          className="font-semibold text-gray-800 bg-transparent outline-none w-full focus:bg-white focus:px-2 focus:rounded transition"
+                          disabled={isLunas}
+                          className="font-semibold text-gray-800 bg-transparent outline-none w-full focus:bg-white focus:px-2 focus:rounded transition disabled:opacity-60 disabled:cursor-not-allowed"
                           placeholder="Nama section..."
                         />
                       </td>
@@ -631,7 +652,8 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                       <td className="px-3 py-2 text-right">
                         <button
                           onClick={() => handleDeleteGroup(group.id)}
-                          className="text-red-400 hover:text-red-600 transition text-xs"
+                          disabled={isLunas}
+                          className="text-red-400 hover:text-red-600 transition text-xs disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-red-400"
                           title="Hapus section"
                         >
                           ✕
@@ -649,11 +671,11 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                       >
                         <td className="px-3 py-2 text-center">
                           <span
-                            draggable
+                            draggable={!isLunas}
                             onDragStart={(e) => handleItemDragStart(e, group.id, item.id)}
                             onDragEnd={handleItemDragEnd}
-                            className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 select-none inline-block opacity-0 group-hover/row:opacity-100 transition"
-                            title="Geser untuk urutkan item"
+                            className={`text-gray-300 select-none inline-block opacity-0 group-hover/row:opacity-100 transition ${isLunas ? "" : "cursor-grab active:cursor-grabbing hover:text-gray-500"}`}
+                            title={isLunas ? undefined : "Geser untuk urutkan item"}
                           >
                             ⠿
                           </span>
@@ -665,7 +687,8 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                             value={item.spesifikasi}
                             onChange={(e) => updateItemLocal(group.id, item.id, "spesifikasi", e.target.value)}
                             onBlur={() => handleBlurItem(item, "spesifikasi")}
-                            className="w-full bg-transparent outline-none text-gray-700 focus:bg-white focus:px-2 focus:rounded transition text-sm"
+                            disabled={isLunas}
+                            className="w-full bg-transparent outline-none text-gray-700 focus:bg-white focus:px-2 focus:rounded transition text-sm disabled:opacity-60 disabled:cursor-not-allowed"
                             placeholder="Spesifikasi..."
                           />
                         </td>
@@ -675,7 +698,8 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                             value={item.qty || ""}
                             onChange={(e) => updateItemLocal(group.id, item.id, "qty", parseFloat(e.target.value) || 0)}
                             onBlur={() => handleBlurItem(item, "qty")}
-                            className="w-full text-right bg-transparent outline-none text-gray-700 focus:bg-white focus:px-2 focus:rounded transition text-sm"
+                            disabled={isLunas}
+                            className="w-full text-right bg-transparent outline-none text-gray-700 focus:bg-white focus:px-2 focus:rounded transition text-sm disabled:opacity-60 disabled:cursor-not-allowed"
                             placeholder="0"
                             step="0.01"
                           />
@@ -686,7 +710,8 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                             value={item.unit}
                             onChange={(e) => updateItemLocal(group.id, item.id, "unit", e.target.value)}
                             onBlur={() => handleBlurItem(item, "unit")}
-                            className="w-full bg-transparent outline-none text-gray-700 focus:bg-white focus:px-2 focus:rounded transition text-sm"
+                            disabled={isLunas}
+                            className="w-full bg-transparent outline-none text-gray-700 focus:bg-white focus:px-2 focus:rounded transition text-sm disabled:opacity-60 disabled:cursor-not-allowed"
                             placeholder="m2"
                           />
                         </td>
@@ -696,7 +721,8 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                             value={item.harga ? formatCurrency(item.harga) : ""}
                             onChange={(e) => updateItemLocal(group.id, item.id, "harga", parseCurrency(e.target.value))}
                             onBlur={() => handleBlurItem(item, "harga")}
-                            className="w-full text-right bg-transparent outline-none text-gray-700 focus:bg-white focus:px-2 focus:rounded transition text-sm"
+                            disabled={isLunas}
+                            className="w-full text-right bg-transparent outline-none text-gray-700 focus:bg-white focus:px-2 focus:rounded transition text-sm disabled:opacity-60 disabled:cursor-not-allowed"
                             placeholder="0"
                           />
                         </td>
@@ -706,7 +732,8 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                         <td className="px-3 py-2 text-right">
                           <button
                             onClick={() => handleDeleteItem(group.id, item.id)}
-                            className="text-red-300 hover:text-red-500 transition text-xs opacity-0 group-hover/row:opacity-100"
+                            disabled={isLunas}
+                            className="text-red-300 hover:text-red-500 transition text-xs opacity-0 group-hover/row:opacity-100 disabled:hover:text-red-300 disabled:cursor-not-allowed"
                             title="Hapus item"
                           >
                             ✕
@@ -722,8 +749,8 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                       <td colSpan={4} className="px-3 py-1.5">
                         <button
                           onClick={() => handleAddItem(group.id)}
-                          disabled={saving}
-                          className="text-xs text-gray-400 hover:text-gray-700 transition"
+                          disabled={saving || isLunas}
+                          className="text-xs text-gray-400 hover:text-gray-700 transition disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-gray-400"
                         >
                           + Tambah item
                         </button>
@@ -742,8 +769,8 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                   <td colSpan={8} className="px-4 py-3">
                     <button
                       onClick={handleAddGroup}
-                      disabled={saving}
-                      className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition disabled:opacity-50"
+                      disabled={saving || isLunas}
+                      className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <span className="text-lg leading-none">+</span> Tambah Section
                     </button>
@@ -774,24 +801,25 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                             value={diskon.persen}
                             onChange={(e) => handleDiskonPersenChange(e.target.value)}
                             onBlur={handleSaveDiskon}
+                            disabled={isLunas}
                             placeholder="0"
                             min="0"
                             max="100"
                             step="0.01"
-                            className="w-full text-right bg-white border border-gray-200 rounded px-2 py-1 text-sm outline-none focus:ring-1 focus:ring-gray-400 pr-6"
+                            className="w-full text-right bg-white border border-gray-200 rounded px-2 py-1 text-sm outline-none focus:ring-1 focus:ring-gray-400 pr-6 disabled:opacity-60 disabled:cursor-not-allowed"
                           />
                           <span className="absolute right-2 top-1.5 text-xs text-gray-400">%</span>
                         </div>
                       </td>
                       <td className="px-2 py-2">
                         <input
-                          type="number"
-                          value={diskon.nilai}
-                          onChange={(e) => handleDiskonNilaiChange(e.target.value)}
+                          type="text"
+                          value={diskon.nilai ? formatCurrency(Number(diskon.nilai)) : ""}
+                          onChange={(e) => handleDiskonNilaiChange(e.target.value.replace(/\D/g, ""))}
                           onBlur={handleSaveDiskon}
+                          disabled={isLunas}
                           placeholder="0"
-                          min="0"
-                          className="w-full text-right bg-white border border-gray-200 rounded px-2 py-1 text-sm outline-none focus:ring-1 focus:ring-gray-400"
+                          className="w-full text-right bg-white border border-gray-200 rounded px-2 py-1 text-sm outline-none focus:ring-1 focus:ring-gray-400 disabled:opacity-60 disabled:cursor-not-allowed"
                         />
                       </td>
                       <td />
@@ -814,7 +842,8 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                       <td className="px-3 py-2 text-right bg-gray-50">
                         <button
                           onClick={handleAddSkema}
-                          className="text-xs text-blue-500 hover:text-blue-700 font-medium transition"
+                          disabled={isLunas}
+                          className="text-xs text-blue-500 hover:text-blue-700 font-medium transition disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-blue-500"
                           title="Tambah tahap pembayaran"
                         >
                           + Tambah Tahap
@@ -844,8 +873,9 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                               value={s.keterangan}
                               onChange={(e) => updateSkemaLocal(idx, "keterangan", e.target.value)}
                               onBlur={() => handleSaveSkema()}
+                              disabled={isLunas}
                               placeholder="Keterangan tahap pembayaran..."
-                              className="w-full bg-transparent outline-none text-sm text-gray-700 focus:bg-white focus:px-2 focus:rounded transition"
+                              className="w-full bg-transparent outline-none text-sm text-gray-700 focus:bg-white focus:px-2 focus:rounded transition disabled:opacity-60 disabled:cursor-not-allowed"
                             />
                           </td>
                           <td className="px-2 py-2">
@@ -855,11 +885,12 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                                 value={s.persen}
                                 onChange={(e) => updateSkemaLocal(idx, "persen", e.target.value)}
                                 onBlur={() => handleSaveSkema()}
+                                disabled={isLunas}
                                 placeholder="0"
                                 min="0"
                                 max="100"
                                 step="0.01"
-                                className="w-full text-right bg-white border border-gray-200 rounded px-2 py-1 text-sm outline-none focus:ring-1 focus:ring-gray-400 pr-6"
+                                className="w-full text-right bg-white border border-gray-200 rounded px-2 py-1 text-sm outline-none focus:ring-1 focus:ring-gray-400 pr-6 disabled:opacity-60 disabled:cursor-not-allowed"
                               />
                               <span className="absolute right-2 top-1.5 text-xs text-gray-400">%</span>
                             </div>
@@ -870,7 +901,8 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                           <td className="px-3 py-2 text-right">
                             <button
                               onClick={() => handleRemoveSkema(idx)}
-                              className="text-red-300 hover:text-red-500 transition text-xs opacity-0 group-hover/skema:opacity-100"
+                              disabled={isLunas}
+                              className="text-red-300 hover:text-red-500 transition text-xs opacity-0 group-hover/skema:opacity-100 disabled:hover:text-red-300 disabled:cursor-not-allowed"
                               title="Hapus tahap"
                             >
                               ✕
@@ -938,6 +970,7 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
                 >
                   <option value="Bapak">Bapak</option>
                   <option value="Ibu">Ibu</option>
+                  <option value="">(Tanpa Sapaan)</option>
                 </select>
               </div>
             </div>

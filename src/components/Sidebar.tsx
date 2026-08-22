@@ -1,27 +1,32 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import React, { useState } from "react";
+import React, { useState, type ComponentType, type SVGProps } from "react";
 import { useAuth } from "@/context/AuthContext";
+import {
+  GridIcon, UsersIcon, FunnelIcon, BuildingIcon, DocumentIcon, ChartBarIcon, BanknotesIcon,
+} from "@/components/icons/AppIcons";
+
+type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
 
 interface NavItem {
   href: string;
   label: string;
-  icon: string;
+  icon: IconComponent;
   children?: { href: string; label: string }[];
 }
 
 const navItems: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: "▦" },
-  { href: "/clients", label: "Clients", icon: "⊙" },
-  { href: "/leads", label: "Leads", icon: "◎" },
-  { href: "/projects", label: "Projects", icon: "▣" },
-  { href: "/invoices", label: "Invoice", icon: "◧" },
-  { href: "/reports", label: "Laporan", icon: "◉" },
+  { href: "/dashboard", label: "Dashboard", icon: GridIcon },
+  { href: "/clients", label: "Clients", icon: UsersIcon },
+  { href: "/leads", label: "Leads", icon: FunnelIcon },
+  { href: "/projects", label: "Projects", icon: BuildingIcon },
+  { href: "/invoices", label: "Invoice", icon: DocumentIcon },
+  { href: "/reports", label: "Laporan", icon: ChartBarIcon },
   {
     href: "/keuangan",
     label: "Keuangan",
-    icon: "◈",
+    icon: BanknotesIcon,
     children: [
       { href: "/keuangan/pengeluaran", label: "Pengeluaran Umum" },
       { href: "/keuangan/laporan", label: "Laporan Keuangan" },
@@ -46,6 +51,7 @@ export default function Sidebar() {
       pathname.startsWith(item.href + "/") ||
       item.children?.some((c) => pathname === c.href || pathname.startsWith(c.href + "/"));
     const hasChildren = !!item.children?.length;
+    const ItemIcon = item.icon;
 
     return (
       <li>
@@ -58,7 +64,7 @@ export default function Sidebar() {
                   : "text-gray-400 hover:text-white hover:bg-white/10"
               }`}
             >
-              <span className="text-base">{item.icon}</span>
+              <ItemIcon className="w-4 h-4 shrink-0" />
               <span>{item.label}</span>
             </div>
             <ul className="mt-0.5 ml-8 space-y-0.5">
@@ -93,7 +99,7 @@ export default function Sidebar() {
                 : "text-gray-400 hover:text-white hover:bg-white/10"
             }`}
           >
-            <span className="text-base">{item.icon}</span>
+            <ItemIcon className="w-4 h-4 shrink-0" />
             <span>{item.label}</span>
           </Link>
         )}

@@ -1,12 +1,17 @@
 // Sumber tunggal untuk semua option dropdown di seluruh aplikasi.
 // Selalu import dari sini, jangan hardcode di komponen.
 
+// "Deal" = negosiasi (belum final), lanjut ke "Deal Won" atau "Deal Lost".
+// Masing-masing status tujuan punya syarat field sendiri sebelum lead boleh
+// pindah ke sana — lihat guard_lead_status_transition() di
+// supabase/migrations/lead_state_machine.sql dan utils/leadStatusGuard.ts.
 export const LEAD_STATUSES = [
   "New Lead",
   "Contacted",
   "Survey",
   "Deal",
-  "Lost",
+  "Deal Won",
+  "Deal Lost",
 ] as const;
 
 export type LeadStatus = (typeof LEAD_STATUSES)[number];
@@ -15,31 +20,32 @@ export const LEAD_STATUS_COLORS: Record<string, string> = {
   "New Lead": "bg-blue-100 text-blue-800",
   Contacted: "bg-yellow-100 text-yellow-800",
   Survey: "bg-purple-100 text-purple-800",
-  Deal: "bg-green-100 text-green-800",
-  Lost: "bg-red-100 text-red-800",
+  Deal: "bg-indigo-100 text-indigo-800",
+  "Deal Won": "bg-green-100 text-green-800",
+  "Deal Lost": "bg-red-100 text-red-800",
 };
 
 // ------------------------------------------------------------------
 
-export const CLIENT_LEAD_STATUSES = [
-  "New Lead",
-  "Contacted",
-  "Meeting Scheduled",
-  "Proposal Sent",
-  "Negotiation",
-  "Deal Won",
-  "Deal Lost",
-] as const;
+export const LEAD_CONTACT_CHANNELS = ["call", "whatsapp", "email", "meeting", "other"] as const;
 
-export const CLIENT_LEAD_STATUS_COLORS: Record<string, string> = {
-  "New Lead": "bg-blue-100 text-blue-800",
-  Contacted: "bg-yellow-100 text-yellow-800",
-  "Meeting Scheduled": "bg-orange-100 text-orange-800",
-  "Proposal Sent": "bg-indigo-100 text-indigo-800",
-  Negotiation: "bg-purple-100 text-purple-800",
-  "Deal Won": "bg-green-100 text-green-800",
-  "Deal Lost": "bg-red-100 text-red-800",
+export const LEAD_CONTACT_CHANNEL_LABELS: Record<string, string> = {
+  call: "Telepon",
+  whatsapp: "WhatsApp",
+  email: "Email",
+  meeting: "Meeting",
+  other: "Lainnya",
 };
+
+// ------------------------------------------------------------------
+
+// Client.lead_status TIDAK LAGI input manual — nilainya di-derive otomatis dari
+// status Lead paling terakhir milik client (lihat trigger sync_client_lead_status
+// di supabase/migrations). Vocabulary-nya karena itu WAJIB sama persis dengan
+// LEAD_STATUSES supaya Client.lead_status tidak pernah menyimpan nilai yang
+// tidak mungkin ada di Leads (mencegah Client.status != Leads.status).
+export const CLIENT_LEAD_STATUSES = LEAD_STATUSES;
+export const CLIENT_LEAD_STATUS_COLORS = LEAD_STATUS_COLORS;
 
 // ------------------------------------------------------------------
 

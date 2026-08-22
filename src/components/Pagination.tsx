@@ -26,7 +26,7 @@ export default function Pagination({
   const pages = buildPageNumbers(page, totalPages);
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-gray-100 bg-white">
+    <div className="flex flex-wrap items-center justify-end gap-3 px-4 py-3 border-t border-gray-100 bg-white">
       {/* Info + page size */}
       <div className="flex items-center gap-3 text-sm text-gray-500">
         <span>

@@ -9,6 +9,9 @@ import { useInvoices } from "@/hooks/useInvoices";
 import { useAuth } from "@/context/AuthContext";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useApprovedRabTotals } from "@/hooks/useRab";
+import { getProjectValue as computeProjectValue } from "@/utils/projectValue";
+import { QuestionCircleIcon } from "@/components/icons/AppIcons";
+import HelpGuideModal from "@/components/HelpGuideModal";
 import type { NotificationType } from "@/types/db";
 
 /* ── Route config ── */
@@ -73,12 +76,18 @@ const TYPE_CONFIG: Record<NotificationType, { color: string; dot: string; hover:
   follow_up_due: { color: "text-orange-600", dot: "bg-orange-400", hover: "hover:bg-orange-50" },
   project_overdue: { color: "text-red-600", dot: "bg-red-400", hover: "hover:bg-red-50" },
   invoice_overdue: { color: "text-yellow-600", dot: "bg-yellow-400", hover: "hover:bg-yellow-50" },
+  lead_stale: { color: "text-gray-600", dot: "bg-gray-400", hover: "hover:bg-gray-50" },
+  lead_survey_overdue: { color: "text-purple-600", dot: "bg-purple-400", hover: "hover:bg-purple-50" },
+  lead_auto_lost: { color: "text-red-600", dot: "bg-red-400", hover: "hover:bg-red-50" },
 };
 
 const TYPE_LABELS: Record<NotificationType, string> = {
   follow_up_due: "Follow-up",
   project_overdue: "Proyek Overdue",
   invoice_overdue: "Invoice Jatuh Tempo",
+  lead_stale: "Lead Stale",
+  lead_survey_overdue: "Survey Overdue",
+  lead_auto_lost: "Lead Auto-Lost",
 };
 
 /* ── Notification bell ── */
@@ -203,8 +212,7 @@ function SearchModal({
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const { totals: rabTotals } = useApprovedRabTotals();
-  const getProjectValue = (p: { lead_id?: string; value?: number }) =>
-    p.lead_id && rabTotals[p.lead_id] != null ? rabTotals[p.lead_id] : (p.value ?? 0);
+  const getProjectValue = (p: { lead_id?: string; value?: number }) => computeProjectValue(p, rabTotals);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -441,6 +449,7 @@ export default function TopBar() {
   const { projects } = useProjects();
   const { invoices } = useInvoices();
   const [showSearch, setShowSearch] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -457,12 +466,13 @@ export default function TopBar() {
     <>
       <header className="flex-shrink-0 bg-white border-b border-gray-100 px-4 sm:px-6 lg:px-8">
         {/* Main bar */}
-        <div className="h-14 flex items-center justify-between gap-4">
+        <div className="h-14 flex items-center gap-4">
           {/* Breadcrumb */}
           <Breadcrumb clients={clients} />
 
-          {/* Actions */}
-          <div className="flex items-center gap-1">
+          {/* Actions — ml-auto (not justify-between) keeps this pinned right even when
+              Breadcrumb renders null, e.g. on /keuangan routes or the root path. */}
+          <div className="flex items-center gap-1 ml-auto">
             {/* Search button */}
             <button
               onClick={() => setShowSearch(true)}
@@ -479,6 +489,16 @@ export default function TopBar() {
 
             {/* Notifications */}
             <NotifBell leads={leads} projects={projects} invoices={invoices} clients={clients} />
+
+            {/* Panduan pemakaian */}
+            <button
+              onClick={() => setShowGuide(true)}
+              className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+              aria-label="Panduan pemakaian"
+              title="Panduan pemakaian"
+            >
+              <span className="w-5 h-5"><QuestionCircleIcon /></span>
+            </button>
 
             {/* Divider */}
             <div className="w-px h-5 bg-gray-200 mx-1" />
@@ -498,6 +518,9 @@ export default function TopBar() {
           onClose={() => setShowSearch(false)}
         />
       )}
+
+      {/* Panduan pemakaian */}
+      {showGuide && <HelpGuideModal onClose={() => setShowGuide(false)} />}
     </>
   );
 }

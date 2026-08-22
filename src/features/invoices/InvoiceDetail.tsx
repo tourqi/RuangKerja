@@ -8,12 +8,14 @@ import { useProjects } from "@/hooks/useProjects";
 import { useAllRabs, useApprovedRabTotals } from "@/hooks/useRab";
 import { useLeads } from "@/hooks/useLeads";
 import { formatRupiah } from "@/utils/format";
+import { getProjectValue as computeProjectValue } from "@/utils/projectValue";
 import { useToast } from "@/components/Toast";
 import type { InvoiceStatus, PaymentMethod } from "@/types/db";
 import ActivityTimeline from "@/components/ActivityTimeline";
 import { addPayment, deletePayment, updateInvoice } from "@/services/invoices";
 import { getRabByLead, getRabWithGroups } from "@/services/rab";
 import type { Rab } from "@/types/db";
+import { NumberInput } from "@/components/NumberInput";
 
 const formatCurrency = (v?: number) =>
   v == null
@@ -56,8 +58,7 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
   const { totals: rabTotals } = useApprovedRabTotals();
   const toast = useToast();
 
-  const getProjectValue = (p: { lead_id?: string; value?: number }) =>
-    p.lead_id && rabTotals[p.lead_id] != null ? rabTotals[p.lead_id] : (p.value ?? 0);
+  const getProjectValue = (p: { lead_id?: string; value?: number }) => computeProjectValue(p, rabTotals);
 
   const [showAddPayment, setShowAddPayment] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
@@ -116,7 +117,7 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
           const r = await getRabByLead(proj.lead_id);
           all.push(...r.filter((x) => x.status === "approved"));
         } else {
-          const dealLeads = leads.filter((l) => l.client_id === proj.client_id && l.status === "Deal");
+          const dealLeads = leads.filter((l) => l.client_id === proj.client_id && l.status === "Deal Won");
           for (const l of dealLeads) {
             const r = await getRabByLead(l.id);
             all.push(...r.filter((x) => x.status === "approved"));
@@ -152,7 +153,7 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
         const r = await getRabByLead(proj.lead_id);
         all.push(...r.filter((x) => x.status === "approved"));
       } else {
-        const dealLeads = leads.filter((l) => l.client_id === proj.client_id && l.status === "Deal");
+        const dealLeads = leads.filter((l) => l.client_id === proj.client_id && l.status === "Deal Won");
         for (const l of dealLeads) {
           const r = await getRabByLead(l.id);
           all.push(...r.filter((x) => x.status === "approved"));
@@ -532,14 +533,12 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
             <form onSubmit={handleAddPayment} className="space-y-4">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1.5">Jumlah (IDR) *</label>
-                <input
-                  type="number"
+                <NumberInput
                   value={paymentForm.amount}
-                  onChange={(e) => setPaymentForm((f) => ({ ...f, amount: e.target.value }))}
+                  onValueChange={(v) => setPaymentForm((f) => ({ ...f, amount: v }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900"
                   placeholder={`Max: ${formatCurrency(outstanding)}`}
                   required
-                  min="1"
                 />
               </div>
               <div>
@@ -671,9 +670,9 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
                           />
                           <span className="absolute right-2 top-1.5 text-xs text-gray-400">%</span>
                         </div>
-                        <input
-                          type="number" value={editForm.diskon_nilai} onChange={(e) => handleEditDiskonNilai(e.target.value)}
-                          placeholder="Rp" min="0"
+                        <NumberInput
+                          value={editForm.diskon_nilai} onValueChange={handleEditDiskonNilai}
+                          placeholder="Rp"
                           className="flex-1 px-2.5 py-1.5 border border-gray-300 rounded-md text-xs text-gray-900 outline-none focus:ring-1 focus:ring-gray-900"
                         />
                       </div>
@@ -700,12 +699,11 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Total Tagihan (Rp) *</p>
-                      <input
-                        type="number"
+                      <NumberInput
                         value={editForm.total_amount}
-                        onChange={(e) => setEditForm((f) => ({ ...f, total_amount: e.target.value }))}
+                        onValueChange={(v) => setEditForm((f) => ({ ...f, total_amount: v }))}
                         className="w-full px-2.5 py-1.5 border border-gray-300 rounded-md text-xs text-gray-900 outline-none focus:ring-1 focus:ring-gray-900"
-                        required min="0"
+                        required
                       />
                     </div>
                     <div>

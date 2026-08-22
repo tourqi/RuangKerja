@@ -2,12 +2,16 @@
 import { useState, type ChangeEvent, type SyntheticEvent } from "react";
 import { Client } from "@/types/db";
 import { addClient, updateClient } from "@/services/clients";
+import { useClients } from "@/hooks/useClients";
 import { useToast } from "@/components/Toast";
+import { Select } from "@/components/Select";
 import {
   PROPERTY_TYPES,
   BUDGET_RANGES,
-  CLIENT_LEAD_STATUSES,
+  CLIENT_LEAD_STATUS_COLORS,
+  PRIORITY_COLORS,
   SOURCES,
+  toOptions,
 } from "@/constants/options";
 
 type Props = {
@@ -19,6 +23,7 @@ type Props = {
 
 export function ClientFormModal({ client, onSaved, onClose, onSavedAndAddLead }: Props) {
   const toast = useToast();
+  const { clients } = useClients();
   const [form, setForm] = useState<Partial<Client>>(client ?? {});
   const [saving, setSaving] = useState(false);
   const [savedClient, setSavedClient] = useState<Client | null>(null);
@@ -36,16 +41,32 @@ export function ClientFormModal({ client, onSaved, onClose, onSavedAndAddLead }:
     );
   };
 
+  // Nomor HP tidak boleh duplikat antar client — bandingkan digit murni supaya format lama tidak lolos.
+  const phoneDigits = (form.phone || "").replace(/\D/g, "");
+  const duplicateClient = phoneDigits
+    ? clients.find((c) => c.id !== client?.id && (c.phone || "").replace(/\D/g, "") === phoneDigits)
+    : undefined;
+
   const handleSubmit = async (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (duplicateClient) {
+      toast(`No. HP ini sudah dipakai oleh client "${duplicateClient.name}"`, "error");
+      return;
+    }
     setSaving(true);
+    // lead_status & priority derived otomatis dari lead terbaru (trigger DB) —
+    // jangan pernah ditulis dari form ini, meski masih ada di state karena
+    // diisi dari `client` awal.
+    const { lead_status: _leadStatus, priority: _priority, ...formWithoutDerived } = form;
+    void _leadStatus;
+    void _priority;
     try {
       if (isEditing) {
-        await updateClient(client.id, form);
+        await updateClient(client.id, formWithoutDerived);
         toast("Client berhasil diperbarui", "success");
         onSaved();
       } else {
-        const newClient = await addClient({ ...form, name: form.name || "" });
+        const newClient = await addClient({ ...formWithoutDerived, name: form.name || "" });
         toast("Client berhasil ditambahkan", "success");
         if (onSavedAndAddLead) {
           setSavedClient(newClient);
@@ -115,7 +136,26 @@ export function ClientFormModal({ client, onSaved, onClose, onSavedAndAddLead }:
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">No. HP <span className="text-red-500">*</span></label>
-              <input name="phone" value={form.phone || ""} onChange={handleChange} required maxLength={13} pattern="[0-9]*" placeholder="08xxxxxxxxxx" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-black focus:border-black outline-none" />
+              <input
+                name="phone"
+                value={form.phone || ""}
+                onChange={handleChange}
+                required
+                maxLength={13}
+                pattern="[0-9]*"
+                placeholder="08xxxxxxxxxx"
+                aria-invalid={!!duplicateClient}
+                className={`w-full px-3 py-2 border rounded-lg text-sm text-gray-900 outline-none focus:ring-2 ${
+                  duplicateClient
+                    ? "border-red-400 focus:ring-red-500 focus:border-red-500"
+                    : "border-gray-300 focus:ring-black focus:border-black"
+                }`}
+              />
+              {duplicateClient && (
+                <p className="text-xs text-red-600 mt-1">
+                  No. HP ini sudah dipakai oleh client &ldquo;{duplicateClient.name}&rdquo;
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Alamat</label>
@@ -127,41 +167,56 @@ export function ClientFormModal({ client, onSaved, onClose, onSavedAndAddLead }:
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Tipe Properti</label>
-              <select name="property_type" value={form.property_type || ""} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none">
-                <option value="">Pilih tipe</option>
-                {PROPERTY_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
+              <Select
+                value={form.property_type || ""}
+                onChange={(v) => setForm((prev) => ({ ...prev, property_type: v }))}
+                options={toOptions(PROPERTY_TYPES)}
+                placeholder="Pilih tipe"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Budget</label>
-              <select name="budget_range" value={form.budget_range || ""} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none">
-                <option value="">Pilih budget</option>
-                {BUDGET_RANGES.map((b) => <option key={b} value={b}>{b}</option>)}
-              </select>
+              <Select
+                value={form.budget_range || ""}
+                onChange={(v) => setForm((prev) => ({ ...prev, budget_range: v }))}
+                options={toOptions(BUDGET_RANGES)}
+                placeholder="Pilih budget"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Status Lead</label>
-              <select name="lead_status" value={form.lead_status || ""} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none">
-                <option value="">Pilih status</option>
-                {CLIENT_LEAD_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
+              {form.lead_status ? (
+                <div className="flex items-center h-[38px]">
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${CLIENT_LEAD_STATUS_COLORS[form.lead_status] || "bg-gray-100 text-gray-700"}`}>
+                    {form.lead_status}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center h-[38px] text-sm text-gray-400">Belum ada lead</div>
+              )}
+              <p className="text-xs text-gray-400 mt-1">Otomatis mengikuti status Lead terbaru, tidak bisa diedit manual.</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Sumber</label>
-              <select name="source" value={form.source || ""} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none">
-                <option value="">Pilih sumber</option>
-                {SOURCES.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
+              <Select
+                value={form.source || ""}
+                onChange={(v) => setForm((prev) => ({ ...prev, source: v }))}
+                options={toOptions(SOURCES)}
+                placeholder="Pilih sumber"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Prioritas</label>
-              <select name="priority" value={form.priority || ""} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none">
-                <option value="">Pilih prioritas</option>
-                <option value="Low">Low</option>
-                <option value="Medium">Medium</option>
-                <option value="High">High</option>
-                <option value="Urgent">Urgent</option>
-              </select>
+              {form.priority ? (
+                <div className="flex items-center h-[38px]">
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize ${PRIORITY_COLORS[form.priority] || "bg-gray-100 text-gray-700"}`}>
+                    {form.priority}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center h-[38px] text-sm text-gray-400">Belum ada lead</div>
+              )}
+              <p className="text-xs text-gray-400 mt-1">Otomatis mengikuti priority Lead terbaru, tidak bisa diedit manual.</p>
             </div>
           </div>
           <div>
@@ -171,7 +226,7 @@ export function ClientFormModal({ client, onSaved, onClose, onSavedAndAddLead }:
           <div className="flex gap-2 pt-1">
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || !!duplicateClient}
               className="px-6 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving ? "Menyimpan..." : isEditing ? "Simpan Perubahan" : "Tambah Client"}

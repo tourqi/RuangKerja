@@ -154,7 +154,7 @@ export default function SphPrintView({ rab, groups, config, onClose }: Props) {
           {/* Recipient */}
           <div style={{ marginBottom: "5mm", fontSize: "10pt" }}>
             <div>Kepada Yth.</div>
-            <div>{config.greeting} {config.clientName}</div>
+            <div>{[config.greeting, config.clientName].filter(Boolean).join(" ")}</div>
             <div>Di Tempat</div>
           </div>
 

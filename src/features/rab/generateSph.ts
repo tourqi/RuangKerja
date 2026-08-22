@@ -339,7 +339,7 @@ export async function generateSphDocx(
     ]}),
 
     new Paragraph({ spacing: { before: 0, after: 0 }, children: [run("Kepada Yth.", { size: 20 })] }),
-    new Paragraph({ spacing: { before: 0, after: 0 }, children: [run(`${config.greeting} ${config.clientName}`, { size: 20 })] }),
+    new Paragraph({ spacing: { before: 0, after: 0 }, children: [run([config.greeting, config.clientName].filter(Boolean).join(" "), { size: 20 })] }),
     new Paragraph({ spacing: { before: 0, after: MM(5) }, children: [run("Di Tempat", { size: 20 })] }),
 
     new Paragraph({ spacing: { before: 0, after: MM(3) }, children: [run("Dengan hormat,", { size: 20 })] }),

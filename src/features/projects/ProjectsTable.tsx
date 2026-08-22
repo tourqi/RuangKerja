@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useProjects } from "@/hooks/useProjects";
 import { useClients } from "@/hooks/useClients";
@@ -13,9 +12,10 @@ import { useSortable } from "@/hooks/useSortable";
 import { usePagination } from "@/hooks/usePagination";
 import Pagination from "@/components/Pagination";
 import { exportCSV } from "@/utils/csv";
-import { useApprovedRabTotals, useAllRabs } from "@/hooks/useRab";
+import { useApprovedRabTotals } from "@/hooks/useRab";
 import { useInvoices } from "@/hooks/useInvoices";
 import { MultiSelect } from "@/components/MultiSelect";
+import { ActionDropdown } from "@/components/ActionDropdown";
 import {
   PROJECT_STATUSES,
   PROJECT_STATUS_LABELS,
@@ -23,6 +23,7 @@ import {
   toOptions,
 } from "@/constants/options";
 import { formatRupiah, formatDate } from "@/utils/format";
+import { getProjectValue as computeProjectValue } from "@/utils/projectValue";
 import { ProjectFormModal } from "./ProjectFormModal";
 import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
 
@@ -47,24 +48,16 @@ export default function ProjectsTable() {
   const { clients } = useClients();
   const { leads } = useLeads();
   const { totals: rabTotals } = useApprovedRabTotals();
-  const { rabs } = useAllRabs();
   const { invoices } = useInvoices();
 
-  const getProjectValue = (p: { lead_id?: string; value?: number }) =>
-    p.lead_id && rabTotals[p.lead_id] != null
-      ? rabTotals[p.lead_id]
-      : (p.value ?? 0);
+  const getProjectValue = (p: { lead_id?: string; value?: number }) => computeProjectValue(p, rabTotals);
 
-  const getPaymentStatus = (leadId: string | undefined): 'lunas' | 'belum' | null => {
-    if (!leadId) return null;
-    const leadRabs = (rabs || []).filter(r => r.lead_id === leadId);
-    if (leadRabs.length === 0) return null;
-    for (const rab of leadRabs) {
-      const rabInvoices = (invoices || []).filter(inv => inv.rab_id === rab.id);
-      if (rabInvoices.length === 0) return 'belum';
-      if (!rabInvoices.every(inv => inv.status === 'paid')) return 'belum';
-    }
-    return 'lunas';
+  // Berdasarkan invoice project itu sendiri, bukan lewat RAB — invoice bisa dibuat
+  // tanpa RAB sama sekali, jadi tidak boleh cuma mengecek invoice yang terhubung ke RAB.
+  const getPaymentStatus = (projectId: string): 'lunas' | 'belum' | null => {
+    const projectInvoices = (invoices || []).filter(inv => inv.project_id === projectId);
+    if (projectInvoices.length === 0) return null;
+    return projectInvoices.every(inv => inv.status === 'paid') ? 'lunas' : 'belum';
   };
   const [editingProject, setEditingProject] = useState<Project | null | undefined>(undefined);
   const [saving, setSaving] = useState(false);
@@ -94,7 +87,7 @@ export default function ProjectsTable() {
   };
 
   // hanya client yang leads-nya Deal (WON)
-  const wonClientIds = new Set((leads || []).filter(l => l.status === "Deal").map(l => l.client_id));
+  const wonClientIds = new Set((leads || []).filter(l => l.status === "Deal Won").map(l => l.client_id));
   const wonClients = (clients || []).filter(c => wonClientIds.has(c.id));
 
   // --- FILTERED PROJECTS ---
@@ -212,7 +205,7 @@ export default function ProjectsTable() {
             ↓ Export CSV
           </button>
           <button
-            className="px-5 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition font-medium"
+            className="px-5 py-2 bg-black text-white text-sm rounded-lg hover:bg-gray-800 transition font-medium"
             onClick={() => { setEditingProject(null); setAutoClientId(null); setAutoLeadId(null); setShowModal(true); }}
           >
             + Tambah Project
@@ -228,14 +221,14 @@ export default function ProjectsTable() {
             value={filterName}
             onChange={e => setFilterName(e.target.value)}
             placeholder="Cari nama project..."
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black placeholder:text-gray-400 focus:ring-2 focus:ring-green-500 outline-none"
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black placeholder:text-gray-400 focus:ring-2 focus:ring-gray-900 outline-none"
           />
           <input
             type="text"
             value={filterClient}
             onChange={e => setFilterClient(e.target.value)}
             placeholder="Cari nama client..."
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black placeholder:text-gray-400 focus:ring-2 focus:ring-green-500 outline-none"
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black placeholder:text-gray-400 focus:ring-2 focus:ring-gray-900 outline-none"
           />
           <MultiSelect
             placeholder="Semua Status"
@@ -248,32 +241,32 @@ export default function ProjectsTable() {
             value={filterAssigned}
             onChange={e => setFilterAssigned(e.target.value)}
             placeholder="Assigned to..."
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black placeholder:text-gray-400 focus:ring-2 focus:ring-green-500 outline-none"
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black placeholder:text-gray-400 focus:ring-2 focus:ring-gray-900 outline-none"
           />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">Start Date</label>
             <div className="flex items-center gap-2">
-              <input type="date" value={filterStartFrom} onChange={e => setFilterStartFrom(e.target.value)} className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-green-500 outline-none" />
+              <input type="date" value={filterStartFrom} onChange={e => setFilterStartFrom(e.target.value)} className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-gray-900 outline-none" />
               <span className="text-gray-400 shrink-0">—</span>
-              <input type="date" value={filterStartTo} onChange={e => setFilterStartTo(e.target.value)} className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-green-500 outline-none" />
+              <input type="date" value={filterStartTo} onChange={e => setFilterStartTo(e.target.value)} className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-gray-900 outline-none" />
             </div>
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">Deadline</label>
             <div className="flex items-center gap-2">
-              <input type="date" value={filterDeadlineFrom} onChange={e => setFilterDeadlineFrom(e.target.value)} className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-green-500 outline-none" />
+              <input type="date" value={filterDeadlineFrom} onChange={e => setFilterDeadlineFrom(e.target.value)} className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-gray-900 outline-none" />
               <span className="text-gray-400 shrink-0">—</span>
-              <input type="date" value={filterDeadlineTo} onChange={e => setFilterDeadlineTo(e.target.value)} className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-green-500 outline-none" />
+              <input type="date" value={filterDeadlineTo} onChange={e => setFilterDeadlineTo(e.target.value)} className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-gray-900 outline-none" />
             </div>
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">Progress (%)</label>
             <div className="flex items-center gap-2">
-              <input type="number" min={0} max={100} value={filterProgressMin} onChange={e => setFilterProgressMin(e.target.value)} placeholder="Min" className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-green-500 outline-none" />
+              <input type="number" min={0} max={100} value={filterProgressMin} onChange={e => setFilterProgressMin(e.target.value)} placeholder="Min" className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-gray-900 outline-none" />
               <span className="text-gray-400 shrink-0">—</span>
-              <input type="number" min={0} max={100} value={filterProgressMax} onChange={e => setFilterProgressMax(e.target.value)} placeholder="Max" className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-green-500 outline-none" />
+              <input type="number" min={0} max={100} value={filterProgressMax} onChange={e => setFilterProgressMax(e.target.value)} placeholder="Max" className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-gray-900 outline-none" />
             </div>
           </div>
         </div>
@@ -293,6 +286,7 @@ export default function ProjectsTable() {
           <table className="w-full min-w-[900px] text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Aksi</th>
                 <SortableHeader label="Nama Project" col="name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Client" col="client_name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Nilai Project" col="value" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
@@ -302,7 +296,6 @@ export default function ProjectsTable() {
                 <SortableHeader label="Assigned To" col="assigned_to" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Progress" col="progress" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Status Pembayaran</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -311,6 +304,38 @@ export default function ProjectsTable() {
                 const progress = project.progress ?? 0;
                 return (
                   <tr key={project.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onDoubleClick={() => router.push(`/projects/${project.id}`)}>
+                    <td className="px-4 py-3 whitespace-nowrap" onDoubleClick={(e) => e.stopPropagation()}>
+                      <ActionDropdown
+                        align="left"
+                        items={[
+                          {
+                            key: "detail",
+                            label: "Lihat Detail",
+                            href: `/projects/${project.id}`,
+                            icon: (
+                              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                            ),
+                          },
+                          {
+                            key: "edit",
+                            label: "Edit",
+                            icon: (
+                              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                            ),
+                            onClick: () => handleEdit(project),
+                          },
+                          {
+                            key: "delete",
+                            label: "Hapus",
+                            danger: true,
+                            icon: (
+                              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            ),
+                            onClick: () => confirmDelete(project.id),
+                          },
+                        ]}
+                      />
+                    </td>
                     <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">{project.name}</td>
                     <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{client?.name || "-"}</td>
                     <td className="px-4 py-3 text-gray-700 font-medium whitespace-nowrap">{formatRupiah(getProjectValue(project))}</td>
@@ -335,36 +360,11 @@ export default function ProjectsTable() {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       {(() => {
-                        const ps = getPaymentStatus(project.lead_id);
-                        if (ps === null) return <span className="text-gray-400 text-xs">-</span>;
+                        const ps = getPaymentStatus(project.id);
+                        if (ps === null) return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">Belum Ada Invoice</span>;
                         if (ps === 'lunas') return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Lunas</span>;
                         return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">Belum Lunas</span>;
                       })()}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap" onDoubleClick={(e) => e.stopPropagation()}>
-                      <div className="flex gap-1.5">
-                        <Link
-                          href={`/projects/${project.id}`}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-gray-50 text-gray-600 rounded-md hover:bg-gray-100 transition"
-                        >
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                          Lihat
-                        </Link>
-                        <button
-                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-green-50 text-green-600 rounded-md hover:bg-green-100 transition"
-                          onClick={() => handleEdit(project)}
-                        >
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                          Edit
-                        </button>
-                        <button
-                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-red-50 text-red-600 rounded-md hover:bg-red-100 transition"
-                          onClick={() => confirmDelete(project.id)}
-                        >
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                          Hapus
-                        </button>
-                      </div>
                     </td>
                   </tr>
                 );

@@ -4,11 +4,15 @@ import { useRouter } from "next/navigation";
 import React, { useState, useCallback, useEffect } from "react";
 import { useProjects } from "@/hooks/useProjects";
 import { useClients } from "@/hooks/useClients";
+import { useLeads } from "@/hooks/useLeads";
+import { useAuth } from "@/context/AuthContext";
 import { getExpenses, addExpense, updateExpense, deleteExpense } from "@/services/expenses";
 import { getInvoicesByProject, getPaymentsByInvoice } from "@/services/invoices";
 import { getRabByLead, getRabWithGroups } from "@/services/rab";
 import { useToast } from "@/components/Toast";
 import ActivityTimeline from "@/components/ActivityTimeline";
+import { NumberInput } from "@/components/NumberInput";
+import { InvoiceFormModal } from "@/features/invoices/InvoiceFormModal";
 import type { ExpenseCategory, Invoice, Payment, ProjectExpense, Rab } from "@/types/db";
 import { projectStatusLabel } from "@/types/db";
 
@@ -54,19 +58,18 @@ const METHOD_LABELS: Record<string, string> = {
   transfer: "Transfer", cash: "Tunai", check: "Cek",
 };
 
-type LocalExpense = ProjectExpense & { _saving?: boolean; _jumlahFocused?: boolean };
+type LocalExpense = ProjectExpense & { _saving?: boolean };
 
 const TODAY = new Date().toISOString().slice(0, 10);
 const PAGE_SIZE = 20;
-
-const formatNumber = (v: number) =>
-  new Intl.NumberFormat("id-ID", { minimumFractionDigits: 0 }).format(v);
 
 export default function ProjectDetail({ projectId }: { projectId: string }) {
   const router = useRouter();
   const toast = useToast();
   const { projects, loading: lp } = useProjects();
   const { clients, loading: lc } = useClients();
+  const { leads } = useLeads();
+  const { user } = useAuth();
 
   const [expenses, setExpenses] = useState<LocalExpense[]>([]);
   const [loadingExp, setLoadingExp] = useState(true);
@@ -81,6 +84,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
   const [approvedRabs, setApprovedRabs] = useState<Rab[]>([]);
   const [rabTotals, setRabTotals] = useState<Record<string, number>>({});
   const [showRabModal, setShowRabModal] = useState(false);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [rabGroupsCache, setRabGroupsCache] = useState<Record<string, { groups: import("@/types/db").RabGroup[]; loading: boolean }>>({});
   const [expandedRabIds, setExpandedRabIds] = useState<Set<string>>(new Set());
 
@@ -101,30 +105,26 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
 
   useEffect(() => { loadExpenses(); }, [loadExpenses]);
 
-  // Load invoices + payments + RABs for this project
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      setLoadingInvoices(true);
-      try {
-        const invs = await getInvoicesByProject(projectId);
-        if (cancelled) return;
-        setProjectInvoices(invs);
-        // load payments for each invoice in parallel
-        const entries = await Promise.all(
-          invs.map(async (inv) => {
-            const pays = await getPaymentsByInvoice(inv.id);
-            return [inv.id, pays] as [string, Payment[]];
-          })
-        );
-        if (!cancelled) setPaymentsByInvoice(Object.fromEntries(entries));
-      } catch { /* silent */ } finally {
-        if (!cancelled) setLoadingInvoices(false);
-      }
+  // Load invoices + payments for this project
+  const loadInvoicesData = useCallback(async () => {
+    setLoadingInvoices(true);
+    try {
+      const invs = await getInvoicesByProject(projectId);
+      setProjectInvoices(invs);
+      // load payments for each invoice in parallel
+      const entries = await Promise.all(
+        invs.map(async (inv) => {
+          const pays = await getPaymentsByInvoice(inv.id);
+          return [inv.id, pays] as [string, Payment[]];
+        })
+      );
+      setPaymentsByInvoice(Object.fromEntries(entries));
+    } catch { /* silent */ } finally {
+      setLoadingInvoices(false);
     }
-    load();
-    return () => { cancelled = true; };
   }, [projectId]);
+
+  useEffect(() => { loadInvoicesData(); }, [loadInvoicesData]);
 
   // Load approved RABs and their totals for this project
   useEffect(() => {
@@ -445,12 +445,15 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
             <button
               onClick={handleAddRow}
               disabled={addingRow}
-              className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-800 transition disabled:opacity-50"
+              className="flex items-center gap-1.5 px-4 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition disabled:opacity-50"
             >
               <span className="text-base leading-none">+</span>
               {addingRow ? "Menambahkan..." : "Tambah Baris"}
             </button>
           </div>
+          <datalist id="vendor-options">
+            {vendorOptions.map((v) => <option key={v} value={v} />)}
+          </datalist>
           {loadingExp ? (
             <div className="py-10 text-center text-xs text-gray-400">Memuat...</div>
           ) : (
@@ -513,10 +516,13 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                         ))}
                       </select>
                     </td>
-                    {/* Vendor */}
+                    {/* Vendor — datalist saran dari vendor yang sudah pernah diinput
+                        di project ini (vendorOptions), tapi tetap bisa diketik bebas
+                        kalau vendornya baru. */}
                     <td className="px-2 py-1.5 hidden md:table-cell">
                       <input
                         type="text"
+                        list="vendor-options"
                         value={exp.vendor ?? ""}
                         placeholder="—"
                         onChange={(e) => updateLocal(exp.id, "vendor", e.target.value)}
@@ -526,17 +532,11 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                     </td>
                     {/* Jumlah */}
                     <td className="px-2 py-1.5">
-                      <input
-                        type={exp._jumlahFocused ? "number" : "text"}
-                        value={exp._jumlahFocused ? (exp.jumlah || "") : (exp.jumlah ? formatNumber(exp.jumlah) : "")}
+                      <NumberInput
+                        value={exp.jumlah || ""}
                         placeholder="0"
-                        min="0"
-                        onChange={(e) => updateLocal(exp.id, "jumlah", Number(e.target.value))}
-                        onFocus={() => setExpenses((prev) => prev.map((r) => r.id === exp.id ? { ...r, _jumlahFocused: true } : r))}
-                        onBlur={() => {
-                          setExpenses((prev) => prev.map((r) => r.id === exp.id ? { ...r, _jumlahFocused: false } : r));
-                          handleBlur(exp, "jumlah");
-                        }}
+                        onValueChange={(v) => updateLocal(exp.id, "jumlah", v === "" ? 0 : Number(v))}
+                        onBlur={() => handleBlur(exp, "jumlah")}
                         className="w-full px-2 py-1 text-sm text-right font-medium text-red-500 bg-transparent border border-transparent rounded focus:outline-none focus:border-gray-300 focus:bg-white transition placeholder-gray-300"
                       />
                     </td>
@@ -622,7 +622,16 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
 
       {/* Tagihan & Pembayaran */}
       <div className="space-y-4">
-        <h2 className="text-sm font-semibold text-gray-800">Tagihan &amp; Pembayaran</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-gray-800">Tagihan &amp; Pembayaran</h2>
+          <button
+            onClick={() => setShowInvoiceModal(true)}
+            className="flex items-center gap-1.5 px-4 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition"
+          >
+            <span className="text-base leading-none">+</span>
+            Tambah Invoice
+          </button>
+        </div>
 
         {/* RAB summary */}
         {approvedRabs.length > 0 && (
@@ -681,7 +690,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
           ) : projectInvoices.length === 0 ? (
             <div className="py-10 text-center text-sm text-gray-400">
               Belum ada invoice untuk project ini.{" "}
-              <a href="/invoices" className="text-gray-700 underline">Buat Invoice</a>
+              <button onClick={() => setShowInvoiceModal(true)} className="text-gray-700 underline">Buat Invoice</button>
             </div>
           ) : (
             <table className="w-full text-sm">
@@ -968,6 +977,20 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal Tambah Invoice */}
+      {showInvoiceModal && (
+        <InvoiceFormModal
+          projects={projects}
+          clients={clients}
+          leads={leads ?? []}
+          unpaidProjects={projects}
+          userId={user?.id}
+          preselectedProjectId={projectId}
+          onSaved={async () => { await loadInvoicesData(); setShowInvoiceModal(false); }}
+          onClose={() => setShowInvoiceModal(false)}
+        />
       )}
     </div>
   );

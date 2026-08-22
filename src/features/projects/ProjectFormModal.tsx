@@ -4,10 +4,14 @@ import { Project, ProjectStatus, Client, Lead } from "@/types/db";
 import { addProject, updateProject } from "@/services/projects";
 import { getRabByLead, getRabWithGroups } from "@/services/rab";
 import { useLeads } from "@/hooks/useLeads";
+import { useProjects } from "@/hooks/useProjects";
 import { useToast } from "@/components/Toast";
+import { NumberInput } from "@/components/NumberInput";
+import { Select } from "@/components/Select";
 import {
   PROJECT_STATUSES,
   PROJECT_STATUS_LABELS,
+  toOptions,
 } from "@/constants/options";
 
 type Props = {
@@ -24,6 +28,11 @@ const PROJECT_COLUMNS: (keyof Project)[] = [
   "client_id", "lead_id", "name", "value", "status", "start_date", "deadline", "assigned_to", "progress",
 ];
 
+/** Project name is derived from the lead — falls back to a dated label when the lead has none. */
+function leadDisplayName(l: Lead): string {
+  return l.project_name || `Lead ${l.created_at ? new Date(l.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : l.id.slice(0, 8)}`;
+}
+
 export function ProjectFormModal({
   project,
   wonClients,
@@ -36,6 +45,13 @@ export function ProjectFormModal({
   const toast = useToast();
   const isEditing = !!project;
   const { leads } = useLeads();
+  const { projects } = useProjects();
+
+  // Project sekarang dinamai dari lead-nya — cegah satu lead/nama dipakai lebih dari satu project,
+  // termasuk terhadap project yang sudah Selesai (bukan cuma yang masih berjalan).
+  const otherProjects = projects.filter((p) => !isEditing || p.id !== project?.id);
+  const usedLeadIds = new Set(otherProjects.map((p) => p.lead_id).filter(Boolean) as string[]);
+  const usedNames = new Set(otherProjects.map((p) => p.name?.trim().toLowerCase()).filter(Boolean) as string[]);
 
   const [form, setForm] = useState<Partial<Project>>(
     project ?? { status: "Planning", progress: 0 }
@@ -53,7 +69,13 @@ export function ProjectFormModal({
       wonClients.find((c) => c.id === autoClientId) ??
       allClients?.find((c) => c.id === autoClientId);
     if (!client) return;
-    setForm((prev) => ({ ...prev, client_id: client.id, lead_id: autoLeadId ?? undefined }));
+    const autoLead = autoLeadId ? leads.find((l) => l.id === autoLeadId) : undefined;
+    setForm((prev) => ({
+      ...prev,
+      client_id: client.id,
+      lead_id: autoLeadId ?? undefined,
+      name: autoLead ? leadDisplayName(autoLead) : prev.name,
+    }));
     setClientQuery(client.name ?? "");
 
     if (autoLeadId) {
@@ -78,14 +100,19 @@ export function ProjectFormModal({
         }
       })();
     }
-  }, [autoClientId, autoLeadId, isEditing, wonClients, allClients]);
+  }, [autoClientId, autoLeadId, isEditing, wonClients, allClients, leads]);
 
   const leadsForClient = leads.filter(
-    (l) => l.client_id === form.client_id && l.status === "Deal"
+    (l) => l.client_id === form.client_id && l.status === "Deal Won"
   );
 
   async function handleLeadSelect(leadId: string) {
-    setForm((prev) => ({ ...prev, lead_id: leadId || undefined }));
+    if (leadId && usedLeadIds.has(leadId)) {
+      toast("Lead ini sudah punya project — tidak bisa dipakai lagi untuk project baru", "warning");
+      return;
+    }
+    const lead = leadsForClient.find((l) => l.id === leadId);
+    setForm((prev) => ({ ...prev, lead_id: leadId || undefined, name: lead ? leadDisplayName(lead) : prev.name }));
     if (!leadId) return;
     try {
       const rabs = await getRabByLead(leadId);
@@ -122,7 +149,15 @@ export function ProjectFormModal({
 
   const handleSubmit = async (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!form.name) { toast("Nama project wajib diisi", "warning"); return; }
+    if (!form.name) { toast("Pilih lead untuk menentukan nama project", "warning"); return; }
+    if (form.lead_id && usedLeadIds.has(form.lead_id)) {
+      toast("Lead ini sudah punya project — tidak bisa dipakai lagi untuk project baru", "warning");
+      return;
+    }
+    if (usedNames.has(form.name.trim().toLowerCase())) {
+      toast(`Nama project "${form.name}" sudah dipakai, tidak boleh duplikat`, "warning");
+      return;
+    }
     setSaving(true);
     try {
       if (isEditing) {
@@ -154,22 +189,9 @@ export function ProjectFormModal({
           >✕</button>
         </div>
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
-          {/* Nama Project */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Nama Project <span className="text-red-500">*</span></label>
-            <input
-              name="name"
-              value={form.name || ""}
-              onChange={handleChange}
-              required
-              placeholder="Nama project"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-green-500"
-            />
-          </div>
-
           {/* Client autocomplete */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Client (Lead Deal)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Client (Lead Deal Won)</label>
             <div className="relative">
               <input
                 type="text"
@@ -183,13 +205,13 @@ export function ProjectFormModal({
                 onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
                 placeholder="Cari nama client..."
                 autoComplete="off"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900"
               />
               {showDropdown && (
                 <div className="absolute z-10 left-0 right-0 bg-white border border-gray-200 rounded-b-lg shadow max-h-48 overflow-y-auto">
                   {wonClients.filter((c) => !clientQuery || c.name?.toLowerCase().includes(clientQuery.toLowerCase())).length === 0 ? (
                     <div className="px-3 py-2 text-gray-400 text-sm">
-                      {wonClients.length === 0 ? "Belum ada lead dengan status Deal." : "Tidak ditemukan"}
+                      {wonClients.length === 0 ? "Belum ada lead dengan status Deal Won." : "Tidak ditemukan"}
                     </div>
                   ) : (
                     wonClients
@@ -214,27 +236,28 @@ export function ProjectFormModal({
             {form.client_id && <p className="text-xs text-green-600 mt-1">✓ Client dipilih</p>}
           </div>
 
-          {/* Lead selector — muncul setelah client dipilih */}
+          {/* Lead selector — menentukan Nama Project, muncul setelah client dipilih */}
           {form.client_id && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Lead</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nama Project <span className="text-red-500">*</span></label>
               {leadsForClient.length === 0 ? (
-                <p className="text-xs text-gray-400 mt-1">Tidak ada lead Deal untuk client ini</p>
+                <p className="text-xs text-gray-400 mt-1">Tidak ada lead Deal Won untuk client ini</p>
               ) : (
-                <select
+                <Select
                   value={form.lead_id || ""}
-                  onChange={(e) => handleLeadSelect(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-green-500"
-                >
-                  <option value="">— Pilih Lead —</option>
-                  {leadsForClient.map((l: Lead) => (
-                    <option key={l.id} value={l.id}>
-                      {l.project_name || `Lead ${l.created_at ? new Date(l.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : l.id.slice(0, 8)}`}
-                    </option>
-                  ))}
-                </select>
+                  onChange={handleLeadSelect}
+                  options={leadsForClient.map((l: Lead) => ({
+                    value: l.id,
+                    label: usedLeadIds.has(l.id) ? `${leadDisplayName(l)} (sudah ada project)` : leadDisplayName(l),
+                    disabled: usedLeadIds.has(l.id),
+                  }))}
+                  placeholder="— Pilih Lead —"
+                />
               )}
-              {form.lead_id && <p className="text-xs text-green-600 mt-1">✓ Nilai project otomatis dari RAB disetujui</p>}
+              {form.lead_id && <p className="text-xs text-green-600 mt-1">✓ Nama &amp; nilai project otomatis dari lead ini</p>}
+              {!form.lead_id && form.name && (
+                <p className="text-xs text-gray-400 mt-1">Nama saat ini: {form.name}</p>
+              )}
             </div>
           )}
 
@@ -242,29 +265,37 @@ export function ProjectFormModal({
             {/* Nilai Project */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Nilai Project (Rp)</label>
-              <input name="value" value={form.value ?? ""} onChange={handleChange} type="number" min={0} placeholder="0" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-green-500" />
+              <NumberInput
+                value={form.value ?? ""}
+                onValueChange={(v) => setForm((prev) => ({ ...prev, value: v === "" ? undefined : Number(v) }))}
+                placeholder="0"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900"
+              />
             </div>
             {/* Status */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Status <span className="text-red-500">*</span></label>
-              <select name="status" value={form.status || "Planning"} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-green-500">
-                {PROJECT_STATUSES.map((s) => <option key={s} value={s}>{PROJECT_STATUS_LABELS[s]}</option>)}
-              </select>
+              <Select
+                value={form.status || "Planning"}
+                onChange={(v) => setForm((prev) => ({ ...prev, status: v as ProjectStatus }))}
+                options={toOptions(PROJECT_STATUSES, PROJECT_STATUS_LABELS)}
+                includeEmptyOption={false}
+              />
             </div>
             {/* Start Date */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-              <input name="start_date" value={form.start_date || ""} onChange={handleChange} type="date" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-green-500" />
+              <input name="start_date" value={form.start_date || ""} onChange={handleChange} type="date" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900" />
             </div>
             {/* Deadline */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Deadline</label>
-              <input name="deadline" value={form.deadline || ""} onChange={handleChange} type="date" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-green-500" />
+              <input name="deadline" value={form.deadline || ""} onChange={handleChange} type="date" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900" />
             </div>
             {/* Assigned To */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
-              <input name="assigned_to" value={form.assigned_to || ""} onChange={handleChange} placeholder="Nama tim / PIC" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-green-500" />
+              <input name="assigned_to" value={form.assigned_to || ""} onChange={handleChange} placeholder="Nama tim / PIC" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900" />
             </div>
             {/* Progress */}
             <div>
@@ -279,7 +310,7 @@ export function ProjectFormModal({
           </div>
 
           <div className="flex gap-2 pt-1">
-            <button type="submit" disabled={saving} className="px-6 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition disabled:opacity-50">
+            <button type="submit" disabled={saving} className="px-6 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition disabled:opacity-50">
               {saving ? "Menyimpan..." : isEditing ? "Simpan Perubahan" : "Tambah Project"}
             </button>
             <button type="button" className="px-6 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition" onClick={onClose}>

@@ -1,6 +1,5 @@
 "use client";
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLeads } from "@/hooks/useLeads";
 import { useClients } from "@/hooks/useClients";
@@ -13,6 +12,7 @@ import { usePagination } from "@/hooks/usePagination";
 import Pagination from "@/components/Pagination";
 import { exportCSV } from "@/utils/csv";
 import { MultiSelect } from "@/components/MultiSelect";
+import { ActionDropdown } from "@/components/ActionDropdown";
 import {
   LEAD_STATUSES,
   LEAD_STATUS_COLORS,
@@ -22,7 +22,7 @@ import {
   SOURCES,
   toOptions,
 } from "@/constants/options";
-import { formatDate } from "@/utils/format";
+import { formatDate, formatRupiah } from "@/utils/format";
 import { LeadFormModal } from "./LeadFormModal";
 import { LeadViewModal } from "./LeadViewModal";
 import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
@@ -58,7 +58,7 @@ export default function LeadsTable() {
   const [projectFlowLeadId, setProjectFlowLeadId] = useState<string | null>(null);
   const [showProjectFlow, setShowProjectFlow] = useState(false);
 
-  const wonClientIds = new Set((leads ?? []).filter((l) => l.status === "Deal").map((l) => l.client_id));
+  const wonClientIds = new Set((leads ?? []).filter((l) => l.status === "Deal Won").map((l) => l.client_id));
   const wonClients = (clients ?? []).filter((c) => wonClientIds.has(c.id));
 
   // --- FILTER STATE ---
@@ -120,8 +120,12 @@ export default function LeadsTable() {
         Klien: l.client_name,
         Telepon: l.client_phone,
         Status: l.status,
+        Stale: l.is_stale ? "Ya" : "",
         Prioritas: l.priority ?? "",
+        "No Response Count": l.no_response_count ?? 0,
         Sumber: l.source ?? "",
+        Budget: l.budget ?? "",
+        "Nominal Deal": l.nominal_deal ?? "",
         "Follow Up": formatDate(l.follow_up_date),
         "Last Contact": formatDate(l.last_contacted_at),
         "Ditutup": formatDate(l.closed_at),
@@ -163,7 +167,7 @@ export default function LeadsTable() {
       <div className="bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
         <table className="w-full text-sm">
           <tbody className="divide-y divide-gray-100">
-            {Array.from({ length: 7 }).map((_, i) => <SkeletonRow key={i} cols={8} />)}
+            {Array.from({ length: 7 }).map((_, i) => <SkeletonRow key={i} cols={13} />)}
           </tbody>
         </table>
       </div>
@@ -185,7 +189,7 @@ export default function LeadsTable() {
             ↓ Export CSV
           </button>
           <button
-            className="px-5 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition font-medium"
+            className="px-5 py-2 bg-black text-white text-sm rounded-lg hover:bg-gray-800 transition font-medium"
             onClick={() => { setEditingLead(null); setShowModal(true); }}
           >
             + Tambah Lead
@@ -206,7 +210,7 @@ export default function LeadsTable() {
                 setSelectedClient("");
               }}
               placeholder="Cari Client (nama/telepon)"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black placeholder:text-gray-900 focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black placeholder:text-gray-400 focus:ring-2 focus:ring-gray-900"
               autoComplete="off"
             />
             {clientQuery && (
@@ -217,7 +221,7 @@ export default function LeadsTable() {
                 {filteredClients.map((c: typeof clients[0]) => (
                   <div
                     key={c.id}
-                    className={`px-3 py-2 cursor-pointer hover:bg-purple-50 text-sm ${selectedClient === c.id ? "bg-purple-100" : ""}`}
+                    className={`px-3 py-2 cursor-pointer hover:bg-purple-50 text-sm text-gray-900 ${selectedClient === c.id ? "bg-purple-100" : ""}`}
                     onClick={() => {
                       setSelectedClient(c.id);
                       setClientQuery(c.name + (c.phone ? ` (${c.phone})` : ""));
@@ -260,14 +264,14 @@ export default function LeadsTable() {
                 type="date"
                 value={followUpStart}
                 onChange={e => setFollowUpStart(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-purple-500 flex-1 min-w-0"
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-gray-900 flex-1 min-w-0"
               />
               <span className="text-gray-400 shrink-0">—</span>
               <input
                 type="date"
                 value={followUpEnd}
                 onChange={e => setFollowUpEnd(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-purple-500 flex-1 min-w-0"
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-gray-900 flex-1 min-w-0"
               />
             </div>
           </div>
@@ -279,14 +283,14 @@ export default function LeadsTable() {
                 type="date"
                 value={updatedStart}
                 onChange={e => setUpdatedStart(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-purple-500 flex-1 min-w-0"
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-gray-900 flex-1 min-w-0"
               />
               <span className="text-gray-400 shrink-0">—</span>
               <input
                 type="date"
                 value={updatedEnd}
                 onChange={e => setUpdatedEnd(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-purple-500 flex-1 min-w-0"
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-gray-900 flex-1 min-w-0"
               />
             </div>
           </div>
@@ -302,17 +306,19 @@ export default function LeadsTable() {
           <table className="w-full min-w-[600px] text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Aksi</th>
                 <SortableHeader label="Client" col="client_name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Nama Project" col="project_name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Status" col="status" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Priority" col="priority" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Nilai</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">No Response</th>
                 <SortableHeader label="Source" col="source" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Follow Up" col="follow_up_date" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Last Contact" col="last_contacted_at" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Closed At" col="closed_at" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Updated At" col="updated_at" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Catatan</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -320,6 +326,46 @@ export default function LeadsTable() {
                 const client = clients.find((c) => c.id === lead.client_id);
                 return (
                   <tr key={lead.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onDoubleClick={() => router.push(`/leads/${lead.id}`)}>
+                    <td className="px-4 py-3 whitespace-nowrap" onDoubleClick={(e) => e.stopPropagation()}>
+                      <ActionDropdown
+                        align="left"
+                        items={[
+                          {
+                            key: "detail",
+                            label: "Detail",
+                            href: `/leads/${lead.id}`,
+                            icon: (
+                              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+                            ),
+                          },
+                          {
+                            key: "view",
+                            label: "Lihat",
+                            icon: (
+                              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                            ),
+                            onClick: () => setViewingLead(lead),
+                          },
+                          {
+                            key: "edit",
+                            label: "Edit",
+                            icon: (
+                              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                            ),
+                            onClick: () => handleEdit(lead),
+                          },
+                          {
+                            key: "delete",
+                            label: "Hapus",
+                            danger: true,
+                            icon: (
+                              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            ),
+                            onClick: () => confirmDelete(lead.id),
+                          },
+                        ]}
+                      />
+                    </td>
                     <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">
                       <div>{client?.name || "-"}</div>
                       {client?.phone && <div className="text-xs text-gray-400">{client.phone}</div>}
@@ -329,6 +375,11 @@ export default function LeadsTable() {
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${LEAD_STATUS_COLORS[lead.status] || "bg-gray-100 text-gray-700"}`}>
                         {lead.status}
                       </span>
+                      {lead.is_stale && (
+                        <span title="Contacted > 7 hari tanpa kontak terbaru" className="ml-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-700">
+                          Stale
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       {lead.priority ? (
@@ -337,50 +388,45 @@ export default function LeadsTable() {
                         </span>
                       ) : <span className="text-gray-400">-</span>}
                     </td>
+                    <td className="px-4 py-3 text-right whitespace-nowrap text-sm">
+                      {lead.nominal_deal != null ? (
+                        <span className="text-gray-900 font-medium">{formatRupiah(lead.nominal_deal)}</span>
+                      ) : lead.budget != null ? (
+                        <span className="text-gray-400 italic" title="Estimasi budget, belum final">{formatRupiah(lead.budget)}</span>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-center whitespace-nowrap text-sm">
+                      {lead.no_response_count ? (
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${lead.no_response_count >= 2 ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-600"}`}>
+                          {lead.no_response_count}
+                        </span>
+                      ) : <span className="text-gray-400">-</span>}
+                    </td>
                     <td className="px-4 py-3 text-gray-600 whitespace-nowrap text-sm">{lead.source || client?.source || "-"}</td>
-                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap text-sm">{formatDate(lead.follow_up_date)}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm">
+                      {(() => {
+                        const overdue = !!lead.follow_up_date
+                          && lead.follow_up_date < new Date().toISOString().slice(0, 10)
+                          && lead.status !== "Deal Won" && lead.status !== "Deal Lost";
+                        return (
+                          <span className={overdue ? "text-red-600 font-medium" : "text-gray-600"}>
+                            {formatDate(lead.follow_up_date)}
+                          </span>
+                        );
+                      })()}
+                    </td>
                     <td className="px-4 py-3 text-gray-600 whitespace-nowrap text-sm">{formatDate(lead.last_contacted_at)}</td>
                     <td className="px-4 py-3 text-gray-600 whitespace-nowrap text-sm">{formatDate(lead.closed_at)}</td>
                     <td className="px-4 py-3 text-gray-600 whitespace-nowrap text-sm">{formatDate(lead.updated_at)}</td>
                     <td className="px-4 py-3 text-gray-500 max-w-[160px] truncate text-sm">{lead.notes || "-"}</td>
-                    <td className="px-4 py-3 whitespace-nowrap" onDoubleClick={(e) => e.stopPropagation()}>
-                      <div className="flex gap-1.5">
-                        <Link
-                          href={`/leads/${lead.id}`}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition"
-                        >
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
-                          Detail
-                        </Link>
-                        <button
-                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-gray-50 text-gray-600 rounded-md hover:bg-gray-100 transition"
-                          onClick={() => setViewingLead(lead)}
-                        >
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                          Lihat
-                        </button>
-                        <button
-                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-purple-50 text-purple-600 rounded-md hover:bg-purple-100 transition"
-                          onClick={() => handleEdit(lead)}
-                        >
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                          Edit
-                        </button>
-                        <button
-                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-red-50 text-red-600 rounded-md hover:bg-red-100 transition"
-                          onClick={() => confirmDelete(lead.id)}
-                        >
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                          Hapus
-                        </button>
-                      </div>
-                    </td>
                   </tr>
                 );
               })}
               {filteredLeads.length === 0 && (
                 <tr>
-                  <td colSpan={11} className="px-6 py-12 text-center text-gray-400 text-sm">
+                  <td colSpan={13} className="px-6 py-12 text-center text-gray-400 text-sm">
                     Belum ada lead. Klik "Tambah Lead" untuk memulai.
                   </td>
                 </tr>
