@@ -35,16 +35,16 @@ export default function InvoicePrintPage({ invoiceId }: { invoiceId: string }) {
   if (li || lp || lg) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-line border-t-ink" />
       </div>
     );
   }
 
   if (!invoice) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-sm text-gray-400">
+      <div className="min-h-screen flex items-center justify-center text-sm text-faint">
         Invoice tidak ditemukan.{" "}
-        <Link href="/invoices" className="ml-1 underline text-gray-700">Kembali</Link>
+        <Link href="/invoices" className="ml-1 underline text-ink">Kembali</Link>
       </div>
     );
   }
@@ -54,20 +54,20 @@ export default function InvoicePrintPage({ invoiceId }: { invoiceId: string }) {
       <div className="print:hidden flex items-center gap-2">
         <Link
           href={`/invoices/${invoiceId}`}
-          className="px-4 py-2 text-sm bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          className="px-3 py-1.5 text-[13px] font-medium bg-white border border-line text-ink rounded-md hover:bg-hover transition-colors"
         >
           ← Kembali
         </Link>
         <button
           onClick={() => window.print()}
-          className="px-4 py-2 text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+          className="px-3 py-1.5 text-[13px] font-medium border border-line bg-white text-ink rounded-md hover:bg-hover transition-colors"
         >
           Cetak / Simpan PDF
         </button>
         <button
           onClick={handleDownloadWord}
           disabled={downloading}
-          className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          className="px-3 py-1.5 text-[13px] font-medium bg-accent text-white rounded-md hover:bg-accent-hover disabled:opacity-50 transition-colors"
         >
           {downloading ? "Menyiapkan…" : "↓ Download Word"}
         </button>

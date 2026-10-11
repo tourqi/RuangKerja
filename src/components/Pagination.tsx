@@ -26,16 +26,16 @@ export default function Pagination({
   const pages = buildPageNumbers(page, totalPages);
 
   return (
-    <div className="flex flex-wrap items-center justify-end gap-3 px-4 py-3 border-t border-gray-100 bg-white">
+    <div className="flex flex-wrap items-center justify-end gap-3 px-3 py-2 border-t border-line bg-white">
       {/* Info + page size */}
-      <div className="flex items-center gap-3 text-sm text-gray-500">
+      <div className="flex items-center gap-3 text-xs text-muted">
         <span>
           {total === 0 ? "0 data" : `${from}–${to} dari ${total}`}
         </span>
         <select
           value={pageSize}
           onChange={(e) => onPageSizeChange(Number(e.target.value))}
-          className="border border-gray-200 rounded-md px-2 py-1 text-xs text-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-300"
+          className="border border-line rounded-md px-2 py-1 text-xs text-muted focus:outline-none focus:ring-2 focus:ring-accent/25"
         >
           {PAGE_SIZE_OPTIONS.map((s) => (
             <option key={s} value={s}>{s} / halaman</option>
@@ -51,15 +51,15 @@ export default function Pagination({
 
           {pages.map((p, i) =>
             p === "..." ? (
-              <span key={`ellipsis-${i}`} className="px-2 text-gray-400 text-sm select-none">…</span>
+              <span key={`ellipsis-${i}`} className="px-2 text-faint text-sm select-none">…</span>
             ) : (
               <button
                 key={p}
                 onClick={() => onPageChange(p as number)}
-                className={`min-w-[32px] h-8 px-2 rounded-md text-sm font-medium transition ${
+                className={`min-w-[28px] h-7 px-2 rounded-md text-xs font-medium transition ${
                   p === page
-                    ? "bg-gray-900 text-white"
-                    : "text-gray-600 hover:bg-gray-100"
+                    ? "bg-accent text-white"
+                    : "text-muted hover:bg-hover"
                 }`}
               >
                 {p}
@@ -80,7 +80,7 @@ function PageBtn({ onClick, disabled, label }: { onClick: () => void; disabled: 
     <button
       onClick={onClick}
       disabled={disabled}
-      className="h-8 px-2 rounded-md text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition"
+      className="h-7 px-2 rounded-md text-xs text-muted hover:bg-hover disabled:opacity-30 disabled:cursor-not-allowed transition"
     >
       {label}
     </button>

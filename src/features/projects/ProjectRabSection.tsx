@@ -6,12 +6,8 @@ import { useToast } from "@/components/Toast";
 import { ActionDropdown } from "@/components/ActionDropdown";
 import type { Invoice, Rab, RabGroup } from "@/types/db";
 import { formatIDR } from "@/utils/format";
+import { RAB_STATUS_TONE } from "@/components/ui/StatusDot";
 
-const RAB_STATUS_COLORS: Record<string, string> = {
-  draft: "bg-gray-100 text-gray-600",
-  sent: "bg-blue-100 text-blue-700",
-  approved: "bg-green-100 text-green-700",
-};
 
 const formatDate = (s?: string) =>
   s ? new Date(s).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "-";
@@ -46,8 +42,8 @@ export function ProjectRabSection({
 
   if (!leadId) {
     return (
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-12 text-center">
-        <p className="text-gray-400 text-sm">Project ini belum terhubung ke lead, jadi RAB belum bisa dibuat.</p>
+      <div className="bg-white rounded-md border border-line p-12 text-center">
+        <p className="text-faint text-sm">Project ini belum terhubung ke lead, jadi RAB belum bisa dibuat.</p>
       </div>
     );
   }
@@ -129,12 +125,12 @@ export function ProjectRabSection({
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-gray-400">
-        Hanya RAB berstatus <span className="font-medium text-green-700">Disetujui</span> yang dihitung sebagai Nilai Project.
+      <p className="text-xs text-muted">
+        Hanya RAB berstatus <span className="font-medium text-ink">Disetujui</span> yang dihitung sebagai Nilai Project.
       </p>
 
       {/* Tambah RAB */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+      <div className="bg-white rounded-md border border-line p-4">
         {showAdd ? (
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <input
@@ -144,19 +140,19 @@ export function ProjectRabSection({
               value={newNama}
               onChange={(e) => setNewNama(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-              className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+              className="flex-1 border border-line rounded-md px-3 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
             />
             <div className="flex gap-2">
               <button
                 onClick={handleAdd}
                 disabled={saving || !newNama.trim()}
-                className="px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-700 disabled:opacity-50 transition"
+                className="px-4 py-2 bg-accent text-white text-sm rounded-md hover:bg-accent-hover disabled:opacity-50 transition"
               >
                 {saving ? "Menyimpan..." : "Simpan"}
               </button>
               <button
                 onClick={() => { setShowAdd(false); setNewNama(""); }}
-                className="px-4 py-2 text-sm text-gray-500 hover:text-gray-800 transition"
+                className="px-4 py-2 text-sm text-muted hover:text-ink transition"
               >
                 Batal
               </button>
@@ -165,7 +161,7 @@ export function ProjectRabSection({
         ) : (
           <button
             onClick={() => setShowAdd(true)}
-            className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition"
+            className="flex items-center gap-2 text-sm text-muted hover:text-ink transition"
           >
             <span className="text-lg leading-none">+</span> Buat RAB Baru
           </button>
@@ -174,10 +170,10 @@ export function ProjectRabSection({
 
       {/* Daftar RAB */}
       {loading ? (
-        <div className="py-10 text-center text-xs text-gray-400">Memuat RAB…</div>
+        <div className="py-10 text-center text-xs text-faint">Memuat RAB…</div>
       ) : rabs.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-12 text-center">
-          <p className="text-gray-400 text-sm">Belum ada RAB untuk project ini.</p>
+        <div className="bg-white rounded-md border border-line p-12 text-center">
+          <p className="text-faint text-sm">Belum ada RAB untuk project ini.</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -188,26 +184,26 @@ export function ProjectRabSection({
             const total = gross - (rab.diskon_nilai ?? 0);
             const isExpanded = expandedIds.has(rab.id);
             return (
-              <div key={rab.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+              <div key={rab.id} className="bg-white rounded-md border border-line overflow-hidden">
                 <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
                   <button onClick={() => toggleExpand(rab.id)} className="flex-1 min-w-0 flex items-center gap-3 text-left">
                     <svg
-                      className={`w-4 h-4 text-gray-400 shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                      className={`w-4 h-4 text-faint shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`}
                       fill="none" stroke="currentColor" viewBox="0 0 24 24"
                     >
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-semibold text-gray-900 truncate">{rab.nama}</p>
+                        <p className="text-sm font-semibold text-ink truncate">{rab.nama}</p>
                         {lunas && (
-                          <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700 shrink-0">
+                          <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border border-line text-success shrink-0">
                             ✓ Lunas
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        Dibuat {formatDate(rab.created_at)} · <span className="font-semibold text-gray-700">{formatIDR(total)}</span>
+                      <p className="text-xs text-faint mt-0.5">
+                        Dibuat {formatDate(rab.created_at)} · <span className="font-mono tabular-nums text-ink">{formatIDR(total)}</span>
                       </p>
                     </div>
                   </button>
@@ -217,7 +213,7 @@ export function ProjectRabSection({
                       onChange={(e) => handleStatusChange(rab, e.target.value as Rab["status"])}
                       disabled={lunas}
                       title={lunas ? "RAB sudah lunas, status tidak dapat diubah" : undefined}
-                      className={`text-xs font-medium px-2.5 py-1 rounded-full border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-300 disabled:cursor-not-allowed disabled:opacity-70 ${RAB_STATUS_COLORS[rab.status]}`}
+                      className={`text-xs font-medium focus:outline-none focus:ring-2 focus:ring-accent/30 tone-${RAB_STATUS_TONE[rab.status] ?? "neutral"}`}
                     >
                       <option value="draft">Draft</option>
                       <option value="sent">Terkirim</option>
@@ -225,7 +221,7 @@ export function ProjectRabSection({
                     </select>
                     <Link
                       href={editorHref(rab.id)}
-                      className="px-3 py-1.5 text-xs font-medium bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition"
+                      className="px-2.5 py-1 text-xs font-medium rounded-md bg-accent text-white hover:bg-accent-hover transition-colors"
                     >
                       Edit
                     </Link>
@@ -235,7 +231,7 @@ export function ProjectRabSection({
                       onClick={() => handleDuplicate(rab.id)}
                       disabled={duplicatingId === rab.id}
                       title="Duplikasi RAB (untuk membuat penawaran harga alternatif dengan komponen yang sama)"
-                      className="hidden sm:inline-flex px-3 py-1.5 text-xs font-medium text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 hover:text-gray-800 transition disabled:opacity-50"
+                      className="hidden sm:inline-flex px-2.5 py-1 text-xs font-medium text-ink border border-line rounded-md hover:bg-hover transition-colors disabled:opacity-50"
                     >
                       {duplicatingId === rab.id ? "..." : "Duplikasi"}
                     </button>
@@ -243,7 +239,7 @@ export function ProjectRabSection({
                       onClick={() => handleDelete(rab.id)}
                       disabled={deletingId === rab.id || lunas}
                       title={lunas ? "RAB sudah lunas dan tidak dapat dihapus" : undefined}
-                      className="hidden sm:inline-flex px-3 py-1.5 text-xs font-medium text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                      className="hidden sm:inline-flex px-2.5 py-1 text-xs font-medium text-danger hover:bg-danger-soft rounded-md transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                     >
                       {deletingId === rab.id ? "..." : "Hapus"}
                     </button>
@@ -253,7 +249,7 @@ export function ProjectRabSection({
                       <ActionDropdown
                         align="right"
                         label="⋯"
-                        buttonClassName="px-2.5 py-1.5 text-sm font-medium text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 hover:text-gray-800 transition"
+                        buttonClassName="px-2.5 py-1.5 text-sm font-medium text-muted border border-line rounded-md hover:bg-hover hover:text-ink transition"
                         items={[
                           {
                             key: "duplicate",
@@ -282,11 +278,11 @@ export function ProjectRabSection({
 
                 {/* Preview isi RAB */}
                 {isExpanded && (
-                  <div className="px-4 sm:px-5 pb-4 pt-3 border-t border-gray-50">
+                  <div className="px-4 sm:px-5 pb-4 pt-3 border-t border-line">
                     {groups.length === 0 ? (
-                      <p className="text-xs text-gray-400 py-4 text-center">
+                      <p className="text-xs text-faint py-4 text-center">
                         Belum ada item pada RAB ini.{" "}
-                        <Link href={editorHref(rab.id)} className="text-gray-700 underline">Isi RAB</Link>
+                        <Link href={editorHref(rab.id)} className="text-ink underline">Isi RAB</Link>
                       </p>
                     ) : (
                       <div className="space-y-3">
@@ -295,30 +291,30 @@ export function ProjectRabSection({
                           return (
                             <div key={group.id}>
                               <div className="flex items-center justify-between py-1.5">
-                                <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                <span className="text-xs font-semibold text-muted">
                                   {group.no}. {group.deskripsi}
                                 </span>
-                                <span className="text-xs font-semibold text-gray-700">{formatIDR(groupTotal)}</span>
+                                <span className="text-xs font-semibold text-ink">{formatIDR(groupTotal)}</span>
                               </div>
                               <div className="overflow-x-auto">
                                 <table className="w-full min-w-[480px] text-xs">
                                   <thead>
-                                    <tr className="border-b border-gray-100">
-                                      <th className="text-left py-1.5 text-gray-400 font-medium pr-3">Spesifikasi</th>
-                                      <th className="text-right py-1.5 text-gray-400 font-medium w-16">Qty</th>
-                                      <th className="text-left py-1.5 text-gray-400 font-medium w-14 pl-1">Sat</th>
-                                      <th className="text-right py-1.5 text-gray-400 font-medium w-28">Harga</th>
-                                      <th className="text-right py-1.5 text-gray-400 font-medium w-28">Total</th>
+                                    <tr className="border-b border-line">
+                                      <th className="text-left py-1.5 text-faint font-medium pr-3">Spesifikasi</th>
+                                      <th className="text-right py-1.5 text-faint font-medium w-16">Qty</th>
+                                      <th className="text-left py-1.5 text-faint font-medium w-14 pl-1">Sat</th>
+                                      <th className="text-right py-1.5 text-faint font-medium w-28">Harga</th>
+                                      <th className="text-right py-1.5 text-faint font-medium w-28">Total</th>
                                     </tr>
                                   </thead>
-                                  <tbody className="divide-y divide-gray-50">
+                                  <tbody className="divide-y divide-line">
                                     {(group.items ?? []).map((item) => (
                                       <tr key={item.id}>
-                                        <td className="py-1.5 text-gray-700 pr-3">{item.spesifikasi}</td>
-                                        <td className="py-1.5 text-right text-gray-600">{item.qty}</td>
-                                        <td className="py-1.5 text-gray-500 pl-1">{item.unit}</td>
-                                        <td className="py-1.5 text-right text-gray-600">{formatIDR(item.harga)}</td>
-                                        <td className="py-1.5 text-right font-medium text-gray-800">{formatIDR(item.qty * item.harga)}</td>
+                                        <td className="py-1.5 text-ink pr-3">{item.spesifikasi}</td>
+                                        <td className="py-1.5 text-right font-mono tabular-nums text-muted">{item.qty}</td>
+                                        <td className="py-1.5 text-muted pl-1">{item.unit}</td>
+                                        <td className="py-1.5 text-right font-mono tabular-nums text-muted">{formatIDR(item.harga)}</td>
+                                        <td className="py-1.5 text-right font-mono tabular-nums font-medium text-ink">{formatIDR(item.qty * item.harga)}</td>
                                       </tr>
                                     ))}
                                   </tbody>
@@ -327,18 +323,18 @@ export function ProjectRabSection({
                             </div>
                           );
                         })}
-                        <div className="border-t border-gray-100 pt-2 space-y-1 text-xs">
-                          <div className="flex justify-between text-gray-600">
+                        <div className="border-t border-line pt-2 space-y-1 text-xs">
+                          <div className="flex justify-between text-muted">
                             <span>Subtotal</span>
                             <span>{formatIDR(gross)}</span>
                           </div>
                           {(rab.diskon_nilai ?? 0) > 0 && (
-                            <div className="flex justify-between text-red-500">
+                            <div className="flex justify-between text-danger">
                               <span>Diskon{rab.diskon_persen ? ` (${rab.diskon_persen}%)` : ""}</span>
                               <span>- {formatIDR(rab.diskon_nilai ?? 0)}</span>
                             </div>
                           )}
-                          <div className="flex justify-between font-bold text-gray-900 text-sm pt-1">
+                          <div className="flex justify-between font-semibold text-ink text-sm pt-1">
                             <span>Total</span>
                             <span>{formatIDR(total)}</span>
                           </div>

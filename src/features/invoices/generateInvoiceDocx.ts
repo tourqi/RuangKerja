@@ -159,8 +159,8 @@ function buildRabTable(groups: RabGroup[], diskonNilai: number, diskonPersen: nu
     tableHeader: true,
     children: [
       tc("NO",          COL.no,          { bold: true, align: CENTER, shade: "E8E8E8" }),
-      tc("DESKRIPSI",   COL.deskripsi,   { bold: true, align: CENTER, shade: "E8E8E8" }),
-      tc("SPESIFIKASI", COL.spesifikasi, { bold: true, align: CENTER, shade: "E8E8E8" }),
+      tc("PEKERJAAN",   COL.deskripsi,   { bold: true, align: CENTER, shade: "E8E8E8" }),
+      tc("DESKRIPSI", COL.spesifikasi, { bold: true, align: CENTER, shade: "E8E8E8" }),
       tc("QTY",         COL.qty,         { bold: true, align: CENTER, shade: "E8E8E8" }),
       tc("SAT",         COL.sat,         { bold: true, align: CENTER, shade: "E8E8E8" }),
       tc("HARGA",       COL.harga,       { bold: true, align: CENTER, shade: "E8E8E8" }),

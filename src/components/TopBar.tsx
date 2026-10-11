@@ -32,7 +32,12 @@ const formatCurrency = (v?: number) =>
     : formatIDR(v);
 
 /* ── Breadcrumb ── */
-function Breadcrumb({ clients }: { clients: ReturnType<typeof useClients>["clients"] }) {
+function Breadcrumb({ clients, leads, projects, invoices }: {
+  clients: ReturnType<typeof useClients>["clients"];
+  leads: ReturnType<typeof useLeads>["leads"];
+  projects: ReturnType<typeof useProjects>["projects"];
+  invoices: ReturnType<typeof useInvoices>["invoices"];
+}) {
   const pathname = usePathname();
   const segments = pathname.split("/").filter(Boolean);
 
@@ -52,20 +57,34 @@ function Breadcrumb({ clients }: { clients: ReturnType<typeof useClients>["clien
     crumbs.push({ label: "Clients", href: "/clients" });
     crumbs.push({ label: client?.name ?? "Profil Client" });
   } else {
+    // Tampilkan nama record, bukan UUID
+    const id = segments[1];
+    const name =
+      first === "projects" ? projects.find((p) => p.id === id)?.name :
+      first === "invoices" ? invoices.find((i) => i.id === id)?.invoice_number :
+      first === "leads" ? (() => {
+        const lead = leads.find((l) => l.id === id);
+        return lead ? (clients.find((c) => c.id === lead.client_id)?.name ?? lead.project_name) : undefined;
+      })() : undefined;
     crumbs.push({ label, href: `/${first}` });
-    crumbs.push({ label: segments[1] });
+    if (segments[2] === "rab") {
+      crumbs.push({ label: name ?? "Detail", href: `/${first}/${id}` });
+      crumbs.push({ label: "RAB" });
+    } else {
+      crumbs.push({ label: name ?? "Detail" });
+    }
   }
 
   return (
-    <nav className="flex items-center gap-1.5 text-xs text-gray-400">
-      <Link href="/dashboard" className="hover:text-gray-600 transition-colors">Home</Link>
+    <nav className="flex items-center gap-1.5 text-xs text-faint">
+      <Link href="/dashboard" className="hover:text-muted transition-colors">Home</Link>
       {crumbs.map((crumb, i) => (
         <span key={i} className="flex items-center gap-1.5">
           <span>/</span>
           {crumb.href ? (
-            <Link href={crumb.href} className="hover:text-gray-600 transition-colors">{crumb.label}</Link>
+            <Link href={crumb.href} className="hover:text-muted transition-colors">{crumb.label}</Link>
           ) : (
-            <span className="text-gray-700 font-medium">{crumb.label}</span>
+            <span className="text-ink font-medium">{crumb.label}</span>
           )}
         </span>
       ))}
@@ -74,12 +93,12 @@ function Breadcrumb({ clients }: { clients: ReturnType<typeof useClients>["clien
 }
 
 const TYPE_CONFIG: Record<NotificationType, { color: string; dot: string; hover: string }> = {
-  follow_up_due: { color: "text-orange-600", dot: "bg-orange-400", hover: "hover:bg-orange-50" },
-  project_overdue: { color: "text-red-600", dot: "bg-red-400", hover: "hover:bg-red-50" },
-  invoice_overdue: { color: "text-yellow-600", dot: "bg-yellow-400", hover: "hover:bg-yellow-50" },
-  lead_stale: { color: "text-gray-600", dot: "bg-gray-400", hover: "hover:bg-gray-50" },
-  lead_survey_overdue: { color: "text-purple-600", dot: "bg-purple-400", hover: "hover:bg-purple-50" },
-  lead_auto_lost: { color: "text-red-600", dot: "bg-red-400", hover: "hover:bg-red-50" },
+  follow_up_due: { color: "text-warning", dot: "bg-warning", hover: "hover:bg-warning-soft" },
+  project_overdue: { color: "text-danger", dot: "bg-danger", hover: "hover:bg-danger-soft" },
+  invoice_overdue: { color: "text-warning", dot: "bg-warning", hover: "hover:bg-warning-soft" },
+  lead_stale: { color: "text-muted", dot: "bg-faint", hover: "hover:bg-hover" },
+  lead_survey_overdue: { color: "text-accent", dot: "bg-accent", hover: "hover:bg-accent-soft" },
+  lead_auto_lost: { color: "text-danger", dot: "bg-danger", hover: "hover:bg-danger-soft" },
 };
 
 const TYPE_LABELS: Record<NotificationType, string> = {
@@ -127,7 +146,7 @@ function NotifBell({
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="relative w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+        className="relative w-9 h-9 flex items-center justify-center rounded-md text-muted hover:bg-hover hover:text-ink transition-colors"
         aria-label="Notifikasi"
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -135,36 +154,36 @@ function NotifBell({
             d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
         </svg>
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
+          <span className="absolute top-1 right-1 w-4 h-4 bg-danger text-white text-[10px] font-semibold rounded-full flex items-center justify-center leading-none">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 top-11 w-80 bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-            <p className="text-sm font-semibold text-gray-800">Notifikasi</p>
+        <div className="absolute right-0 top-11 w-80 bg-white border border-line rounded-md shadow-xl z-50 overflow-hidden">
+          <div className="px-4 py-3 border-b border-line flex items-center justify-between">
+            <p className="text-sm font-semibold text-ink">Notifikasi</p>
             {unreadCount > 0 ? (
               <button
                 onClick={markAllRead}
-                className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-xs text-faint hover:text-muted transition-colors"
               >
                 Tandai semua dibaca
               </button>
             ) : (
-              <span className="text-xs text-gray-400">Semua beres</span>
+              <span className="text-xs text-faint">Semua beres</span>
             )}
           </div>
-          <div className="max-h-80 overflow-y-auto divide-y divide-gray-50">
+          <div className="max-h-80 overflow-y-auto divide-y divide-line">
             {notifications.length === 0 ? (
-              <div className="px-4 py-8 text-center text-xs text-gray-400">
+              <div className="px-4 py-8 text-center text-xs text-faint">
                 Tidak ada notifikasi aktif
               </div>
             ) : (
               (Object.keys(groups) as NotificationType[]).map((type) => (
                 <div key={type}>
-                  <p className={`px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide ${TYPE_CONFIG[type].color}`}>
+                  <p className={`px-4 pt-3 pb-1 text-xs font-semibold ${TYPE_CONFIG[type].color}`}>
                     {TYPE_LABELS[type]} ({groups[type].length})
                   </p>
                   {groups[type].map((n) => (
@@ -179,11 +198,11 @@ function NotifBell({
                     >
                       <span className={`w-2 h-2 rounded-full ${TYPE_CONFIG[type].dot} mt-1.5 flex-shrink-0`} />
                       <div className="min-w-0">
-                        <p className="text-xs font-medium text-gray-800 truncate">{n.title}</p>
-                        {n.body && <p className="text-xs text-gray-400">{n.body}</p>}
+                        <p className="text-xs font-medium text-ink truncate">{n.title}</p>
+                        {n.body && <p className="text-xs text-faint">{n.body}</p>}
                       </div>
                       {!n.read && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 flex-shrink-0" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 flex-shrink-0" />
                       )}
                     </button>
                   ))}
@@ -252,12 +271,12 @@ function SearchModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden"
+        className="w-full max-w-xl bg-white rounded-lg shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search input */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
-          <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-line">
+          <svg className="w-4 h-4 text-faint flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input
@@ -266,9 +285,9 @@ function SearchModal({
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKey}
             placeholder="Cari client, proyek, atau lead…"
-            className="flex-1 text-sm text-gray-800 placeholder:text-gray-400 outline-none bg-transparent"
+            className="flex-1 text-sm text-ink placeholder:text-faint outline-none bg-transparent"
           />
-          <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-[10px] text-gray-400 border border-gray-200 rounded-md">
+          <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-[10px] text-faint border border-line rounded-md">
             ESC
           </kbd>
         </div>
@@ -276,36 +295,36 @@ function SearchModal({
         {/* Results */}
         <div className="max-h-96 overflow-y-auto">
           {!q && (
-            <div className="px-4 py-8 text-center text-xs text-gray-400">
+            <div className="px-4 py-8 text-center text-xs text-faint">
               Ketik minimal 1 karakter untuk mulai mencari
             </div>
           )}
 
           {q && !hasResults && (
-            <div className="px-4 py-8 text-center text-xs text-gray-400">
+            <div className="px-4 py-8 text-center text-xs text-faint">
               Tidak ditemukan untuk &ldquo;{query}&rdquo;
             </div>
           )}
 
           {matchedClients.length > 0 && (
             <div>
-              <p className="px-4 pt-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">Clients</p>
+              <p className="px-4 pt-3 pb-1 text-xs font-semibold text-faint">Clients</p>
               {matchedClients.map((c) => (
                 <Link
                   key={c.id}
                   href={`/clients/${c.id}`}
                   onClick={onClose}
-                  className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors"
+                  className="flex items-center gap-3 px-4 py-2.5 hover:bg-hover transition-colors"
                 >
-                  <span className="w-7 h-7 rounded-full bg-gray-900 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
+                  <span className="w-7 h-7 rounded-full bg-accent text-white text-xs font-semibold flex items-center justify-center flex-shrink-0">
                     {c.name?.[0]?.toUpperCase() ?? "?"}
                   </span>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-800">{c.name}</p>
-                    <p className="text-xs text-gray-400">{c.phone ?? c.source ?? ""}</p>
+                    <p className="text-sm font-medium text-ink">{c.name}</p>
+                    <p className="text-xs text-faint">{c.phone ?? c.source ?? ""}</p>
                   </div>
                   {c.lead_status && (
-                    <span className="ml-auto text-xs text-gray-400 flex-shrink-0">{c.lead_status}</span>
+                    <span className="ml-auto text-xs text-faint flex-shrink-0">{c.lead_status}</span>
                   )}
                 </Link>
               ))}
@@ -314,17 +333,17 @@ function SearchModal({
 
           {matchedProjects.length > 0 && (
             <div>
-              <p className="px-4 pt-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">Proyek</p>
+              <p className="px-4 pt-3 pb-1 text-xs font-semibold text-faint">Proyek</p>
               {matchedProjects.map((p) => (
                 <button
                   key={p.id}
                   onClick={() => { router.push("/projects"); onClose(); }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-hover transition-colors text-left"
                 >
-                  <span className="w-7 h-7 rounded-full bg-green-100 text-green-700 text-xs font-bold flex items-center justify-center flex-shrink-0">P</span>
+                  <span className="w-7 h-7 rounded-full bg-surface text-muted text-xs font-semibold flex items-center justify-center flex-shrink-0">P</span>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-800">{p.name}</p>
-                    <p className="text-xs text-gray-400">{p.status}{getProjectValue(p) ? ` · ${formatCurrency(getProjectValue(p))}` : ""}</p>
+                    <p className="text-sm font-medium text-ink">{p.name}</p>
+                    <p className="text-xs text-faint">{p.status}{getProjectValue(p) ? ` · ${formatCurrency(getProjectValue(p))}` : ""}</p>
                   </div>
                 </button>
               ))}
@@ -333,7 +352,7 @@ function SearchModal({
 
           {matchedLeads.length > 0 && (
             <div>
-              <p className="px-4 pt-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">Leads</p>
+              <p className="px-4 pt-3 pb-1 text-xs font-semibold text-faint">Leads</p>
               {matchedLeads.map((l) => {
                 const c = clients.find((cl) => cl.id === l.client_id);
                 return (
@@ -341,12 +360,12 @@ function SearchModal({
                     key={l.id}
                     href={c ? `/clients/${c.id}` : "/leads"}
                     onClick={onClose}
-                    className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors"
+                    className="flex items-center gap-3 px-4 py-2.5 hover:bg-hover transition-colors"
                   >
-                    <span className="w-7 h-7 rounded-full bg-purple-100 text-purple-700 text-xs font-bold flex items-center justify-center flex-shrink-0">L</span>
+                    <span className="w-7 h-7 rounded-full bg-surface text-muted text-xs font-semibold flex items-center justify-center flex-shrink-0">L</span>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-800">{c?.name ?? "-"}</p>
-                      <p className="text-xs text-gray-400">Lead · {l.status}</p>
+                      <p className="text-sm font-medium text-ink">{c?.name ?? "-"}</p>
+                      <p className="text-xs text-faint">Lead · {l.status}</p>
                     </div>
                   </Link>
                 );
@@ -355,8 +374,8 @@ function SearchModal({
           )}
 
           {hasResults && (
-            <div className="px-4 py-2.5 border-t border-gray-50">
-              <p className="text-xs text-gray-400 text-center">Klik hasil untuk navigasi</p>
+            <div className="px-4 py-2.5 border-t border-line">
+              <p className="text-xs text-faint text-center">Klik hasil untuk navigasi</p>
             </div>
           )}
         </div>
@@ -397,21 +416,21 @@ function UserMenu() {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-8 h-8 rounded-full bg-gray-900 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 hover:bg-gray-700 transition-colors"
+        className="w-8 h-8 rounded-full bg-accent text-white text-xs font-semibold flex items-center justify-center flex-shrink-0 hover:bg-accent-hover transition-colors"
         aria-label="Menu pengguna"
       >
         {initials}
       </button>
 
       {open && (
-        <div className="absolute right-0 top-10 w-52 bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100">
-            <p className="text-xs font-semibold text-gray-800 truncate">
+        <div className="absolute right-0 top-10 w-52 bg-white border border-line rounded-md shadow-xl z-50 overflow-hidden">
+          <div className="px-4 py-3 border-b border-line">
+            <p className="text-xs font-semibold text-ink truncate">
               {profile?.name ?? "Pengguna"}
             </p>
-            <p className="text-xs text-gray-400 truncate">{user?.email}</p>
+            <p className="text-xs text-faint truncate">{user?.email}</p>
             {profile?.role && (
-              <span className="inline-block mt-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 capitalize">
+              <span className="inline-block mt-1 text-[10px] font-medium px-1.5 py-0.5 rounded border border-line text-muted capitalize">
                 {profile.role}
               </span>
             )}
@@ -420,7 +439,7 @@ function UserMenu() {
             <Link
               href="/settings/users"
               onClick={() => setOpen(false)}
-              className="flex items-center gap-2 px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-2 px-4 py-2.5 text-xs text-muted hover:bg-hover transition-colors"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -430,7 +449,7 @@ function UserMenu() {
           )}
           <button
             onClick={handleSignOut}
-            className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-red-600 hover:bg-red-50 transition-colors"
+            className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-danger hover:bg-danger-soft transition-colors"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -465,11 +484,11 @@ export default function TopBar() {
 
   return (
     <>
-      <header className="flex-shrink-0 bg-white border-b border-gray-100 px-4 sm:px-6 lg:px-8">
+      <header className="flex-shrink-0 bg-white border-b border-line px-4 sm:px-6 lg:px-8">
         {/* Main bar */}
-        <div className="h-14 flex items-center gap-4">
+        <div className="h-12 flex items-center gap-4">
           {/* Breadcrumb */}
-          <Breadcrumb clients={clients} />
+          <Breadcrumb clients={clients} leads={leads} projects={projects} invoices={invoices} />
 
           {/* Actions — ml-auto (not justify-between) keeps this pinned right even when
               Breadcrumb renders null, e.g. on /keuangan routes or the root path. */}
@@ -477,13 +496,13 @@ export default function TopBar() {
             {/* Search button */}
             <button
               onClick={() => setShowSearch(true)}
-              className="flex items-center gap-2 px-3 h-9 text-sm text-gray-400 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors"
+              className="flex items-center gap-2 px-2.5 h-8 w-48 max-sm:w-auto text-sm text-faint bg-white hover:bg-hover border border-line rounded-md transition-colors"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <span className="hidden sm:inline text-xs">Cari…</span>
-              <kbd className="hidden sm:inline-flex items-center gap-0.5 text-[10px] text-gray-300">
+              <kbd className="hidden sm:inline-flex items-center ml-auto px-1 font-mono text-[11px] text-muted border border-line rounded">
                 <span>⌘K</span>
               </kbd>
             </button>
@@ -494,7 +513,7 @@ export default function TopBar() {
             {/* Panduan pemakaian */}
             <button
               onClick={() => setShowGuide(true)}
-              className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+              className="w-9 h-9 flex items-center justify-center rounded-md text-muted hover:bg-hover hover:text-ink transition-colors"
               aria-label="Panduan pemakaian"
               title="Panduan pemakaian"
             >
@@ -502,7 +521,7 @@ export default function TopBar() {
             </button>
 
             {/* Divider */}
-            <div className="w-px h-5 bg-gray-200 mx-1" />
+            <div className="w-px h-5 bg-line mx-1" />
 
             {/* User menu */}
             <UserMenu />

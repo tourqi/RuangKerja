@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import Link from "next/link";
+import { StatusDot, RAB_STATUS_TONE } from "@/components/ui/StatusDot";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useToast } from "@/components/Toast";
 import {
@@ -46,6 +47,8 @@ type LocalGroup = Omit<RabGroup, "created_at" | "items"> & {
 
 let tempCounter = 0;
 const tempId = () => `temp_${++tempCounter}`;
+
+const RAB_STATUS_LABEL: Record<string, string> = { draft: "Draft", sent: "Terkirim", approved: "Disetujui" };
 
 export default function RabEditor({ leadId, rabId, projectId }: { leadId: string; rabId: string; projectId?: string }) {
   // Dibuka dari halaman project (?project=) -> navigasi balik ke tab RAB project itu
@@ -483,7 +486,7 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-gray-900" />
+        <div className="animate-spin rounded-full h-6 w-6 border-2 border-line border-t-ink" />
       </div>
     );
   }
@@ -491,9 +494,9 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
   if (!rab) {
     return (
       <div className="p-6">
-        <Link href={backHref} className="text-sm text-gray-500 hover:text-gray-800">← Kembali</Link>
-        <div className="mt-6 bg-white rounded-xl border border-gray-100 p-12 text-center">
-          <p className="text-gray-400 text-sm">RAB tidak ditemukan.</p>
+        <Link href={backHref} className="text-sm text-muted hover:text-ink">← Kembali</Link>
+        <div className="mt-6 bg-white rounded-md border border-line p-12 text-center">
+          <p className="text-faint text-sm">RAB tidak ditemukan.</p>
         </div>
       </div>
     );
@@ -518,19 +521,14 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
         />
       )}
 
-      <div className="p-6 space-y-6 print:hidden">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm text-gray-400">
-          <Link href={projectId ? "/projects" : "/leads"} className="hover:text-gray-700">{projectId ? "Projects" : "Leads"}</Link>
-          <span>/</span>
-          <Link href={backHref} className="hover:text-gray-700">{projectId ? "Detail Project" : "Detail Lead"}</Link>
-          <span>/</span>
-          <span className="text-gray-700">{rab.nama}</span>
-        </div>
+      <div className="space-y-5 print:hidden">
+        <Link href={backHref} className="inline-flex items-center gap-1 text-xs text-muted hover:text-ink transition-colors">
+          ← {projectId ? "Kembali ke project" : "Kembali ke lead"}
+        </Link>
 
         {/* Lunas banner */}
         {isLunas && (
-          <div className="flex items-center gap-2 px-4 py-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-800">
+          <div className="flex items-center gap-2 px-4 py-3 bg-success-soft border border-success/25 rounded-md text-sm text-success">
             <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -541,8 +539,8 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
         )}
 
         {/* Header */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-6">
-          <div className="flex items-center justify-between gap-3">
+        <div className="space-y-2">
+          <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               {editingName ? (
                 <input
@@ -552,36 +550,28 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
                   onChange={(e) => setRabName(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSaveName()}
                   onBlur={handleSaveName}
-                  className="text-lg sm:text-2xl font-bold text-gray-900 border-b-2 border-gray-900 outline-none bg-transparent w-full"
+                  className="text-xl font-semibold tracking-tight text-ink border-b-2 border-accent outline-none bg-transparent w-full"
                 />
               ) : (
                 <h1
-                  className={`text-lg sm:text-2xl font-bold text-gray-900 transition group truncate ${isLunas ? "" : "cursor-pointer hover:text-gray-600"}`}
+                  className={`text-xl font-semibold tracking-tight text-ink transition group truncate ${isLunas ? "" : "cursor-pointer hover:text-muted"}`}
                   onClick={() => !isLunas && setEditingName(true)}
                 >
                   {rab.nama}
                   {!isLunas && (
-                    <span className="hidden sm:inline ml-2 text-sm font-normal text-gray-400 opacity-0 group-hover:opacity-100 transition">klik untuk edit</span>
+                    <span className="hidden sm:inline ml-2 text-xs font-normal text-faint opacity-0 group-hover:opacity-100 transition">klik untuk ganti nama</span>
                   )}
                 </h1>
               )}
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-              <div className="text-right">
-                <p className="text-[10px] sm:text-xs text-gray-400">Total RAB</p>
-                <p className="text-sm sm:text-xl font-bold text-gray-900 whitespace-nowrap">Rp {formatCurrency(netTotal)}</p>
-                {diskonNilaiNum > 0 && (
-                  <p className="hidden sm:block text-xs text-gray-400 line-through">Rp {formatCurrency(grandTotal)}</p>
-                )}
-              </div>
-
               {/* Mobile: 4 aksi digabung jadi satu dropdown biar rapi */}
               <div className="sm:hidden">
                 <ActionDropdown
                   align="right"
                   label="⋯"
-                  buttonClassName="px-2.5 py-1.5 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50"
+                  buttonClassName="px-2.5 py-1.5 text-sm text-muted border border-line rounded-md hover:bg-hover"
                   items={[
                     {
                       key: "print-rab",
@@ -612,59 +602,65 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
               </div>
 
               {/* Desktop: 4 tombol terpisah */}
-              <div className="hidden sm:flex items-center gap-3">
+              <div className="hidden sm:flex items-center gap-1.5">
                 <button
                   onClick={handlePrint}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition font-medium"
+                  className="px-2.5 py-1.5 border border-line bg-white text-ink text-[13px] rounded-md hover:bg-hover transition-colors font-medium"
                 >
                   ⎙ Print RAB
                 </button>
                 <button
                   onClick={handleExportExcel}
-                  className="px-4 py-2 bg-green-700 text-white text-sm rounded-lg hover:bg-green-800 transition font-medium"
+                  className="px-2.5 py-1.5 border border-line bg-white text-ink text-[13px] rounded-md hover:bg-hover transition-colors font-medium"
                 >
                   ↓ Excel RAB
                 </button>
                 <button
                   onClick={() => openSphDialog("print")}
-                  className="px-4 py-2 bg-amber-600 text-white text-sm rounded-lg hover:bg-amber-700 transition font-medium"
+                  className="px-2.5 py-1.5 border border-line bg-white text-ink text-[13px] rounded-md hover:bg-hover transition-colors font-medium"
                 >
                   ⎙ Print SPH
                 </button>
                 <button
                   onClick={() => openSphDialog("word")}
-                  className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition font-medium"
+                  className="px-2.5 py-1.5 bg-accent text-white text-[13px] rounded-md hover:bg-accent-hover transition-colors font-medium"
                 >
                   ↓ Word SPH
                 </button>
               </div>
             </div>
           </div>
-          <p className="text-xs sm:text-sm text-gray-400 mt-1">
-            {groups.length} section · {groups.reduce((s, g) => s + g.items.length, 0)} item
-          </p>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[13px] text-muted">
+            <StatusDot tone={RAB_STATUS_TONE[rab.status] ?? "neutral"}>{RAB_STATUS_LABEL[rab.status] ?? rab.status}</StatusDot>
+            {isLunas && <span className="text-success font-medium">Lunas</span>}
+            <span>{groups.length} pekerjaan · {groups.reduce((s, g) => s + g.items.length, 0)} item</span>
+            <span>
+              Total <span className="font-mono font-medium text-ink">Rp {formatCurrency(netTotal)}</span>
+              {diskonNilaiNum > 0 && <span className="ml-1.5 font-mono text-faint line-through">Rp {formatCurrency(grandTotal)}</span>}
+            </span>
+          </div>
         </div>
 
         {/* RAB Table */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-md border border-line overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[800px]">
-              <thead className="bg-gray-50 border-b border-gray-200">
+            <table className="w-full text-[13px] min-w-[800px]">
+              <thead className="bg-surface border-b border-line">
                 <tr>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase w-10">No</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase w-36">Deskripsi</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Spesifikasi</th>
-                  <th className="px-3 py-3 text-right text-xs font-semibold text-gray-500 uppercase w-20">QTY</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase w-16">Unit</th>
-                  <th className="px-3 py-3 text-right text-xs font-semibold text-gray-500 uppercase w-32">Harga</th>
-                  <th className="px-3 py-3 text-right text-xs font-semibold text-gray-500 uppercase w-32">Total</th>
-                  <th className="px-3 py-3 w-16" />
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted w-10">No</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted w-36">Pekerjaan</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted">Deskripsi</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-muted w-20">Qty</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted w-16">Unit</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-muted w-32">Harga</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-muted w-32">Total</th>
+                  <th className="px-3 py-2 w-16" />
                 </tr>
               </thead>
               <tbody>
                 {groups.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-gray-400 text-sm">
+                    <td colSpan={6} className="px-6 py-12 text-center text-faint text-sm">
                       Belum ada section. Klik "+ Tambah Section" untuk mulai.
                     </td>
                   </tr>
@@ -674,17 +670,17 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
                     {/* Group Header Row */}
                     <tr
                       key={`group-${group.id}`}
-                      className={`bg-gray-50 border-t border-gray-200 transition ${draggedGroupId === group.id ? "opacity-40" : ""} ${dragOverGroupId === group.id ? "border-t-2 border-t-blue-400" : ""}`}
+                      className={`bg-surface border-t border-line transition ${draggedGroupId === group.id ? "opacity-40" : ""} ${dragOverGroupId === group.id ? "border-t-2 border-t-blue-400" : ""}`}
                       onDragOver={(e) => handleGroupDragOver(e, group.id)}
                       onDrop={(e) => handleGroupDrop(e, group.id)}
                     >
-                      <td className="px-3 py-2 font-semibold text-gray-700 text-sm">
+                      <td className="px-3 py-2 font-semibold text-ink text-sm">
                         <div className="flex items-center gap-1.5">
                           <span
                             draggable={!isLunas}
                             onDragStart={(e) => handleGroupDragStart(e, group.id)}
                             onDragEnd={handleGroupDragEnd}
-                            className={`text-gray-300 select-none ${isLunas ? "" : "cursor-grab active:cursor-grabbing hover:text-gray-500"}`}
+                            className={`text-faint select-none ${isLunas ? "" : "cursor-grab active:cursor-grabbing hover:text-muted"}`}
                             title={isLunas ? undefined : "Geser untuk urutkan section"}
                           >
                             ⠿
@@ -699,16 +695,16 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
                           onChange={(e) => updateGroupLocal(group.id, "deskripsi", e.target.value)}
                           onBlur={() => handleBlurGroup(group, "deskripsi")}
                           disabled={isLunas}
-                          className="font-semibold text-gray-800 bg-transparent outline-none w-full focus:bg-white focus:px-2 focus:rounded transition disabled:opacity-60 disabled:cursor-not-allowed"
-                          placeholder="Nama section..."
+                          className="font-semibold text-ink bg-transparent outline-none w-full focus:bg-white focus:px-2 focus:rounded transition disabled:opacity-60 disabled:cursor-not-allowed"
+                          placeholder="Nama pekerjaan..."
                         />
                       </td>
-                      <td className="px-3 py-2 text-right text-xs text-gray-400">subtotal</td>
+                      <td className="px-3 py-2 text-right text-xs text-faint">subtotal</td>
                       <td className="px-3 py-2 text-right">
                         <button
                           onClick={() => handleDeleteGroup(group.id)}
                           disabled={isLunas}
-                          className="text-red-400 hover:text-red-600 transition text-xs disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-red-400"
+                          className="text-danger hover:text-danger transition text-xs disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-faint"
                           title="Hapus section"
                         >
                           ✕
@@ -720,7 +716,7 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
                     {group.items.map((item) => (
                       <tr
                         key={item.id}
-                        className={`border-t border-gray-100 hover:bg-gray-50 transition-colors group/row ${draggedItem?.itemId === item.id ? "opacity-40" : ""} ${dragOverItem?.itemId === item.id ? "border-t-2 border-t-blue-400" : ""}`}
+                        className={`border-t border-line hover:bg-hover transition-colors group/row ${draggedItem?.itemId === item.id ? "opacity-40" : ""} ${dragOverItem?.itemId === item.id ? "border-t-2 border-t-blue-400" : ""}`}
                         onDragOver={(e) => handleItemDragOver(e, group.id, item.id)}
                         onDrop={(e) => handleItemDrop(e, group.id, item.id)}
                       >
@@ -729,7 +725,7 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
                             draggable={!isLunas}
                             onDragStart={(e) => handleItemDragStart(e, group.id, item.id)}
                             onDragEnd={handleItemDragEnd}
-                            className={`text-gray-300 select-none inline-block opacity-0 group-hover/row:opacity-100 transition ${isLunas ? "" : "cursor-grab active:cursor-grabbing hover:text-gray-500"}`}
+                            className={`text-faint select-none inline-block opacity-0 group-hover/row:opacity-100 transition ${isLunas ? "" : "cursor-grab active:cursor-grabbing hover:text-muted"}`}
                             title={isLunas ? undefined : "Geser untuk urutkan item"}
                           >
                             ⠿
@@ -743,8 +739,8 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
                             onChange={(e) => updateItemLocal(group.id, item.id, "spesifikasi", e.target.value)}
                             onBlur={() => handleBlurItem(item, "spesifikasi")}
                             disabled={isLunas}
-                            className="w-full bg-transparent outline-none text-gray-700 focus:bg-white focus:px-2 focus:rounded transition text-sm disabled:opacity-60 disabled:cursor-not-allowed"
-                            placeholder="Spesifikasi..."
+                            className="w-full bg-transparent outline-none text-ink focus:bg-white focus:px-2 focus:rounded transition text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                            placeholder="Deskripsi..."
                           />
                         </td>
                         <td className="px-3 py-2">
@@ -754,7 +750,7 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
                             onChange={(e) => updateItemLocal(group.id, item.id, "qty", parseFloat(e.target.value) || 0)}
                             onBlur={() => handleBlurItem(item, "qty")}
                             disabled={isLunas}
-                            className="w-full text-right bg-transparent outline-none text-gray-700 focus:bg-white focus:px-2 focus:rounded transition text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                            className="w-full text-right bg-transparent outline-none text-ink focus:bg-white focus:px-2 focus:rounded transition text-sm disabled:opacity-60 disabled:cursor-not-allowed"
                             placeholder="0"
                             step="0.01"
                           />
@@ -766,7 +762,7 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
                             onChange={(e) => updateItemLocal(group.id, item.id, "unit", e.target.value)}
                             onBlur={() => handleBlurItem(item, "unit")}
                             disabled={isLunas}
-                            className="w-full bg-transparent outline-none text-gray-700 focus:bg-white focus:px-2 focus:rounded transition text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                            className="w-full bg-transparent outline-none text-ink focus:bg-white focus:px-2 focus:rounded transition text-sm disabled:opacity-60 disabled:cursor-not-allowed"
                             placeholder="m2"
                           />
                         </td>
@@ -777,18 +773,18 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
                             onChange={(e) => updateItemLocal(group.id, item.id, "harga", parseCurrency(e.target.value))}
                             onBlur={() => handleBlurItem(item, "harga")}
                             disabled={isLunas}
-                            className="w-full text-right bg-transparent outline-none text-gray-700 focus:bg-white focus:px-2 focus:rounded transition text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                            className="w-full text-right bg-transparent outline-none text-ink focus:bg-white focus:px-2 focus:rounded transition text-sm disabled:opacity-60 disabled:cursor-not-allowed"
                             placeholder="0"
                           />
                         </td>
-                        <td className="px-3 py-2 text-right text-sm text-gray-700 font-medium">
+                        <td className="px-3 py-2 text-right text-sm text-ink font-medium">
                           {formatCurrency(item.qty * item.harga)}
                         </td>
                         <td className="px-3 py-2 text-right">
                           <button
                             onClick={() => handleDeleteItem(group.id, item.id)}
                             disabled={isLunas}
-                            className="text-red-300 hover:text-red-500 transition text-xs opacity-0 group-hover/row:opacity-100 disabled:hover:text-red-300 disabled:cursor-not-allowed"
+                            className="text-danger hover:text-danger transition text-xs opacity-0 group-hover/row:opacity-100 disabled:hover:text-faint disabled:cursor-not-allowed"
                             title="Hapus item"
                           >
                             ✕
@@ -798,7 +794,7 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
                     ))}
 
                     {/* Add item row */}
-                    <tr key={`add-item-${group.id}`} className="border-t border-dashed border-gray-200">
+                    <tr key={`add-item-${group.id}`} className="border-t border-dashed border-line">
                       <td />
                       <td />
                       <td colSpan={4} className="px-3 py-1.5">
@@ -806,7 +802,7 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
                         <button
                           onClick={() => handleAddItem(group.id)}
                           disabled={saving || isLunas}
-                          className="hidden sm:inline text-xs text-gray-400 hover:text-gray-700 transition disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-gray-400"
+                          className="hidden sm:inline text-xs text-faint hover:text-ink transition disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-faint"
                         >
                           + Tambah item
                         </button>
@@ -814,13 +810,13 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
                         <button
                           onClick={() => setAddItemGroupId(group.id)}
                           disabled={saving || isLunas}
-                          className="sm:hidden inline-flex items-center gap-1 px-2.5 py-1 bg-black text-white text-xs font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="sm:hidden inline-flex items-center gap-1 px-2.5 py-1 bg-accent text-white text-xs font-medium rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           + Tambah Item
                         </button>
                       </td>
                       {/* Subtotal */}
-                      <td className="px-3 py-2 text-right text-sm font-semibold text-gray-800">
+                      <td className="px-3 py-2 text-right text-sm font-semibold text-ink">
                         {formatCurrency(groupSubtotal(group))}
                       </td>
                       <td />
@@ -829,13 +825,13 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
                 ))}
 
                 {/* Tambah Section — above subtotal */}
-                <tr className="border-t border-dashed border-gray-200">
+                <tr className="border-t border-dashed border-line">
                   <td colSpan={8} className="px-4 py-3">
                     {/* Desktop: langsung tambah section kosong, isi nama inline di tabel */}
                     <button
                       onClick={() => handleAddGroup()}
                       disabled={saving || isLunas}
-                      className="hidden sm:flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="hidden sm:flex items-center gap-2 text-sm text-muted hover:text-ink transition disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <span className="text-lg leading-none">+</span> Tambah Section
                     </button>
@@ -843,7 +839,7 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
                     <button
                       onClick={() => setShowAddSectionModal(true)}
                       disabled={saving || isLunas}
-                      className="sm:hidden inline-flex items-center gap-1.5 px-3 py-1.5 bg-black text-white text-xs font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="sm:hidden inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent text-white text-xs font-medium rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       + Tambah Section
                     </button>
@@ -854,17 +850,17 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
               <tfoot>
                 {groups.length > 0 && (
                   <>
-                    <tr className="border-t-2 border-gray-300">
-                      <td colSpan={6} className="px-4 py-2.5 text-sm font-semibold text-gray-700 text-right">
+                    <tr className="border-t-2 border-line-strong">
+                      <td colSpan={6} className="px-4 py-2.5 text-sm font-semibold text-ink text-right">
                         Subtotal
                       </td>
-                      <td className="px-3 py-2.5 text-right text-sm font-semibold text-gray-700">
+                      <td className="px-3 py-2.5 text-right text-sm font-semibold text-ink">
                         Rp {formatCurrency(grandTotal)}
                       </td>
                       <td />
                     </tr>
-                    <tr className="border-t border-gray-200">
-                      <td colSpan={5} className="px-4 py-2 text-sm text-gray-600 text-right">
+                    <tr className="border-t border-line">
+                      <td colSpan={5} className="px-4 py-2 text-sm text-muted text-right">
                         Diskon
                       </td>
                       <td className="px-2 py-2">
@@ -879,9 +875,9 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
                             min="0"
                             max="100"
                             step="0.01"
-                            className="w-full text-right bg-white border border-gray-200 rounded px-2 py-1 text-sm outline-none focus:ring-1 focus:ring-gray-400 pr-6 disabled:opacity-60 disabled:cursor-not-allowed"
+                            className="w-full text-right bg-white border border-line rounded px-2 py-1 text-sm outline-none focus:ring-1 focus:ring-accent/25 pr-6 disabled:opacity-60 disabled:cursor-not-allowed"
                           />
-                          <span className="absolute right-2 top-1.5 text-xs text-gray-400">%</span>
+                          <span className="absolute right-2 top-1.5 text-xs text-faint">%</span>
                         </div>
                       </td>
                       <td className="px-2 py-2">
@@ -892,42 +888,42 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
                           onBlur={handleSaveDiskon}
                           disabled={isLunas}
                           placeholder="0"
-                          className="w-full text-right bg-white border border-gray-200 rounded px-2 py-1 text-sm outline-none focus:ring-1 focus:ring-gray-400 disabled:opacity-60 disabled:cursor-not-allowed"
+                          className="w-full text-right bg-white border border-line rounded px-2 py-1 text-sm outline-none focus:ring-1 focus:ring-accent/25 disabled:opacity-60 disabled:cursor-not-allowed"
                         />
                       </td>
                       <td />
                     </tr>
-                    <tr className="border-t-2 border-gray-300 bg-gray-50">
-                      <td colSpan={6} className="px-4 py-3 text-sm font-bold text-gray-800 uppercase tracking-wide text-right">
+                    <tr className="border-t-2 border-line-strong bg-surface">
+                      <td colSpan={6} className="px-4 py-3 text-sm font-semibold text-ink text-right">
                         TOTAL
                       </td>
-                      <td className="px-3 py-3 text-right text-sm font-bold text-gray-900">
+                      <td className="px-3 py-3 text-right text-sm font-semibold text-ink">
                         Rp {formatCurrency(netTotal)}
                       </td>
                       <td />
                     </tr>
 
                     {/* Skema Pembayaran header */}
-                    <tr className="border-t-2 border-gray-200">
-                      <td colSpan={6} className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide text-left bg-gray-50">
+                    <tr className="border-t-2 border-line">
+                      <td colSpan={6} className="px-4 py-2 text-xs font-semibold text-muted text-left bg-surface">
                         Skema Pembayaran
                       </td>
-                      <td className="px-3 py-2 text-right bg-gray-50">
+                      <td className="px-3 py-2 text-right bg-surface">
                         <button
                           onClick={handleAddSkema}
                           disabled={isLunas}
-                          className="text-xs text-blue-500 hover:text-blue-700 font-medium transition disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-blue-500"
+                          className="text-xs text-accent hover:text-accent-hover font-medium transition disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-faint"
                           title="Tambah tahap pembayaran"
                         >
                           + Tambah Tahap
                         </button>
                       </td>
-                      <td className="bg-gray-50" />
+                      <td className="bg-surface" />
                     </tr>
 
                     {skema.length === 0 && (
-                      <tr className="border-t border-dashed border-gray-200">
-                        <td colSpan={8} className="px-4 py-2 text-xs text-gray-400 italic">
+                      <tr className="border-t border-dashed border-line">
+                        <td colSpan={8} className="px-4 py-2 text-xs text-faint italic">
                           Belum ada skema pembayaran. Klik "+ Tambah Tahap" untuk menambahkan.
                         </td>
                       </tr>
@@ -936,8 +932,8 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
                     {skema.map((s, idx) => {
                       const amount = Math.round(netTotal * (parseFloat(s.persen) || 0) / 100);
                       return (
-                        <tr key={idx} className="border-t border-gray-100 group/skema">
-                          <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">
+                        <tr key={idx} className="border-t border-line group/skema">
+                          <td className="px-3 py-2 text-xs text-muted whitespace-nowrap">
                             Tahap {idx + 1}
                           </td>
                           <td colSpan={4} className="px-3 py-2">
@@ -948,7 +944,7 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
                               onBlur={() => handleSaveSkema()}
                               disabled={isLunas}
                               placeholder="Keterangan tahap pembayaran..."
-                              className="w-full bg-transparent outline-none text-sm text-gray-700 focus:bg-white focus:px-2 focus:rounded transition disabled:opacity-60 disabled:cursor-not-allowed"
+                              className="w-full bg-transparent outline-none text-sm text-ink focus:bg-white focus:px-2 focus:rounded transition disabled:opacity-60 disabled:cursor-not-allowed"
                             />
                           </td>
                           <td className="px-2 py-2">
@@ -963,19 +959,19 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
                                 min="0"
                                 max="100"
                                 step="0.01"
-                                className="w-full text-right bg-white border border-gray-200 rounded px-2 py-1 text-sm outline-none focus:ring-1 focus:ring-gray-400 pr-6 disabled:opacity-60 disabled:cursor-not-allowed"
+                                className="w-full text-right bg-white border border-line rounded px-2 py-1 text-sm outline-none focus:ring-1 focus:ring-accent/25 pr-6 disabled:opacity-60 disabled:cursor-not-allowed"
                               />
-                              <span className="absolute right-2 top-1.5 text-xs text-gray-400">%</span>
+                              <span className="absolute right-2 top-1.5 text-xs text-faint">%</span>
                             </div>
                           </td>
-                          <td className="px-3 py-2 text-right text-sm font-medium text-gray-700">
+                          <td className="px-3 py-2 text-right text-sm font-medium text-ink">
                             {amount > 0 ? `Rp ${formatCurrency(amount)}` : "—"}
                           </td>
                           <td className="px-3 py-2 text-right">
                             <button
                               onClick={() => handleRemoveSkema(idx)}
                               disabled={isLunas}
-                              className="text-red-300 hover:text-red-500 transition text-xs opacity-0 group-hover/skema:opacity-100 disabled:hover:text-red-300 disabled:cursor-not-allowed"
+                              className="text-danger hover:text-danger transition text-xs opacity-0 group-hover/skema:opacity-100 disabled:hover:text-faint disabled:cursor-not-allowed"
                               title="Hapus tahap"
                             >
                               ✕
@@ -986,16 +982,16 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
                     })}
 
                     {skema.length > 0 && (
-                      <tr className="border-t border-dashed border-gray-200">
-                        <td colSpan={5} className="px-4 py-1.5 text-xs text-right text-gray-400">
+                      <tr className="border-t border-dashed border-line">
+                        <td colSpan={5} className="px-4 py-1.5 text-xs text-right text-faint">
                           Total skema
                         </td>
                         <td className="px-2 py-1.5">
-                          <span className={`text-xs font-medium ${Math.abs(skema.reduce((s, item) => s + (parseFloat(item.persen) || 0), 0) - 100) < 0.01 ? "text-green-600" : "text-amber-600"}`}>
+                          <span className={`text-xs font-medium ${Math.abs(skema.reduce((s, item) => s + (parseFloat(item.persen) || 0), 0) - 100) < 0.01 ? "text-success" : "text-warning"}`}>
                             {skema.reduce((s, item) => s + (parseFloat(item.persen) || 0), 0).toFixed(0)}%
                           </span>
                         </td>
-                        <td className="px-3 py-1.5 text-right text-xs text-gray-500">
+                        <td className="px-3 py-1.5 text-right text-xs text-muted">
                           {formatCurrency(skema.reduce((s, item) => s + Math.round(netTotal * (parseFloat(item.persen) || 0) / 100), 0))}
                         </td>
                         <td />
@@ -1017,12 +1013,12 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
           onClick={() => setShowAddSectionModal(false)}
         >
           <div
-            className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl p-5 w-full sm:max-w-md"
+            className="bg-white rounded-t-2xl sm:rounded-md shadow-xl p-5 w-full sm:max-w-md"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-base font-bold text-gray-900 mb-4">Tambah Section</h2>
+            <h2 className="text-base font-semibold text-ink mb-4">Tambah Section</h2>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Nama Section</label>
+              <label className="block text-xs text-muted mb-1">Nama Pekerjaan</label>
               <input
                 type="text"
                 autoFocus
@@ -1030,20 +1026,20 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
                 onChange={(e) => setNewSectionName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleAddGroup(newSectionName)}
                 placeholder="Contoh: Pekerjaan Dinding"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none focus:border-gray-500"
+                className="w-full border border-line-strong rounded-md px-3 py-2 text-sm text-ink outline-none focus:border-accent"
               />
             </div>
             <div className="flex gap-3 mt-5">
               <button
                 onClick={() => setShowAddSectionModal(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition"
+                className="flex-1 px-4 py-2 border border-line-strong text-ink text-sm rounded-md hover:bg-hover transition"
               >
                 Batal
               </button>
               <button
                 onClick={() => handleAddGroup(newSectionName)}
                 disabled={saving}
-                className="flex-1 px-4 py-2 bg-black text-white text-sm rounded-lg hover:bg-gray-800 transition disabled:opacity-50"
+                className="flex-1 px-4 py-2 bg-accent text-white text-sm rounded-md hover:bg-accent-hover transition disabled:opacity-50"
               >
                 Tambah
               </button>
@@ -1059,59 +1055,59 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
           onClick={() => setAddItemGroupId(null)}
         >
           <div
-            className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl p-5 w-full sm:max-w-md space-y-3"
+            className="bg-white rounded-t-2xl sm:rounded-md shadow-xl p-5 w-full sm:max-w-md space-y-3"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-base font-bold text-gray-900 mb-1">Tambah Item</h2>
+            <h2 className="text-base font-semibold text-ink mb-1">Tambah Item</h2>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Spesifikasi</label>
+              <label className="block text-xs text-muted mb-1">Deskripsi</label>
               <input
                 type="text"
                 autoFocus
                 value={newItemForm.spesifikasi}
                 onChange={(e) => setNewItemForm((f) => ({ ...f, spesifikasi: e.target.value }))}
                 placeholder="Contoh: Cat dinding interior"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none focus:border-gray-500"
+                className="w-full border border-line-strong rounded-md px-3 py-2 text-sm text-ink outline-none focus:border-accent"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Qty</label>
+                <label className="block text-xs text-muted mb-1">Qty</label>
                 <input
                   type="number"
                   step="0.01"
                   value={newItemForm.qty}
                   onChange={(e) => setNewItemForm((f) => ({ ...f, qty: e.target.value }))}
                   placeholder="0"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none focus:border-gray-500"
+                  className="w-full border border-line-strong rounded-md px-3 py-2 text-sm text-ink outline-none focus:border-accent"
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Unit</label>
+                <label className="block text-xs text-muted mb-1">Unit</label>
                 <input
                   type="text"
                   value={newItemForm.unit}
                   onChange={(e) => setNewItemForm((f) => ({ ...f, unit: e.target.value }))}
                   placeholder="m2"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none focus:border-gray-500"
+                  className="w-full border border-line-strong rounded-md px-3 py-2 text-sm text-ink outline-none focus:border-accent"
                 />
               </div>
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Harga Satuan</label>
+              <label className="block text-xs text-muted mb-1">Harga Satuan</label>
               <input
                 type="text"
                 inputMode="numeric"
                 value={newItemForm.harga ? formatCurrency(parseCurrency(newItemForm.harga)) : ""}
                 onChange={(e) => setNewItemForm((f) => ({ ...f, harga: e.target.value }))}
                 placeholder="0"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none focus:border-gray-500"
+                className="w-full border border-line-strong rounded-md px-3 py-2 text-sm text-ink outline-none focus:border-accent"
               />
             </div>
             <div className="flex gap-3 pt-2">
               <button
                 onClick={() => setAddItemGroupId(null)}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition"
+                className="flex-1 px-4 py-2 border border-line-strong text-ink text-sm rounded-md hover:bg-hover transition"
               >
                 Batal
               </button>
@@ -1125,7 +1121,7 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
                   })
                 }
                 disabled={saving}
-                className="flex-1 px-4 py-2 bg-black text-white text-sm rounded-lg hover:bg-gray-800 transition disabled:opacity-50"
+                className="flex-1 px-4 py-2 bg-accent text-white text-sm rounded-md hover:bg-accent-hover transition disabled:opacity-50"
               >
                 Tambah
               </button>
@@ -1137,8 +1133,8 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
       {/* SPH Config Dialog */}
       {showSphDialog && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 print:hidden">
-          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Konfigurasi SPH</h2>
+          <div className="bg-white rounded-md shadow-xl p-6 w-full max-w-md mx-4">
+            <h2 className="text-lg font-semibold text-ink mb-4">Konfigurasi SPH</h2>
             <div className="space-y-3">
               {[
                 { label: "Nomor SPH", key: "nomorSph", placeholder: "001/SPH/XII/2025" },
@@ -1148,22 +1144,22 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
                 { label: "Penandatangan", key: "penandatangan", placeholder: "M. Tourqi" },
               ].map(({ label, key, placeholder }) => (
                 <div key={key}>
-                  <label className="block text-xs text-gray-500 mb-1">{label}</label>
+                  <label className="block text-xs text-muted mb-1">{label}</label>
                   <input
                     type="text"
                     value={sphConfig[key as keyof SphConfig]}
                     onChange={(e) => setSphConfig((prev) => ({ ...prev, [key]: e.target.value }))}
                     placeholder={placeholder}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none focus:border-gray-500"
+                    className="w-full border border-line-strong rounded-md px-3 py-2 text-sm text-ink outline-none focus:border-accent"
                   />
                 </div>
               ))}
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Sapaan</label>
+                <label className="block text-xs text-muted mb-1">Sapaan</label>
                 <select
                   value={sphConfig.greeting}
                   onChange={(e) => setSphConfig((prev) => ({ ...prev, greeting: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none focus:border-gray-500"
+                  className="w-full border border-line-strong rounded-md px-3 py-2 text-sm text-ink outline-none focus:border-accent"
                 >
                   <option value="Bapak">Bapak</option>
                   <option value="Ibu">Ibu</option>
@@ -1174,16 +1170,16 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => setShowSphDialog(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition"
+                className="flex-1 px-4 py-2 border border-line-strong text-ink text-sm rounded-md hover:bg-hover transition"
               >
                 Batal
               </button>
               <button
                 onClick={handleConfirmSph}
-                className={`flex-1 px-4 py-2 text-white text-sm rounded-lg transition font-medium ${
+                className={`flex-1 px-4 py-2 text-white text-sm rounded-md transition font-medium ${
                   sphMode === "word"
-                    ? "bg-blue-600 hover:bg-blue-700"
-                    : "bg-amber-600 hover:bg-amber-700"
+                    ? "bg-accent hover:bg-accent-hover"
+                    : "bg-accent hover:bg-accent-hover"
                 }`}
               >
                 {sphMode === "word" ? "↓ Download Word" : "⎙ Print SPH"}

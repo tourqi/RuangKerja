@@ -79,7 +79,7 @@ export async function generateRabExcel(rab: Rab, groups: ExcelGroup[]): Promise<
   // ── Column header row ──
   const headerRowIdx = 4;
   const headerRow = ws.getRow(headerRowIdx);
-  const headerLabels = ["NO", "DESKRIPSI", "SPESIFIKASI", "QTY", "SAT", "HARGA", "TOTAL"];
+  const headerLabels = ["NO", "PEKERJAAN", "DESKRIPSI", "QTY", "SAT", "HARGA", "TOTAL"];
   headerLabels.forEach((label, i) => {
     const cell = headerRow.getCell(i + 1);
     cell.value = label;

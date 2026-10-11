@@ -225,12 +225,12 @@ export function InvoiceFormModal({
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+        className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
-          <h2 className="text-base font-semibold text-gray-900">Buat Invoice</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-line">
+          <h2 className="text-base font-semibold text-ink">Buat Invoice</h2>
+          <button onClick={onClose} className="text-faint hover:text-muted transition-colors">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -239,13 +239,13 @@ export function InvoiceFormModal({
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-5">
           {/* Project */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1.5">Project *</label>
+            <label className="block text-xs font-medium text-ink mb-1.5">Project *</label>
             {preselectedProjectId ? (
               (() => {
                 const project = projects.find((p) => p.id === preselectedProjectId);
                 const client = clients.find((c) => c.id === project?.client_id);
                 return (
-                  <div className="w-full px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg text-sm text-gray-700">
+                  <div className="w-full px-3 py-2 border border-line bg-surface rounded-md text-sm text-ink">
                     {project?.name ?? "—"}{client ? ` — ${client.name}` : ""}
                   </div>
                 );
@@ -254,7 +254,7 @@ export function InvoiceFormModal({
               <select
                 value={form.project_id}
                 onChange={(e) => handleProjectChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900"
+                className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25"
                 required
               >
                 <option value="">Pilih project…</option>
@@ -273,12 +273,12 @@ export function InvoiceFormModal({
           {/* RAB */}
           {form.project_id && (
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                RAB <span className="text-red-500">*</span>
-                {loadingRabs && <span className="ml-2 text-gray-400">Memuat…</span>}
+              <label className="block text-xs font-medium text-ink mb-1.5">
+                RAB <span className="text-danger">*</span>
+                {loadingRabs && <span className="ml-2 text-faint">Memuat…</span>}
               </label>
               {availableRabs.length === 0 && !loadingRabs ? (
-                <p className="text-xs text-red-500 py-2">
+                <p className="text-xs text-danger py-2">
                   Tidak ada RAB disetujui untuk project ini. Buat &amp; setujui RAB terlebih dahulu sebelum membuat invoice.
                 </p>
               ) : (
@@ -286,8 +286,8 @@ export function InvoiceFormModal({
                   <select
                     value={selectedRabId}
                     onChange={(e) => handleRabChange(e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-lg text-sm text-gray-900 outline-none focus:ring-2 ${
-                      selectedRabId ? "border-gray-300 focus:ring-gray-900" : "border-red-300 focus:ring-red-500"
+                    className={`w-full px-3 py-2 border rounded-md text-sm text-ink outline-none focus:ring-2 ${
+                      selectedRabId ? "border-line-strong focus:ring-accent/25" : "border-danger-line focus:ring-danger/25"
                     }`}
                   >
                     <option value="">— Pilih RAB —</option>
@@ -296,46 +296,46 @@ export function InvoiceFormModal({
                     ))}
                   </select>
                   {!selectedRabId && (
-                    <p className="text-xs text-red-500 mt-1">Wajib pilih RAB terlebih dahulu.</p>
+                    <p className="text-xs text-danger mt-1">Wajib pilih RAB terlebih dahulu.</p>
                   )}
                 </>
               )}
               {rabTotal != null && (
                 <div className="mt-2 space-y-2">
                   {isRabLunas && (
-                    <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg text-xs text-green-800">
+                    <div className="flex items-center gap-2 px-3 py-2 bg-success-soft border border-success/25 rounded-md text-xs text-success">
                       <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       <span><span className="font-semibold">RAB ini sudah lunas.</span> Tidak bisa dibuatkan invoice tambahan.</span>
                     </div>
                   )}
-                  <div className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
-                    <span className="text-xs text-gray-500">Total RAB</span>
-                    <span className="text-sm font-semibold text-gray-900">{formatRupiah(rabTotal)}</span>
+                  <div className="flex items-center justify-between bg-surface rounded-md px-3 py-2">
+                    <span className="text-xs text-muted">Total RAB</span>
+                    <span className="text-sm font-semibold text-ink">{formatRupiah(rabTotal)}</span>
                   </div>
                   <div className="flex items-center gap-2 px-1">
-                    <span className="text-xs text-gray-500 shrink-0">Diskon</span>
+                    <span className="text-xs text-muted shrink-0">Diskon</span>
                     <div className="relative w-24">
                       <input
                         type="number" value={diskon.persen} onChange={(e) => handleDiskonPersenChange(e.target.value)}
                         disabled={isRabLunas}
                         placeholder="0" min="0" max="100" step="any"
-                        className="w-full pl-2.5 pr-7 py-1.5 border border-gray-300 rounded-md text-xs text-gray-900 outline-none focus:ring-1 focus:ring-gray-900 disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="w-full pl-2.5 pr-7 py-1.5 border border-line-strong rounded-md text-xs text-ink outline-none focus:ring-1 focus:ring-accent/25 disabled:opacity-60 disabled:cursor-not-allowed"
                       />
-                      <span className="absolute right-2 top-1.5 text-xs text-gray-400">%</span>
+                      <span className="absolute right-2 top-1.5 text-xs text-faint">%</span>
                     </div>
                     <NumberInput
                       value={diskon.nilai} onValueChange={handleDiskonNilaiChange}
                       disabled={isRabLunas}
                       placeholder="Rp"
-                      className="flex-1 px-2.5 py-1.5 border border-gray-300 rounded-md text-xs text-gray-900 outline-none focus:ring-1 focus:ring-gray-900 disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="flex-1 px-2.5 py-1.5 border border-line-strong rounded-md text-xs text-ink outline-none focus:ring-1 focus:ring-accent/25 disabled:opacity-60 disabled:cursor-not-allowed"
                     />
                   </div>
                   {diskonNilaiNum > 0 && (
-                    <div className="flex items-center justify-between bg-blue-50 rounded-lg px-3 py-2">
-                      <span className="text-xs text-blue-700">Total setelah diskon</span>
-                      <span className="text-sm font-semibold text-blue-900">{formatRupiah(effectiveRabTotal ?? 0)}</span>
+                    <div className="flex items-center justify-between bg-accent-soft rounded-md px-3 py-2">
+                      <span className="text-xs text-accent">Total setelah diskon</span>
+                      <span className="text-sm font-semibold text-accent">{formatRupiah(effectiveRabTotal ?? 0)}</span>
                     </div>
                   )}
                 </div>
@@ -354,31 +354,31 @@ export function InvoiceFormModal({
               draft: "Draft", sent: "Terkirim", partial: "Sebagian", paid: "Lunas", overdue: "Lewat Jatuh Tempo",
             };
             const statusColor: Record<string, string> = {
-              draft: "text-gray-500", sent: "text-blue-600", partial: "text-amber-600",
-              paid: "text-green-600", overdue: "text-red-500",
+              draft: "text-muted", sent: "text-accent", partial: "text-warning",
+              paid: "text-success", overdue: "text-danger",
             };
             return (
-              <div className="rounded-lg border border-gray-200 overflow-hidden">
-                <div className="px-3 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
-                  <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+              <div className="rounded-md border border-line overflow-hidden">
+                <div className="px-3 py-2 bg-surface border-b border-line flex items-center justify-between">
+                  <span className="text-xs font-semibold text-muted">
                     Invoice Sebelumnya ({filtered.length})
                   </span>
-                  <span className="text-xs text-gray-500">Total: {formatRupiah(totalTagih)}</span>
+                  <span className="text-xs text-muted">Total: {formatRupiah(totalTagih)}</span>
                 </div>
-                <div className="divide-y divide-gray-100">
+                <div className="divide-y divide-line">
                   {filtered.map((inv) => (
                     <div key={inv.id} className="flex items-center justify-between px-3 py-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono text-gray-700">{inv.invoice_number}</span>
+                        <span className="text-xs font-mono text-ink">{inv.invoice_number}</span>
                         {inv.notes && (
-                          <span className="text-xs text-gray-400 truncate max-w-[140px]">{inv.notes.split(" · ")[0]}</span>
+                          <span className="text-xs text-faint truncate max-w-[140px]">{inv.notes.split(" · ")[0]}</span>
                         )}
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className={`text-xs font-medium ${statusColor[inv.status] ?? "text-gray-500"}`}>
+                        <span className={`text-xs font-medium ${statusColor[inv.status] ?? "text-muted"}`}>
                           {statusLabel[inv.status] ?? inv.status}
                         </span>
-                        <span className="text-xs font-semibold text-gray-800">{formatRupiah(inv.total_amount)}</span>
+                        <span className="text-xs font-semibold text-ink">{formatRupiah(inv.total_amount)}</span>
                       </div>
                     </div>
                   ))}
@@ -389,12 +389,12 @@ export function InvoiceFormModal({
 
           {/* Tanggal Invoice */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1.5">Tanggal Invoice *</label>
+            <label className="block text-xs font-medium text-ink mb-1.5">Tanggal Invoice *</label>
             <input
               type="date" value={form.invoice_date}
               onChange={(e) => setForm((f) => ({ ...f, invoice_date: e.target.value }))}
               disabled={isRabLunas}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25 disabled:opacity-60 disabled:cursor-not-allowed"
               required
             />
           </div>
@@ -411,8 +411,8 @@ export function InvoiceFormModal({
                 const rabInvoiceCount = existingInvoices.filter((inv) => inv.rab_id === selectedRabId).length;
                 const nextIdx = rabInvoiceCount;
                 return (
-                  <div className="mb-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <span className="text-xs font-semibold text-amber-800">
+                  <div className="mb-2 px-3 py-2 bg-warning-soft border border-warning/25 rounded-md flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span className="text-xs font-semibold text-warning">
                       💡 Skema RAB ({skema.length} termin):
                     </span>
                     <div className="flex items-center gap-1.5 flex-wrap">
@@ -421,10 +421,10 @@ export function InvoiceFormModal({
                           key={i}
                           className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border ${
                             i < rabInvoiceCount
-                              ? "bg-green-100 border-green-300 text-green-700 line-through opacity-60"
+                              ? "bg-success-soft border-success/25 text-success line-through opacity-60"
                               : i === nextIdx
-                              ? "bg-amber-200 border-amber-400 text-amber-900 font-semibold"
-                              : "bg-white border-gray-200 text-gray-500"
+                              ? "bg-warning-soft border-warning text-warning font-semibold"
+                              : "bg-white border-line text-muted"
                           }`}
                         >
                           {i < rabInvoiceCount && "✓ "}
@@ -434,28 +434,28 @@ export function InvoiceFormModal({
                       ))}
                     </div>
                     {nextIdx < skema.length && (
-                      <span className="text-xs text-amber-700 w-full mt-0.5">
+                      <span className="text-xs text-warning w-full mt-0.5">
                         Saran: tagihan ke-{nextIdx + 1} · {skema[nextIdx].keterangan || `${skema[nextIdx].persen}%`}
                       </span>
                     )}
                     {nextIdx >= skema.length && (
-                      <span className="text-xs text-green-700 font-medium">Semua termin sudah diinvoice ✓</span>
+                      <span className="text-xs text-success font-medium">Semua termin sudah diinvoice ✓</span>
                     )}
                   </div>
                 );
               })()}
 
               <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-medium text-gray-700">Termin Pembayaran *</label>
+                <label className="text-xs font-medium text-ink">Termin Pembayaran *</label>
                 {rabTotal != null && sisaTagihan != null && (
-                  <span className={`text-xs font-medium ${Math.abs(sisaTagihan) < 1 ? "text-green-600" : sisaTagihan < 0 ? "text-red-500" : "text-orange-500"}`}>
+                  <span className={`text-xs font-medium ${Math.abs(sisaTagihan) < 1 ? "text-success" : sisaTagihan < 0 ? "text-danger" : "text-warning"}`}>
                     Sisa: {formatRupiah(sisaTagihan)}
                   </span>
                 )}
               </div>
               <div className="space-y-2">
                 {termins.map((t, idx) => (
-                  <div key={t.id} className="flex items-start gap-2 p-3 border border-gray-200 rounded-lg bg-gray-50">
+                  <div key={t.id} className="flex items-start gap-2 p-3 border border-line rounded-md bg-surface">
                     <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-2">
                       <div className="col-span-2 md:col-span-1">
                         <input
@@ -463,7 +463,7 @@ export function InvoiceFormModal({
                           onChange={(e) => updateTermin(t.id, "nama", e.target.value)}
                           disabled={isRabLunas}
                           placeholder={idx === 0 ? "DP" : idx === termins.length - 1 ? "Pelunasan" : `Termin ${idx + 1}`}
-                          className="w-full px-2.5 py-1.5 border border-gray-300 rounded-md text-xs text-gray-900 outline-none focus:ring-1 focus:ring-gray-900 disabled:opacity-60 disabled:cursor-not-allowed"
+                          className="w-full px-2.5 py-1.5 border border-line-strong rounded-md text-xs text-ink outline-none focus:ring-1 focus:ring-accent/25 disabled:opacity-60 disabled:cursor-not-allowed"
                         />
                       </div>
                       <div>
@@ -473,9 +473,9 @@ export function InvoiceFormModal({
                             onChange={(e) => updateTermin(t.id, "persen", e.target.value)}
                             disabled={isRabLunas}
                             placeholder="0" min="0" max="100" step="any"
-                            className="w-full pl-2.5 pr-7 py-1.5 border border-gray-300 rounded-md text-xs text-gray-900 outline-none focus:ring-1 focus:ring-gray-900 disabled:opacity-60 disabled:cursor-not-allowed"
+                            className="w-full pl-2.5 pr-7 py-1.5 border border-line-strong rounded-md text-xs text-ink outline-none focus:ring-1 focus:ring-accent/25 disabled:opacity-60 disabled:cursor-not-allowed"
                           />
-                          <span className="absolute right-2 top-1.5 text-xs text-gray-400">%</span>
+                          <span className="absolute right-2 top-1.5 text-xs text-faint">%</span>
                         </div>
                       </div>
                       <div>
@@ -484,7 +484,7 @@ export function InvoiceFormModal({
                           onValueChange={(v) => updateTermin(t.id, "jumlah", v)}
                           disabled={isRabLunas}
                           placeholder="Rp"
-                          className="w-full px-2.5 py-1.5 border border-gray-300 rounded-md text-xs text-gray-900 outline-none focus:ring-1 focus:ring-gray-900 disabled:opacity-60 disabled:cursor-not-allowed"
+                          className="w-full px-2.5 py-1.5 border border-line-strong rounded-md text-xs text-ink outline-none focus:ring-1 focus:ring-accent/25 disabled:opacity-60 disabled:cursor-not-allowed"
                         />
                       </div>
                       <div>
@@ -492,7 +492,7 @@ export function InvoiceFormModal({
                           type="date" value={t.due_date}
                           onChange={(e) => updateTermin(t.id, "due_date", e.target.value)}
                           disabled={isRabLunas}
-                          className="w-full px-2.5 py-1.5 border border-gray-300 rounded-md text-xs text-gray-900 outline-none focus:ring-1 focus:ring-gray-900 disabled:opacity-60 disabled:cursor-not-allowed"
+                          className="w-full px-2.5 py-1.5 border border-line-strong rounded-md text-xs text-ink outline-none focus:ring-1 focus:ring-accent/25 disabled:opacity-60 disabled:cursor-not-allowed"
                         />
                       </div>
                     </div>
@@ -500,7 +500,7 @@ export function InvoiceFormModal({
                       type="button"
                       onClick={() => setTermins((prev) => prev.filter((x) => x.id !== t.id))}
                       disabled={termins.length === 1 || isRabLunas}
-                      className="mt-1 text-gray-300 hover:text-red-400 transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
+                      className="mt-1 text-faint hover:text-danger transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
@@ -511,26 +511,26 @@ export function InvoiceFormModal({
                 type="button"
                 onClick={() => setTermins((prev) => [...prev, newTermin(prev.length)])}
                 disabled={isRabLunas}
-                className="mt-2 flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-gray-500"
+                className="mt-2 flex items-center gap-1.5 text-xs text-muted hover:text-ink transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-faint"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                 Tambah Termin
               </button>
-              <div className="mt-2 text-xs text-gray-400">
-                <span className="font-medium text-gray-600">Kolom: </span> Nama · % · Jumlah (Rp) · Jatuh Tempo
+              <div className="mt-2 text-xs text-faint">
+                <span className="font-medium text-muted">Kolom: </span> Nama · % · Jumlah (Rp) · Jatuh Tempo
               </div>
             </div>
           )}
 
           {/* Catatan */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1.5">Catatan</label>
+            <label className="block text-xs font-medium text-ink mb-1.5">Catatan</label>
             <textarea
               value={form.notes}
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
               disabled={isRabLunas}
               rows={2}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900 resize-none disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25 resize-none disabled:opacity-60 disabled:cursor-not-allowed"
               placeholder="Catatan tambahan…"
             />
           </div>
@@ -538,14 +538,14 @@ export function InvoiceFormModal({
           <div className="flex gap-3 pt-1">
             <button
               type="button" onClick={onClose}
-              className="flex-1 px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              className="flex-1 px-4 py-2 text-sm font-medium text-muted bg-hover rounded-md hover:bg-hover transition-colors"
             >
               Batal
             </button>
             <button
               type="submit" disabled={saving || isRabLunas || !selectedRabId}
               title={isRabLunas ? "RAB ini sudah lunas" : !selectedRabId ? "Wajib pilih RAB terlebih dahulu" : undefined}
-              className="flex-1 px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="flex-1 px-4 py-2 text-sm font-medium text-white bg-accent rounded-md hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {saving
                 ? "Menyimpan…"

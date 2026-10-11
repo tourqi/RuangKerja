@@ -126,29 +126,37 @@ export default function InvoicesTable() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Invoice</h1>
-        <p className="text-sm text-gray-500 mt-1">Kelola tagihan dan pembayaran klien</p>
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-ink">Invoice</h1>
+          <p className="text-sm text-muted mt-1">Kelola tagihan dan pembayaran klien</p>
+        </div>
+        <button
+          onClick={() => setShowAdd(true)}
+          className="px-2.5 py-1.5 bg-accent text-white text-[13px] font-medium rounded-md hover:bg-accent-hover transition-colors"
+        >
+          + Buat Invoice
+        </button>
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4">
         {[
-          { label: "Total Tagihan", value: totalTagihan, color: "text-gray-900" },
-          { label: "Total Lunas", value: totalLunas, color: "text-green-600" },
-          { label: "Outstanding", value: totalOutstanding, color: "text-red-600" },
+          { label: "Total Tagihan", value: totalTagihan, color: "text-ink" },
+          { label: "Total Lunas", value: totalLunas, color: "text-success" },
+          { label: "Outstanding", value: totalOutstanding, color: "text-danger" },
         ].map((c) => (
-          <div key={c.label} className="bg-white rounded-xl border border-gray-100 px-3 sm:px-4 py-2.5 sm:py-3 min-w-0">
-            <p className="text-[11px] sm:text-xs text-gray-500 truncate">{c.label}</p>
-            <p className={`text-sm sm:text-base font-bold mt-0.5 truncate ${c.color}`}>{formatRupiah(c.value)}</p>
+          <div key={c.label} className="bg-white rounded-md border border-line px-3 sm:px-4 py-2.5 sm:py-3 min-w-0">
+            <p className="text-[11px] sm:text-xs text-muted truncate">{c.label}</p>
+            <p className={`text-sm sm:text-base font-semibold mt-0.5 truncate ${c.color}`}>{formatRupiah(c.value)}</p>
           </div>
         ))}
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 mb-4">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 mb-3">
         <div className="relative">
-          <svg className="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 text-faint absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input
@@ -156,7 +164,7 @@ export default function InvoicesTable() {
             value={filterSearch}
             onChange={e => { setFilterSearch(e.target.value); goTo(1); }}
             placeholder="Cari project / RAB..."
-            className="pl-8 pr-3 py-2 border border-gray-300 rounded-lg text-sm text-black placeholder:text-gray-400 focus:ring-2 focus:ring-gray-900 outline-none w-full sm:w-52"
+            className="pl-8 pr-3 py-1.5 border border-line rounded-md text-[13px] text-ink placeholder:text-faint focus:ring-2 focus:ring-accent/25 outline-none w-full sm:w-52"
           />
         </div>
         <MultiSelect
@@ -187,57 +195,46 @@ export default function InvoicesTable() {
           onChange={(v) => { setFilterRabId(v); goTo(1); }}
           className="w-full sm:w-52"
         />
-        <div className="sm:ml-auto">
-          <button
-            onClick={() => setShowAdd(true)}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Buat Invoice
-          </button>
-        </div>
       </div>
 
       {/* Table (desktop) */}
-      <div className="hidden sm:block bg-white rounded-xl border border-gray-100 overflow-hidden">
+      <div className="hidden sm:block bg-white rounded-md border border-line overflow-hidden">
         {loading ? (
-          <div className="divide-y divide-gray-50">
+          <div className="divide-y divide-line">
             {[...Array(5)].map((_, i) => (
               <div key={i} className="h-14 px-4 flex items-center gap-4 animate-pulse">
-                <div className="h-3 bg-gray-100 rounded w-32" />
-                <div className="h-3 bg-gray-100 rounded w-24" />
-                <div className="h-3 bg-gray-100 rounded w-20 ml-auto" />
+                <div className="h-3 bg-hover rounded w-32" />
+                <div className="h-3 bg-hover rounded w-24" />
+                <div className="h-3 bg-hover rounded w-20 ml-auto" />
               </div>
             ))}
           </div>
         ) : paged.length === 0 ? (
-          <div className="py-16 text-center text-sm text-gray-400">
+          <div className="py-16 text-center text-sm text-faint">
             {filtered.length === 0 && invoices.length > 0 ? "Tidak ada invoice yang sesuai filter" : "Belum ada invoice"}
           </div>
         ) : (
-          <table className="w-full text-sm">
+          <table className="w-full text-[13px]">
             <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Aksi</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">No. Invoice</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Project / Client</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden xl:table-cell">RAB</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell">Tgl Invoice</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Jatuh Tempo</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Total</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden sm:table-cell">Terbayar</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+              <tr className="border-b border-line bg-surface">
+                <th className="text-left px-3 py-2 text-xs font-medium text-muted w-10"><span className="sr-only">Aksi</span></th>
+                <th className="text-left px-3 py-2 text-xs font-medium text-muted">No. Invoice</th>
+                <th className="text-left px-3 py-2 text-xs font-medium text-muted">Project / Client</th>
+                <th className="text-left px-3 py-2 text-xs font-medium text-muted hidden xl:table-cell">RAB</th>
+                <th className="text-left px-3 py-2 text-xs font-medium text-muted hidden lg:table-cell">Tgl Invoice</th>
+                <th className="text-left px-3 py-2 text-xs font-medium text-muted hidden md:table-cell">Jatuh Tempo</th>
+                <th className="text-right px-3 py-2 text-xs font-medium text-muted">Total</th>
+                <th className="text-right px-3 py-2 text-xs font-medium text-muted hidden sm:table-cell">Terbayar</th>
+                <th className="text-left px-3 py-2 text-xs font-medium text-muted">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-line">
               {paged.map((inv: import("@/types/db").Invoice) => {
                 const client = clients.find((c) => c.id === inv.client_id);
                 const outstanding = inv.total_amount - inv.paid_amount;
                 return (
-                  <tr key={inv.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onDoubleClick={() => router.push(`/invoices/${inv.id}`)}>
-                    <td className="px-4 py-3" onDoubleClick={(e) => e.stopPropagation()}>
+                  <tr key={inv.id} className="hover:bg-hover transition-colors cursor-pointer" onDoubleClick={() => router.push(`/invoices/${inv.id}`)}>
+                    <td className="px-3 py-2" onDoubleClick={(e) => e.stopPropagation()}>
                       <ActionDropdown
                         align="left"
                         items={[
@@ -270,42 +267,42 @@ export default function InvoicesTable() {
                         ]}
                       />
                     </td>
-                    <td className="px-4 py-3">
-                      <Link href={`/invoices/${inv.id}`} className="font-medium text-gray-900 hover:underline">
+                    <td className="px-3 py-2">
+                      <Link href={`/invoices/${inv.id}`} className="font-medium text-ink hover:underline whitespace-nowrap">
                         {inv.invoice_number}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-gray-600">
+                    <td className="px-3 py-2 text-muted">
                       {(() => {
                         const project = projects.find((p) => p.id === inv.project_id);
-                        if (project) return <><span className="font-medium text-gray-800">{project.name}</span>{client && <span className="text-gray-400 text-xs ml-1">· {client.name}</span>}</>;
+                        if (project) return <><span className="font-medium text-ink">{project.name}</span>{client && <span className="text-faint text-xs ml-1">· {client.name}</span>}</>;
                         return client?.name ?? "—";
                       })()}
                     </td>
-                    <td className="px-4 py-3 hidden xl:table-cell">
+                    <td className="px-3 py-2 hidden xl:table-cell">
                       {inv.rab_id ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blue-50 text-blue-700 font-medium">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-accent-soft text-accent font-medium">
                           {rabs.find((r) => r.id === inv.rab_id)?.nama ?? "RAB"}
                         </span>
                       ) : (
-                        <span className="text-gray-300 text-xs">—</span>
+                        <span className="text-faint text-xs">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-gray-500 hidden lg:table-cell">
+                    <td className="px-3 py-2 text-muted hidden lg:table-cell">
                       {inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString("id-ID") : "—"}
                     </td>
-                    <td className="px-4 py-3 text-gray-500 hidden md:table-cell">
+                    <td className="px-3 py-2 text-muted hidden md:table-cell">
                       {inv.due_date ? new Date(inv.due_date).toLocaleDateString("id-ID") : "—"}
                     </td>
-                    <td className="px-4 py-3 text-right font-medium text-gray-900">
+                    <td className="px-3 py-2 text-right font-medium text-ink">
                       {formatRupiah(inv.total_amount)}
                     </td>
-                    <td className="px-4 py-3 text-right hidden sm:table-cell">
-                      <span className={outstanding > 0 ? "text-red-600" : "text-green-600"}>
+                    <td className="px-3 py-2 text-right hidden sm:table-cell">
+                      <span className={outstanding > 0 ? "text-danger" : "text-success"}>
                         {formatRupiah(inv.paid_amount)}
                       </span>
                     </td>
-                    <td className="px-4 py-3" onDoubleClick={(e) => e.stopPropagation()}>
+                    <td className="px-3 py-2" onDoubleClick={(e) => e.stopPropagation()}>
                       <select
                         value={inv.status}
                         onChange={(e) => handleStatusChange(inv.id, e.target.value as InvoiceStatus)}
@@ -339,11 +336,11 @@ export default function InvoicesTable() {
         {loading ? (
           <div className="space-y-3">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-40 bg-white rounded-2xl border border-gray-100 animate-pulse" />
+              <div key={i} className="h-40 bg-white rounded-lg border border-line animate-pulse" />
             ))}
           </div>
         ) : paged.length === 0 ? (
-          <div className="py-16 text-center text-sm text-gray-400 bg-white rounded-2xl border border-gray-100">
+          <div className="py-16 text-center text-sm text-faint bg-white rounded-lg border border-line">
             {filtered.length === 0 && invoices.length > 0 ? "Tidak ada invoice yang sesuai filter" : "Belum ada invoice"}
           </div>
         ) : (
@@ -358,7 +355,7 @@ export default function InvoicesTable() {
                     <MobileCardHeader
                       title={inv.invoice_number}
                       subtitle={
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-faint">
                           {project ? project.name : client?.name ?? "—"}
                           {project && client && <> · {client.name}</>}
                         </span>
@@ -383,12 +380,12 @@ export default function InvoicesTable() {
                     </MobileCardRow>
                     <MobileCardRow label="Total">{formatRupiah(inv.total_amount)}</MobileCardRow>
                     <MobileCardRow label="Terbayar">
-                      <span className={outstanding > 0 ? "text-red-600" : "text-green-600"}>
+                      <span className={outstanding > 0 ? "text-danger" : "text-success"}>
                         {formatRupiah(inv.paid_amount)}
                       </span>
                     </MobileCardRow>
                     <div className="flex items-center justify-between gap-3 pt-2 text-sm" onClick={(e) => e.stopPropagation()}>
-                      <span className="text-gray-400">Status</span>
+                      <span className="text-faint">Status</span>
                       <select
                         value={inv.status}
                         onChange={(e) => handleStatusChange(inv.id, e.target.value as InvoiceStatus)}
@@ -403,7 +400,7 @@ export default function InvoicesTable() {
                 );
               })}
             </MobileCardList>
-            <div className="mt-3 bg-white rounded-2xl border border-gray-100 overflow-hidden">
+            <div className="mt-3 bg-white rounded-lg border border-line overflow-hidden">
               <Pagination
                 page={page}
                 totalPages={totalPages}

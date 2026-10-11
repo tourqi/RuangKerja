@@ -26,21 +26,24 @@ import { formatIDR } from "@/utils/format";
 
 type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
 
+// Palet grafik (urutan tetap, sudah divalidasi aman buta warna). Abu-abu = "lainnya"/kalah.
+const SERIES = { blue: "#3247d1", orange: "#eb6834", aqua: "#1baf7a", yellow: "#eda100", pink: "#e87ba4", green: "#008300", grey: "#9097a1" };
+const C = { success: "#2f8a4e", danger: "#c4352b", warning: "#b7791f", grid: "#eef0f2", tick: "#9097a1", track: "#eef0f2" };
 const LEAD_COLORS: Record<string, string> = {
-  "New Lead": "#3b82f6", Contacted: "#eab308", Survey: "#a855f7", Deal: "#6366f1", "Deal Won": "#22c55e", "Deal Lost": "#ef4444",
+  "New Lead": SERIES.blue, Contacted: SERIES.orange, Survey: SERIES.pink, Deal: SERIES.yellow, "Deal Won": SERIES.green, "Deal Lost": SERIES.grey,
 };
 const PROJECT_LABEL: Record<string, string> = {
   Planning: "Planning", Design: "Design", Production: "Produksi", Installation: "Instalasi", Done: "Selesai",
 };
 const projectStatusBadge: Record<string, string> = {
-  Planning: "bg-gray-100 text-gray-600", Design: "bg-blue-100 text-blue-700",
-  Production: "bg-yellow-100 text-yellow-700", Installation: "bg-purple-100 text-purple-700",
-  Done: "bg-green-100 text-green-700",
+  Planning: "tone-neutral", Design: "tone-active",
+  Production: "tone-warning", Installation: "tone-active",
+  Done: "tone-success",
 };
 const invoiceStatusBadge: Record<string, string> = {
-  draft: "bg-gray-100 text-gray-500", sent: "bg-blue-100 text-blue-700",
-  partial: "bg-yellow-100 text-yellow-700", paid: "bg-green-100 text-green-700",
-  overdue: "bg-red-100 text-red-600",
+  draft: "tone-neutral", sent: "tone-active",
+  partial: "tone-warning", paid: "tone-success",
+  overdue: "tone-danger",
 };
 const invoiceStatusLabels: Record<string, string> = {
   draft: "Draft", sent: "Terkirim", partial: "Sebagian", paid: "Lunas", overdue: "Jatuh Tempo",
@@ -52,16 +55,16 @@ const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   material: "Material", jasa: "Jasa", transport: "Transport", lainnya: "Lainnya",
 };
 const EXPENSE_CATEGORY_COLORS: Record<ExpenseCategory, string> = {
-  material: "#3b82f6", jasa: "#a855f7", transport: "#f97316", lainnya: "#9ca3af",
+  material: SERIES.blue, jasa: SERIES.orange, transport: SERIES.aqua, lainnya: SERIES.grey,
 };
 const SOURCE_ICONS: Record<string, { icon: IconComponent; tint: string }> = {
-  Instagram: { icon: CameraIcon, tint: "bg-pink-50 text-pink-500" },
-  TikTok: { icon: MusicNoteIcon, tint: "bg-gray-100 text-gray-600" },
-  Website: { icon: GlobeIcon, tint: "bg-blue-50 text-blue-600" },
-  Referral: { icon: LinkIcon, tint: "bg-green-50 text-green-600" },
-  "Walk-in": { icon: MapPinIcon, tint: "bg-amber-50 text-amber-600" },
-  Marketplace: { icon: ShoppingBagIcon, tint: "bg-orange-50 text-orange-600" },
-  "Ads (Google/Facebook)": { icon: MegaphoneIcon, tint: "bg-purple-50 text-purple-600" },
+  Instagram: { icon: CameraIcon, tint: "bg-surface text-muted" },
+  TikTok: { icon: MusicNoteIcon, tint: "bg-surface text-muted" },
+  Website: { icon: GlobeIcon, tint: "bg-surface text-muted" },
+  Referral: { icon: LinkIcon, tint: "bg-surface text-muted" },
+  "Walk-in": { icon: MapPinIcon, tint: "bg-surface text-muted" },
+  Marketplace: { icon: ShoppingBagIcon, tint: "bg-surface text-muted" },
+  "Ads (Google/Facebook)": { icon: MegaphoneIcon, tint: "bg-surface text-muted" },
 };
 
 const fmt = (v?: number) =>
@@ -99,10 +102,10 @@ function currentMonthKey() {
 const CurrencyTooltip = ({ active, payload, label }: { active?: boolean; payload?: { name: string; value: number; color?: string }[]; label?: string }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-white border border-gray-200 shadow-lg rounded-lg p-3 text-xs space-y-0.5">
-      <p className="font-semibold text-gray-700 mb-1">{label}</p>
+    <div className="bg-white border border-line shadow-lg rounded-md p-3 text-xs space-y-0.5">
+      <p className="font-semibold text-ink mb-1">{label}</p>
       {payload.map((p) => (
-        <p key={p.name} style={{ color: p.color }} className="font-medium">{p.name}: {fmt(p.value)}</p>
+        <p key={p.name} className="text-muted"><span className="inline-block w-2 h-2 rounded-full mr-1.5" style={{ background: p.color }} />{p.name}: <b className="text-ink font-medium">{fmt(p.value)}</b></p>
       ))}
     </div>
   );
@@ -110,29 +113,29 @@ const CurrencyTooltip = ({ active, payload, label }: { active?: boolean; payload
 const CountTooltip = ({ active, payload, label }: { active?: boolean; payload?: { name: string; value: number }[]; label?: string }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-white border border-gray-200 shadow-lg rounded-lg p-3 text-xs space-y-0.5">
-      <p className="font-semibold text-gray-700 mb-1">{label}</p>
+    <div className="bg-white border border-line shadow-lg rounded-md p-3 text-xs space-y-0.5">
+      <p className="font-semibold text-ink mb-1">{label}</p>
       {payload.map((p) => (
-        <p key={p.name} className="text-gray-600">{p.name}: <b className="text-gray-900">{p.value}</b></p>
+        <p key={p.name} className="text-muted">{p.name}: <b className="text-ink">{p.value}</b></p>
       ))}
     </div>
   );
 };
 
 function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`bg-white rounded-xl border border-gray-100 shadow-sm ${className}`}>{children}</div>;
+  return <div className={`bg-white rounded-md border border-line ${className}`}>{children}</div>;
 }
 
 /** Small inline chip for quick top-line numbers — deliberately not another big box. */
 function QuickStat({
-  icon: IconEl, tint = "bg-gray-50 text-gray-500", label, value, valueClass = "text-gray-900",
+  icon: IconEl, tint = "bg-surface text-muted", label, value, valueClass = "text-ink",
 }: { icon: IconComponent; tint?: string; label: string; value: string; valueClass?: string }) {
   return (
-    <div className="flex items-center gap-2.5 bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-2.5 shrink-0">
-      <div className={`w-8 h-8 rounded-lg p-1.5 shrink-0 ${tint}`}><IconEl /></div>
+    <div className="flex items-center gap-2.5 bg-white rounded-md border border-line px-4 py-2.5 shrink-0">
+      <div className={`w-8 h-8 rounded-md p-1.5 shrink-0 ${tint}`}><IconEl /></div>
       <div className="min-w-0">
-        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide leading-tight whitespace-nowrap">{label}</p>
-        <p className={`text-sm font-bold leading-tight whitespace-nowrap ${valueClass}`}>{value}</p>
+        <p className="text-[10px] font-semibold text-faint leading-tight whitespace-nowrap">{label}</p>
+        <p className={`text-sm font-semibold leading-tight whitespace-nowrap ${valueClass}`}>{value}</p>
       </div>
     </div>
   );
@@ -149,28 +152,28 @@ function SplitCompareCard({
 }) {
   return (
     <Card className="p-5">
-      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">{title}</p>
-      <p className="text-2xl font-bold text-gray-900 mb-4">{total}</p>
+      <p className="text-xs font-semibold text-faint mb-1">{title}</p>
+      <p className="text-2xl font-semibold text-ink mb-4">{total}</p>
       <div className="flex items-center justify-between text-xs mb-2 gap-2">
         <div>
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full shrink-0" style={{ background: left.color }} />
-            <span className="text-gray-500">{left.label}</span>
+            <span className="text-muted">{left.label}</span>
           </div>
-          <p className="text-base font-bold mt-0.5" style={{ color: left.color }}>{left.pct}%</p>
-          <p className="text-[11px] text-gray-400">{left.value}</p>
+          <p className="text-base font-semibold mt-0.5 text-ink">{left.pct}%</p>
+          <p className="text-[11px] text-faint">{left.value}</p>
         </div>
-        <span className="text-[10px] text-gray-300 font-medium self-center">vs</span>
+        <span className="text-[10px] text-faint font-medium self-center">vs</span>
         <div className="text-right">
           <div className="flex items-center gap-1.5 justify-end">
-            <span className="text-gray-500">{right.label}</span>
+            <span className="text-muted">{right.label}</span>
             <span className="w-2 h-2 rounded-full shrink-0" style={{ background: right.color }} />
           </div>
-          <p className="text-base font-bold mt-0.5" style={{ color: right.color }}>{right.pct}%</p>
-          <p className="text-[11px] text-gray-400">{right.value}</p>
+          <p className="text-base font-semibold mt-0.5 text-ink">{right.pct}%</p>
+          <p className="text-[11px] text-faint">{right.value}</p>
         </div>
       </div>
-      <div className="h-2 rounded-full overflow-hidden flex bg-gray-100">
+      <div className="h-2 rounded-full overflow-hidden flex bg-hover">
         <div style={{ width: `${left.pct}%`, background: left.color }} />
         <div style={{ width: `${right.pct}%`, background: right.color }} />
       </div>
@@ -187,18 +190,18 @@ function IconStatGrid({
 }) {
   return (
     <Card className="p-5">
-      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">{title}</p>
-      <p className="text-2xl font-bold text-gray-900">{total}</p>
-      {sub && <p className="text-xs text-gray-400 mb-1">{sub}</p>}
+      <p className="text-xs font-semibold text-faint mb-1">{title}</p>
+      <p className="text-2xl font-semibold text-ink">{total}</p>
+      {sub && <p className="text-xs text-faint mb-1">{sub}</p>}
       <div className="grid grid-cols-2 gap-x-3 gap-y-3 mt-3">
         {tiles.map((t) => {
           const TileIcon = t.icon;
           return (
             <div key={t.label} className="flex items-center gap-2.5">
-              <div className={`w-8 h-8 rounded-lg p-1.5 shrink-0 ${t.tint}`}><TileIcon /></div>
+              <div className={`w-8 h-8 rounded-md p-1.5 shrink-0 ${t.tint}`}><TileIcon /></div>
               <div className="min-w-0">
-                <p className="text-sm font-bold text-gray-900 leading-tight truncate">{t.value}</p>
-                <p className="text-[11px] text-gray-400 leading-tight truncate">{t.label}</p>
+                <p className="text-sm font-semibold text-ink leading-tight truncate">{t.value}</p>
+                <p className="text-[11px] text-faint leading-tight truncate">{t.label}</p>
               </div>
             </div>
           );
@@ -216,22 +219,22 @@ function RadialPercentCard({
   const data = [{ name: "v", value: safePct }, { name: "rest", value: 100 - safePct }];
   return (
     <Card className="p-5 flex flex-col">
-      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">{title}</p>
-      <p className="text-2xl font-bold text-gray-900 mb-1">{total}</p>
+      <p className="text-xs font-semibold text-faint mb-1">{title}</p>
+      <p className="text-2xl font-semibold text-ink mb-1">{total}</p>
       <div className="relative h-28 flex items-center justify-center flex-1">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie data={data} dataKey="value" innerRadius="70%" outerRadius="100%" startAngle={90} endAngle={-270} stroke="none" isAnimationActive={false}>
               <Cell fill={color} />
-              <Cell fill="#f3f4f6" />
+              <Cell fill={C.track} />
             </Pie>
           </PieChart>
         </ResponsiveContainer>
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-lg font-bold text-gray-900">{safePct}%</span>
+          <span className="text-lg font-semibold text-ink">{safePct}%</span>
         </div>
       </div>
-      {sub && <p className="text-xs text-gray-400 text-center mt-1">{sub}</p>}
+      {sub && <p className="text-xs text-faint text-center mt-1">{sub}</p>}
     </Card>
   );
 }
@@ -247,18 +250,18 @@ function HorizontalBarBreakdownCard({
   return (
     <Card className="p-5 h-full">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-gray-800">{title}</h3>
-        {linkHref && <Link href={linkHref} className="text-xs text-blue-600 hover:underline">{linkLabel ?? "Lihat semua"}</Link>}
+        <h3 className="text-sm font-semibold text-ink">{title}</h3>
+        {linkHref && <Link href={linkHref} className="text-xs text-accent hover:underline">{linkLabel ?? "Lihat semua"}</Link>}
       </div>
       {rows.length === 0 ? (
-        <div className="flex items-center justify-center h-32 text-xs text-gray-400">Belum ada data</div>
+        <div className="flex items-center justify-center h-32 text-xs text-faint">Belum ada data</div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-x-6 gap-y-4">
           <div className="space-y-3">
             {rows.map((r) => (
               <div key={r.label} className="flex items-center gap-3">
-                <span className="text-xs text-gray-500 w-24 shrink-0 truncate">{r.label}</span>
-                <div className="flex-1 h-6 bg-gray-50 rounded-md overflow-hidden">
+                <span className="text-xs text-muted w-24 shrink-0 truncate">{r.label}</span>
+                <div className="flex-1 h-6 bg-surface rounded-md overflow-hidden">
                   <div
                     className="h-full rounded-md flex items-center justify-end px-2 text-[11px] font-semibold text-white transition-all"
                     style={{ width: `${r.value > 0 ? Math.max(10, (r.value / max) * 100) : 0}%`, background: r.color }}
@@ -269,12 +272,12 @@ function HorizontalBarBreakdownCard({
               </div>
             ))}
           </div>
-          <div className="space-y-2.5 lg:pl-4 lg:border-l lg:border-gray-50 lg:min-w-[140px]">
+          <div className="space-y-2.5 lg:pl-4 lg:border-l lg:border-line lg:min-w-[140px]">
             {rows.map((r) => (
               <div key={r.label} className="flex items-center gap-2 text-xs">
                 <span className="w-2 h-2 rounded-full shrink-0" style={{ background: r.color }} />
-                <span className="text-gray-500">{r.label}</span>
-                <span className="ml-auto font-bold text-gray-900">{total > 0 ? ((r.value / total) * 100).toFixed(1) : "0.0"}%</span>
+                <span className="text-muted">{r.label}</span>
+                <span className="ml-auto font-semibold text-ink">{total > 0 ? ((r.value / total) * 100).toFixed(1) : "0.0"}%</span>
               </div>
             ))}
           </div>
@@ -298,33 +301,33 @@ function MiniRingStatCard({
     <Card className="p-5">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1 truncate">{title}</p>
-          <p className="text-2xl font-bold text-gray-900">{value}</p>
+          <p className="text-xs font-semibold text-faint mb-1 truncate">{title}</p>
+          <p className="text-2xl font-semibold text-ink">{value}</p>
         </div>
         <div className="relative w-14 h-14 shrink-0">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie data={data} dataKey="value" innerRadius="72%" outerRadius="100%" startAngle={90} endAngle={-270} stroke="none" isAnimationActive={false}>
                 <Cell fill={color} />
-                <Cell fill="#f3f4f6" />
+                <Cell fill={C.track} />
               </Pie>
             </PieChart>
           </ResponsiveContainer>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-[11px] font-bold text-gray-800">{safePct}%</span>
+            <span className="text-[11px] font-semibold text-ink">{safePct}%</span>
           </div>
         </div>
       </div>
-      <div className="mt-4 pt-3 border-t border-gray-50">
+      <div className="mt-4 pt-3 border-t border-line">
         <div className="flex items-center justify-between text-xs mb-1.5">
-          <span className="text-gray-500">{compareLeft.label}</span>
-          <span className="text-gray-500">{compareRight.label}</span>
+          <span className="text-muted">{compareLeft.label}</span>
+          <span className="text-muted">{compareRight.label}</span>
         </div>
-        <div className="flex items-center justify-between text-sm font-bold mb-1.5">
-          <span style={{ color: compareLeft.color }}>{compareLeft.value}</span>
-          <span style={{ color: compareRight.color }}>{compareRight.value}</span>
+        <div className="flex items-center justify-between text-sm font-semibold mb-1.5">
+          <span>{compareLeft.value}</span>
+          <span>{compareRight.value}</span>
         </div>
-        <div className="h-1.5 rounded-full overflow-hidden flex bg-gray-100">
+        <div className="h-1.5 rounded-full overflow-hidden flex bg-hover">
           <div style={{ width: `${compareLeft.pct}%`, background: compareLeft.color }} />
           <div style={{ width: `${compareRight.pct}%`, background: compareRight.color }} />
         </div>
@@ -342,20 +345,20 @@ function IconListCard({
 }) {
   return (
     <Card className="p-5 h-full">
-      <h3 className="text-sm font-semibold text-gray-800 mb-4">{title}</h3>
+      <h3 className="text-sm font-semibold text-ink mb-4">{title}</h3>
       <div className="space-y-3.5">
         {rows.map((r) => {
           const RowIcon = r.icon;
           return (
             <div key={r.label} className="flex items-center gap-3">
-              <div className={`w-8 h-8 rounded-lg p-1.5 shrink-0 ${r.tint}`}><RowIcon /></div>
-              <span className="text-sm text-gray-700 flex-1 truncate">{r.label}</span>
-              <span className="text-sm font-semibold text-gray-900">{r.value}</span>
-              <span className="text-xs font-bold w-14 text-right text-gray-500">{r.pct}%</span>
+              <div className={`w-8 h-8 rounded-md p-1.5 shrink-0 ${r.tint}`}><RowIcon /></div>
+              <span className="text-sm text-ink flex-1 truncate">{r.label}</span>
+              <span className="text-sm font-semibold text-ink">{r.value}</span>
+              <span className="text-xs font-semibold w-14 text-right text-muted">{r.pct}%</span>
             </div>
           );
         })}
-        {rows.length === 0 && <p className="text-xs text-gray-400 text-center py-6">Belum ada data</p>}
+        {rows.length === 0 && <p className="text-xs text-faint text-center py-6">Belum ada data</p>}
       </div>
     </Card>
   );
@@ -371,29 +374,30 @@ function LabeledBarListCard({
   const max = Math.max(1, ...rows.map((r) => r.value));
   return (
     <Card className="p-5 h-full">
-      <h3 className="text-sm font-semibold text-gray-800 mb-4">{title}</h3>
+      <h3 className="text-sm font-semibold text-ink mb-4">{title}</h3>
       <div className="space-y-3">
         {rows.map((r) => (
           <div key={r.label}>
             <div className="flex items-center justify-between text-xs mb-1">
-              <span className="font-medium text-gray-600">{r.label}</span>
-              <span className="text-gray-400">
+              <span className="font-medium text-muted">{r.label}</span>
+              <span className="text-faint">
                 {valueFormatter(r.value)}{" "}
-                <span className="font-semibold text-gray-600">({total > 0 ? ((r.value / total) * 100).toFixed(1) : "0.0"}%)</span>
+                <span className="font-semibold text-muted">({total > 0 ? ((r.value / total) * 100).toFixed(1) : "0.0"}%)</span>
               </span>
             </div>
-            <div className="h-2.5 bg-gray-50 rounded-full overflow-hidden">
+            <div className="h-2.5 bg-surface rounded-full overflow-hidden">
               <div className="h-full rounded-full transition-all" style={{ width: `${(r.value / max) * 100}%`, background: r.color }} />
             </div>
           </div>
         ))}
-        {rows.length === 0 && <p className="text-xs text-gray-400 text-center py-6">Belum ada data</p>}
+        {rows.length === 0 && <p className="text-xs text-faint text-center py-6">Belum ada data</p>}
       </div>
     </Card>
   );
 }
 
-export default function DashboardOverview() {
+/** Dashboard versi 1 (grafik ringkasan lama). Disimpan untuk referensi; yang aktif adalah DashboardV2. */
+export default function DashboardV1() {
   const { clients, loading: lc } = useClients();
   const { leads, loading: ll } = useLeads();
   const { projects, loading: lp } = useProjects();
@@ -409,7 +413,7 @@ export default function DashboardOverview() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-gray-900" />
+        <div className="animate-spin rounded-full h-6 w-6 border-2 border-line border-t-ink" />
       </div>
     );
   }
@@ -499,28 +503,28 @@ export default function DashboardOverview() {
       {(overdueProjects.length > 0 || followUpLeads.length > 0 || overdueInvoices.length > 0) && (
         <div className="space-y-2">
           {overdueProjects.length > 0 && (
-            <div className="flex items-center gap-3 px-4 py-2.5 bg-red-50 border border-red-200 rounded-xl text-xs">
-              <span className="w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center font-bold flex-shrink-0">!</span>
-              <span className="text-red-800 font-semibold">{overdueProjects.length} proyek lewat deadline</span>
-              <span className="text-red-600 truncate hidden sm:block">
+            <div className="flex items-center gap-3 px-4 py-2.5 bg-danger-soft border border-danger-line rounded-md text-xs">
+              <span className="w-4 h-4 rounded-full bg-danger text-white flex items-center justify-center font-semibold flex-shrink-0">!</span>
+              <span className="text-danger font-semibold">{overdueProjects.length} proyek lewat deadline</span>
+              <span className="text-danger truncate hidden sm:block">
                 {overdueProjects.slice(0, 3).map((p) => p.name).join(", ")}
                 {overdueProjects.length > 3 && ` +${overdueProjects.length - 3} lainnya`}
               </span>
-              <Link href="/projects" className="ml-auto text-red-500 hover:underline flex-shrink-0">Lihat →</Link>
+              <Link href="/projects" className="ml-auto text-danger hover:underline flex-shrink-0">Lihat →</Link>
             </div>
           )}
           {followUpLeads.length > 0 && (
-            <div className="flex items-center gap-3 px-4 py-2.5 bg-orange-50 border border-orange-200 rounded-xl text-xs">
-              <span className="w-4 h-4 rounded-full bg-orange-400 text-white flex items-center justify-center font-bold flex-shrink-0">!</span>
-              <span className="text-orange-800 font-semibold">{followUpLeads.length} lead perlu follow-up hari ini</span>
-              <Link href="/leads" className="ml-auto text-orange-500 hover:underline flex-shrink-0">Lihat →</Link>
+            <div className="flex items-center gap-3 px-4 py-2.5 bg-warning-soft border border-warning/25 rounded-md text-xs">
+              <span className="w-4 h-4 rounded-full bg-warning text-white flex items-center justify-center font-semibold flex-shrink-0">!</span>
+              <span className="text-warning font-semibold">{followUpLeads.length} lead perlu follow-up hari ini</span>
+              <Link href="/leads" className="ml-auto text-warning hover:underline flex-shrink-0">Lihat →</Link>
             </div>
           )}
           {overdueInvoices.length > 0 && (
-            <div className="flex items-center gap-3 px-4 py-2.5 bg-yellow-50 border border-yellow-200 rounded-xl text-xs">
-              <span className="w-4 h-4 rounded-full bg-yellow-400 text-white flex items-center justify-center font-bold flex-shrink-0">!</span>
-              <span className="text-yellow-800 font-semibold">{overdueInvoices.length} invoice jatuh tempo belum terbayar</span>
-              <Link href="/invoices" className="ml-auto text-yellow-600 hover:underline flex-shrink-0">Lihat →</Link>
+            <div className="flex items-center gap-3 px-4 py-2.5 bg-warning-soft border border-warning/25 rounded-md text-xs">
+              <span className="w-4 h-4 rounded-full bg-warning text-white flex items-center justify-center font-semibold flex-shrink-0">!</span>
+              <span className="text-warning font-semibold">{overdueInvoices.length} invoice jatuh tempo belum terbayar</span>
+              <Link href="/invoices" className="ml-auto text-warning hover:underline flex-shrink-0">Lihat →</Link>
             </div>
           )}
         </div>
@@ -528,13 +532,13 @@ export default function DashboardOverview() {
 
       {/* ── Quick stats strip ── */}
       <div className="flex flex-wrap gap-2.5">
-        <QuickStat icon={UsersIcon} tint="bg-indigo-50 text-indigo-600" label="Total Klien" value={String(clients.length)} />
-        <QuickStat icon={FunnelIcon} tint="bg-purple-50 text-purple-600" label="Total Lead" value={String(leads.length)} />
-        <QuickStat icon={BuildingIcon} tint="bg-blue-50 text-blue-600" label="Proyek Aktif" value={String(activeProjects)} />
-        <QuickStat icon={BanknotesIcon} tint="bg-teal-50 text-teal-600" label="Nilai Semua Proyek" value={fmtShort(totalValue)} />
-        <QuickStat icon={InboxDownIcon} tint="bg-green-50 text-green-600" label="Pemasukan Bln Ini" value={fmtShort(pemasukanBulanIni)} valueClass="text-green-600" />
-        <QuickStat icon={RefreshIcon} tint="bg-sky-50 text-sky-600" label="Arus Kas Bln Ini" value={fmtShort(arusBulanIni)} valueClass={arusBulanIni >= 0 ? "text-blue-600" : "text-orange-500"} />
-        <QuickStat icon={ChartBarIcon} tint="bg-amber-50 text-amber-600" label="Laba Bersih" value={fmtShort(labaBersih)} valueClass={labaBersih >= 0 ? "text-green-600" : "text-red-500"} />
+        <QuickStat icon={UsersIcon} tint="bg-accent-soft text-accent" label="Total Klien" value={String(clients.length)} />
+        <QuickStat icon={FunnelIcon} tint="bg-accent-soft text-accent" label="Total Lead" value={String(leads.length)} />
+        <QuickStat icon={BuildingIcon} tint="bg-accent-soft text-accent" label="Proyek Aktif" value={String(activeProjects)} />
+        <QuickStat icon={BanknotesIcon} tint="bg-success-soft text-success" label="Nilai Semua Proyek" value={fmtShort(totalValue)} />
+        <QuickStat icon={InboxDownIcon} tint="bg-success-soft text-success" label="Pemasukan Bln Ini" value={fmtShort(pemasukanBulanIni)} valueClass="text-success" />
+        <QuickStat icon={RefreshIcon} tint="bg-accent-soft text-accent" label="Arus Kas Bln Ini" value={fmtShort(arusBulanIni)} valueClass={arusBulanIni >= 0 ? "text-accent" : "text-warning"} />
+        <QuickStat icon={ChartBarIcon} tint="bg-warning-soft text-warning" label="Laba Bersih" value={fmtShort(labaBersih)} valueClass={labaBersih >= 0 ? "text-success" : "text-danger"} />
       </div>
 
       {/* ── Row 1: penagihan, ringkasan proyek, tingkat penagihan ── */}
@@ -542,18 +546,18 @@ export default function DashboardOverview() {
         <SplitCompareCard
           title="Status Penagihan Invoice"
           total={fmt(totalTagihan)}
-          left={{ label: "Terkumpul", value: fmtShort(totalTerkumpul), pct: collectionRate, color: "#22c55e" }}
-          right={{ label: "Piutang", value: fmtShort(totalPiutang), pct: 100 - collectionRate, color: "#f97316" }}
+          left={{ label: "Terkumpul", value: fmtShort(totalTerkumpul), pct: collectionRate, color: C.success }}
+          right={{ label: "Piutang", value: fmtShort(totalPiutang), pct: 100 - collectionRate, color: C.warning }}
         />
         <IconStatGrid
           title="Ringkasan Proyek"
           total={String(projects.length)}
           sub={`${activeProjects} sedang berjalan`}
           tiles={[
-            { icon: CoinsIcon, label: "Rata-rata Nilai", value: fmtShort(projects.length > 0 ? totalValue / projects.length : 0), tint: "bg-indigo-50 text-indigo-600" },
-            { icon: CheckCircleIcon, label: "Selesai", value: String(doneProjects), tint: "bg-green-50 text-green-600" },
-            { icon: ClockIcon, label: "Lewat Deadline", value: String(overdueProjects.length), tint: "bg-red-50 text-red-600" },
-            { icon: HomeIcon, label: "Klien Aktif", value: String(activeClientIds.size), tint: "bg-blue-50 text-blue-600" },
+            { icon: CoinsIcon, label: "Rata-rata Nilai", value: fmtShort(projects.length > 0 ? totalValue / projects.length : 0), tint: "bg-surface text-muted" },
+            { icon: CheckCircleIcon, label: "Selesai", value: String(doneProjects), tint: "bg-surface text-muted" },
+            { icon: ClockIcon, label: "Lewat Deadline", value: String(overdueProjects.length), tint: overdueProjects.length > 0 ? "bg-danger-soft text-danger" : "bg-surface text-muted" },
+            { icon: HomeIcon, label: "Klien Aktif", value: String(activeClientIds.size), tint: "bg-surface text-muted" },
           ]}
         />
         <RadialPercentCard
@@ -561,7 +565,7 @@ export default function DashboardOverview() {
           total={fmtShort(totalTerkumpul)}
           sub={`dari total tagihan ${fmtShort(totalTagihan)}`}
           pct={collectionRate}
-          color="#6366f1"
+          color={SERIES.blue}
         />
       </div>
 
@@ -580,17 +584,17 @@ export default function DashboardOverview() {
             title="Proyek Selesai"
             value={doneProjects}
             pct={projects.length > 0 ? Math.round((doneProjects / projects.length) * 100) : 0}
-            color="#22c55e"
-            compareLeft={{ label: "Aktif", value: activeProjects, pct: projects.length > 0 ? (activeProjects / projects.length) * 100 : 0, color: "#3b82f6" }}
-            compareRight={{ label: "Selesai", value: doneProjects, pct: projects.length > 0 ? (doneProjects / projects.length) * 100 : 0, color: "#22c55e" }}
+            color={SERIES.blue}
+            compareLeft={{ label: "Aktif", value: activeProjects, pct: projects.length > 0 ? (activeProjects / projects.length) * 100 : 0, color: SERIES.blue }}
+            compareRight={{ label: "Selesai", value: doneProjects, pct: projects.length > 0 ? (doneProjects / projects.length) * 100 : 0, color: C.success }}
           />
           <MiniRingStatCard
             title="Lead Closing Rate"
             value={dealLeads}
             pct={leads.length > 0 ? Math.round((dealLeads / leads.length) * 100) : 0}
-            color="#a855f7"
-            compareLeft={{ label: "Deal Won", value: dealLeads, pct: leads.length > 0 ? (dealLeads / leads.length) * 100 : 0, color: "#22c55e" }}
-            compareRight={{ label: "Deal Lost", value: lostLeads, pct: leads.length > 0 ? (lostLeads / leads.length) * 100 : 0, color: "#ef4444" }}
+            color={SERIES.blue}
+            compareLeft={{ label: "Deal Won", value: dealLeads, pct: leads.length > 0 ? (dealLeads / leads.length) * 100 : 0, color: C.success }}
+            compareRight={{ label: "Deal Lost", value: lostLeads, pct: leads.length > 0 ? (lostLeads / leads.length) * 100 : 0, color: C.danger }}
           />
         </div>
       </div>
@@ -609,20 +613,20 @@ export default function DashboardOverview() {
       {/* ── Row 4: status proyek (bar) ── */}
       <Card className="p-5">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-gray-800">Status Proyek</h3>
-          <Link href="/projects" className="text-xs text-blue-600 hover:underline">Lihat semua</Link>
+          <h3 className="text-sm font-semibold text-ink">Status Proyek</h3>
+          <Link href="/projects" className="text-xs text-accent hover:underline">Lihat semua</Link>
         </div>
         {projects.length === 0 ? (
-          <div className="flex items-center justify-center h-44 text-xs text-gray-400">Belum ada data proyek</div>
+          <div className="flex items-center justify-center h-44 text-xs text-faint">Belum ada data proyek</div>
         ) : (
           <div className="h-44">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={projectBarData} barSize={26} margin={{ top: 4, right: 4, bottom: 0, left: -16 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} allowDecimals={false} />
-                <Tooltip content={<CountTooltip />} cursor={{ fill: "#f9fafb" }} />
-                <Bar dataKey="jumlah" name="Jumlah" radius={[4, 4, 0, 0]} fill="#6366f1" />
+                <CartesianGrid strokeDasharray="3 3" stroke={C.grid} vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 10, fill: C.tick }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: C.tick }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <Tooltip content={<CountTooltip />} cursor={{ fill: "#f7f8fa" }} />
+                <Bar dataKey="jumlah" name="Jumlah" radius={[4, 4, 0, 0]} fill={SERIES.blue} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -632,29 +636,29 @@ export default function DashboardOverview() {
       {/* ── Row 5: Tren keuangan ── */}
       <Card className="p-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-semibold text-gray-800">Tren Keuangan 6 Bulan</h3>
-          <Link href="/reports" className="text-xs text-blue-600 hover:underline">Laporan lengkap →</Link>
+          <h3 className="text-sm font-semibold text-ink">Tren Keuangan 6 Bulan</h3>
+          <Link href="/reports" className="text-xs text-accent hover:underline">Laporan lengkap →</Link>
         </div>
         <div className="h-48">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={financialTrend} margin={{ top: 4, right: 4, bottom: 0, left: 20 }}>
               <defs>
                 <linearGradient id="gP" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#22c55e" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                  <stop offset="5%" stopColor={C.success} stopOpacity={0.15} />
+                  <stop offset="95%" stopColor={C.success} stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="gK" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.12} />
-                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                  <stop offset="5%" stopColor={C.danger} stopOpacity={0.12} />
+                  <stop offset="95%" stopColor={C.danger} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-              <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} tickFormatter={fmtShort} />
+              <CartesianGrid strokeDasharray="3 3" stroke={C.grid} vertical={false} />
+              <XAxis dataKey="label" tick={{ fontSize: 11, fill: C.tick }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 10, fill: C.tick }} axisLine={false} tickLine={false} tickFormatter={fmtShort} />
               <Tooltip content={<CurrencyTooltip />} cursor={{ stroke: "#e5e7eb" }} />
               <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }} />
-              <Area type="monotone" dataKey="Pemasukan" stroke="#22c55e" strokeWidth={2} fill="url(#gP)" dot={{ r: 3, fill: "#22c55e" }} />
-              <Area type="monotone" dataKey="Pengeluaran" stroke="#ef4444" strokeWidth={2} fill="url(#gK)" dot={{ r: 3, fill: "#ef4444" }} />
+              <Area type="monotone" dataKey="Pemasukan" stroke={C.success} strokeWidth={2} fill="url(#gP)" dot={{ r: 3, fill: C.success }} />
+              <Area type="monotone" dataKey="Pengeluaran" stroke={C.danger} strokeWidth={2} fill="url(#gK)" dot={{ r: 3, fill: C.danger }} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -662,32 +666,32 @@ export default function DashboardOverview() {
 
       {/* ── Row 6: Tren aktivitas ── */}
       <Card className="p-5">
-        <h3 className="text-sm font-semibold text-gray-800 mb-4">Tren Aktivitas 6 Bulan</h3>
+        <h3 className="text-sm font-semibold text-ink mb-4">Tren Aktivitas 6 Bulan</h3>
         <div className="h-40">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={activityTrend} margin={{ top: 4, right: 4, bottom: 0, left: -12 }}>
               <defs>
                 <linearGradient id="gL" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#a855f7" stopOpacity={0.12} />
-                  <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
+                  <stop offset="5%" stopColor={SERIES.blue} stopOpacity={0.12} />
+                  <stop offset="95%" stopColor={SERIES.blue} stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="gPr" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.12} />
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  <stop offset="5%" stopColor={SERIES.orange} stopOpacity={0.12} />
+                  <stop offset="95%" stopColor={SERIES.orange} stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="gI" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#f97316" stopOpacity={0.12} />
-                  <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+                  <stop offset="5%" stopColor={SERIES.aqua} stopOpacity={0.12} />
+                  <stop offset="95%" stopColor={SERIES.aqua} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-              <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} allowDecimals={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke={C.grid} vertical={false} />
+              <XAxis dataKey="label" tick={{ fontSize: 11, fill: C.tick }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: C.tick }} axisLine={false} tickLine={false} allowDecimals={false} />
               <Tooltip content={<CountTooltip />} cursor={{ stroke: "#e5e7eb" }} />
               <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }} />
-              <Area type="monotone" dataKey="Lead" stroke="#a855f7" strokeWidth={2} fill="url(#gL)" dot={{ r: 3, fill: "#a855f7" }} />
-              <Area type="monotone" dataKey="Proyek" stroke="#3b82f6" strokeWidth={2} fill="url(#gPr)" dot={{ r: 3, fill: "#3b82f6" }} />
-              <Area type="monotone" dataKey="Invoice" stroke="#f97316" strokeWidth={2} fill="url(#gI)" dot={{ r: 3, fill: "#f97316" }} />
+              <Area type="monotone" dataKey="Lead" stroke={SERIES.blue} strokeWidth={2} fill="url(#gL)" dot={{ r: 3, fill: SERIES.blue }} />
+              <Area type="monotone" dataKey="Proyek" stroke={SERIES.orange} strokeWidth={2} fill="url(#gPr)" dot={{ r: 3, fill: SERIES.orange }} />
+              <Area type="monotone" dataKey="Invoice" stroke={SERIES.aqua} strokeWidth={2} fill="url(#gI)" dot={{ r: 3, fill: SERIES.aqua }} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -697,27 +701,27 @@ export default function DashboardOverview() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         {/* Proyek terbaru */}
         <Card className="overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
-            <h3 className="text-sm font-semibold text-gray-800">Proyek Terbaru</h3>
-            <Link href="/projects" className="text-xs text-blue-600 hover:underline">Semua →</Link>
+          <div className="flex items-center justify-between px-5 py-3.5 border-b border-line">
+            <h3 className="text-sm font-semibold text-ink">Proyek Terbaru</h3>
+            <Link href="/projects" className="text-xs text-accent hover:underline">Semua →</Link>
           </div>
           <table className="w-full">
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-line">
               {recentProjects.map((p) => (
-                <tr key={p.id} className="hover:bg-gray-50/60">
+                <tr key={p.id} className="hover:bg-hover">
                   <td className="px-5 py-3">
-                    <Link href={`/projects/${p.id}`} className="text-xs font-medium text-gray-900 hover:underline block truncate max-w-[140px]">{p.name}</Link>
-                    <p className="text-xs text-gray-400">{fmt(getProjectValue(p))}</p>
+                    <Link href={`/projects/${p.id}`} className="text-xs font-medium text-ink hover:underline block truncate max-w-[140px]">{p.name}</Link>
+                    <p className="text-xs text-faint">{fmt(getProjectValue(p))}</p>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${projectStatusBadge[p.status] ?? "bg-gray-100 text-gray-500"}`}>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${projectStatusBadge[p.status] ?? "tone-neutral"}`}>
                       {PROJECT_LABEL[p.status] ?? p.status}
                     </span>
                   </td>
                 </tr>
               ))}
               {recentProjects.length === 0 && (
-                <tr><td colSpan={2} className="px-5 py-8 text-center text-xs text-gray-400">Belum ada proyek</td></tr>
+                <tr><td colSpan={2} className="px-5 py-8 text-center text-xs text-faint">Belum ada proyek</td></tr>
               )}
             </tbody>
           </table>
@@ -725,27 +729,27 @@ export default function DashboardOverview() {
 
         {/* Invoice terbaru */}
         <Card className="overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
-            <h3 className="text-sm font-semibold text-gray-800">Invoice Terbaru</h3>
-            <Link href="/invoices" className="text-xs text-blue-600 hover:underline">Semua →</Link>
+          <div className="flex items-center justify-between px-5 py-3.5 border-b border-line">
+            <h3 className="text-sm font-semibold text-ink">Invoice Terbaru</h3>
+            <Link href="/invoices" className="text-xs text-accent hover:underline">Semua →</Link>
           </div>
           <table className="w-full">
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-line">
               {recentInvoices.map((inv) => {
                 const proj = projects.find((p) => p.id === inv.project_id);
                 const cl = clients.find((c) => c.id === inv.client_id);
                 const outstanding = inv.total_amount - inv.paid_amount;
                 return (
-                  <tr key={inv.id} className="hover:bg-gray-50/60">
+                  <tr key={inv.id} className="hover:bg-hover">
                     <td className="px-5 py-3">
-                      <Link href={`/invoices/${inv.id}`} className="text-xs font-medium text-gray-900 hover:underline">{inv.invoice_number}</Link>
-                      <p className="text-xs text-gray-400 truncate max-w-[140px]">
+                      <Link href={`/invoices/${inv.id}`} className="text-xs font-medium text-ink hover:underline">{inv.invoice_number}</Link>
+                      <p className="text-xs text-faint truncate max-w-[140px]">
                         {proj?.name ?? cl?.name ?? "—"}
                         {outstanding > 0 && <span className="ml-1">· sisa {fmtShort(outstanding)}</span>}
                       </p>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${invoiceStatusBadge[inv.status] ?? "bg-gray-100 text-gray-500"}`}>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${invoiceStatusBadge[inv.status] ?? "tone-neutral"}`}>
                         {invoiceStatusLabels[inv.status] ?? inv.status}
                       </span>
                     </td>
@@ -753,7 +757,7 @@ export default function DashboardOverview() {
                 );
               })}
               {recentInvoices.length === 0 && (
-                <tr><td colSpan={2} className="px-5 py-8 text-center text-xs text-gray-400">Belum ada invoice</td></tr>
+                <tr><td colSpan={2} className="px-5 py-8 text-center text-xs text-faint">Belum ada invoice</td></tr>
               )}
             </tbody>
           </table>
@@ -761,27 +765,27 @@ export default function DashboardOverview() {
 
         {/* Laba per proyek */}
         <Card className="overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
-            <h3 className="text-sm font-semibold text-gray-800">Laba per Proyek</h3>
-            <Link href="/reports" className="text-xs text-blue-600 hover:underline">Laporan →</Link>
+          <div className="flex items-center justify-between px-5 py-3.5 border-b border-line">
+            <h3 className="text-sm font-semibold text-ink">Laba per Proyek</h3>
+            <Link href="/reports" className="text-xs text-accent hover:underline">Laporan →</Link>
           </div>
           <table className="w-full">
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-line">
               {labaRows.map(({ p, laba, margin }) => (
-                <tr key={p.id} className="hover:bg-gray-50/60">
+                <tr key={p.id} className="hover:bg-hover">
                   <td className="px-5 py-3">
-                    <Link href={`/projects/${p.id}`} className="text-xs font-medium text-gray-900 hover:underline block truncate max-w-[140px]">{p.name}</Link>
+                    <Link href={`/projects/${p.id}`} className="text-xs font-medium text-ink hover:underline block truncate max-w-[140px]">{p.name}</Link>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <p className={`text-xs font-semibold ${laba >= 0 ? "text-green-600" : "text-red-500"}`}>{fmtShort(laba)}</p>
+                    <p className={`text-xs font-semibold ${laba >= 0 ? "text-success" : "text-danger"}`}>{fmtShort(laba)}</p>
                     {margin !== null && (
-                      <p className={`text-xs ${margin < 0 ? "text-red-400" : margin < 20 ? "text-yellow-500" : "text-green-400"}`}>{margin}%</p>
+                      <p className={`text-xs ${margin < 0 ? "text-danger" : margin < 20 ? "text-warning" : "text-success"}`}>{margin}%</p>
                     )}
                   </td>
                 </tr>
               ))}
               {labaRows.length === 0 && (
-                <tr><td colSpan={2} className="px-5 py-8 text-center text-xs text-gray-400">Belum ada data laba</td></tr>
+                <tr><td colSpan={2} className="px-5 py-8 text-center text-xs text-faint">Belum ada data laba</td></tr>
               )}
             </tbody>
           </table>

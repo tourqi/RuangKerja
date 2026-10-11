@@ -7,6 +7,7 @@ import { useAllPayments } from "@/hooks/usePayments";
 import { useAllExpenses } from "@/hooks/useExpenses";
 import { useApprovedRabTotals } from "@/hooks/useRab";
 import { useState } from "react";
+import { DetailTabs } from "@/components/DetailTabs";
 import Link from "next/link";
 import { LaporanPendapatan } from "./LaporanPendapatan";
 import { LaporanPengeluaran } from "./LaporanPengeluaran";
@@ -28,40 +29,40 @@ const LEAD_STATUSES = ["New Lead", "Contacted", "Survey", "Deal", "Deal Won", "D
 const PROJECT_STATUSES = ["Planning", "Design", "Production", "Installation", "Done"] as const;
 
 const leadColors: Record<string, string> = {
-  "New Lead": "bg-blue-500",
-  Contacted: "bg-yellow-500",
-  Survey: "bg-purple-500",
-  Deal: "bg-indigo-500",
-  "Deal Won": "bg-green-500",
-  "Deal Lost": "bg-red-400",
+  "New Lead": "bg-accent",
+  Contacted: "bg-warning",
+  Survey: "bg-accent",
+  Deal: "bg-accent",
+  "Deal Won": "bg-success",
+  "Deal Lost": "bg-danger",
 };
 const leadBadge: Record<string, string> = {
-  "New Lead": "bg-blue-100 text-blue-700",
-  Contacted: "bg-yellow-100 text-yellow-700",
-  Survey: "bg-purple-100 text-purple-700",
-  Deal: "bg-indigo-100 text-indigo-700",
-  "Deal Won": "bg-green-100 text-green-700",
-  "Deal Lost": "bg-red-100 text-red-700",
+  "New Lead": "tone-active",
+  Contacted: "tone-warning",
+  Survey: "tone-active",
+  Deal: "tone-active",
+  "Deal Won": "tone-success",
+  "Deal Lost": "tone-danger",
 };
 const projectColors: Record<string, string> = {
-  Planning: "bg-gray-400",
-  Design: "bg-blue-500",
-  Production: "bg-yellow-500",
-  Installation: "bg-purple-500",
-  Done: "bg-green-500",
+  Planning: "bg-faint",
+  Design: "bg-accent",
+  Production: "bg-warning",
+  Installation: "bg-accent",
+  Done: "bg-success",
 };
 const projectBadge: Record<string, string> = {
-  Planning: "bg-gray-100 text-gray-700",
-  Design: "bg-blue-100 text-blue-700",
-  Production: "bg-yellow-100 text-yellow-700",
-  Installation: "bg-purple-100 text-purple-700",
-  Done: "bg-green-100 text-green-700",
+  Planning: "tone-neutral",
+  Design: "tone-active",
+  Production: "tone-warning",
+  Installation: "tone-active",
+  Done: "tone-success",
 };
 const priorityBadge: Record<string, string> = {
-  low: "bg-gray-100 text-gray-600",
-  medium: "bg-blue-100 text-blue-700",
-  high: "bg-orange-100 text-orange-700",
-  urgent: "bg-red-100 text-red-700",
+  low: "tone-neutral",
+  medium: "tone-active",
+  high: "tone-warning",
+  urgent: "tone-danger",
 };
 
 const TABS = [
@@ -77,25 +78,25 @@ const TABS = [
 ];
 
 const invoiceStatusColors: Record<string, string> = {
-  draft: "bg-gray-100 text-gray-600",
-  sent: "bg-blue-100 text-blue-700",
-  partial: "bg-yellow-100 text-yellow-700",
-  paid: "bg-green-100 text-green-700",
-  overdue: "bg-red-100 text-red-700",
+  draft: "tone-neutral",
+  sent: "tone-active",
+  partial: "tone-warning",
+  paid: "tone-success",
+  overdue: "tone-danger",
 };
 const invoiceStatusLabels: Record<string, string> = {
   draft: "Draft", sent: "Terkirim", partial: "Sebagian", paid: "Lunas", overdue: "Jatuh Tempo",
 };
 const invoiceStatusBarColors: Record<string, string> = {
-  draft: "bg-gray-400", sent: "bg-blue-500", partial: "bg-yellow-500", paid: "bg-green-500", overdue: "bg-red-500",
+  draft: "bg-faint", sent: "bg-accent", partial: "bg-warning", paid: "bg-success", overdue: "bg-danger",
 };
 
 function StatCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">{label}</p>
-      <p className="text-2xl font-bold text-gray-900">{value}</p>
-      {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
+    <div className="bg-white rounded-md border border-line p-5">
+      <p className="text-xs font-semibold text-faint mb-1">{label}</p>
+      <p className="text-2xl font-semibold text-ink">{value}</p>
+      {sub && <p className="text-xs text-faint mt-1">{sub}</p>}
     </div>
   );
 }
@@ -121,21 +122,21 @@ function BarRow({
       <span className={`text-xs font-medium px-2 py-0.5 rounded-full w-32 text-center flex-shrink-0 ${badgeClass}`}>
         {label}
       </span>
-      <div className="flex-1 bg-gray-100 rounded-full h-2">
+      <div className="flex-1 bg-hover rounded-full h-2">
         <div className={`${colorClass} h-2 rounded-full transition-all`} style={{ width: `${p}%` }} />
       </div>
-      <span className="text-xs font-semibold text-gray-700 w-16 text-right flex-shrink-0">
-        {count} <span className="text-gray-400 font-normal">({p}%)</span>
+      <span className="text-xs font-semibold text-ink w-16 text-right flex-shrink-0">
+        {count} <span className="text-faint font-normal">({p}%)</span>
       </span>
-      {valueLabel && <span className="text-xs text-gray-500 w-28 text-right flex-shrink-0">{valueLabel}</span>}
+      {valueLabel && <span className="text-xs text-muted w-28 text-right flex-shrink-0">{valueLabel}</span>}
     </div>
   );
 }
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-      <h3 className="text-sm font-semibold text-gray-800 mb-4">{title}</h3>
+    <div className="bg-white rounded-md border border-line p-5">
+      <h3 className="text-sm font-semibold text-ink mb-4">{title}</h3>
       {children}
     </div>
   );
@@ -158,7 +159,7 @@ export default function ReportsOverview() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-gray-900" />
+        <div className="animate-spin rounded-full h-6 w-6 border-2 border-line border-t-ink" />
       </div>
     );
   }
@@ -284,21 +285,7 @@ export default function ReportsOverview() {
   return (
     <div className="space-y-6">
       {/* Tab navigation */}
-      <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-        <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`px-4 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap shrink-0 transition-all duration-150 ${
-                tab === t.key ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <DetailTabs tabs={[...TABS]} active={tab} onChange={setTab} />
 
       {/* ── TAB: Ringkasan ── */}
       {tab === "ringkasan" && (
@@ -328,7 +315,7 @@ export default function ReportsOverview() {
           <SectionCard title="Ringkasan Pipeline">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <p className="text-xs text-gray-500 mb-3 font-medium">Status Lead</p>
+                <p className="text-xs text-muted mb-3 font-medium">Status Lead</p>
                 <div className="space-y-2">
                   {LEAD_STATUSES.map((s) => {
                     const c = leads.filter((l) => l.status === s).length;
@@ -346,7 +333,7 @@ export default function ReportsOverview() {
                 </div>
               </div>
               <div>
-                <p className="text-xs text-gray-500 mb-3 font-medium">Status Proyek</p>
+                <p className="text-xs text-muted mb-3 font-medium">Status Proyek</p>
                 <div className="space-y-2">
                   {PROJECT_STATUSES.map((s) => {
                     const c = projects.filter((p) => p.status === s).length;
@@ -375,10 +362,10 @@ export default function ReportsOverview() {
             {LEAD_STATUSES.map((s) => {
               const c = leads.filter((l) => l.status === s).length;
               return (
-                <div key={s} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 text-center">
+                <div key={s} className="bg-white rounded-md border border-line p-4 text-center">
                   <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${leadBadge[s]}`}>{s}</span>
-                  <p className="text-3xl font-bold text-gray-900 mt-2">{c}</p>
-                  <p className="text-xs text-gray-400">{pct(c, leads.length)}%</p>
+                  <p className="text-3xl font-semibold text-ink mt-2">{c}</p>
+                  <p className="text-xs text-faint">{pct(c, leads.length)}%</p>
                 </div>
               );
             })}
@@ -387,7 +374,7 @@ export default function ReportsOverview() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <SectionCard title="Lead berdasarkan Sumber">
               {Object.keys(leadSources).length === 0 ? (
-                <p className="text-xs text-gray-400">Belum ada data sumber</p>
+                <p className="text-xs text-faint">Belum ada data sumber</p>
               ) : (
                 <div className="space-y-2">
                   {Object.entries(leadSources)
@@ -398,8 +385,8 @@ export default function ReportsOverview() {
                         label={src}
                         count={cnt}
                         total={leads.length}
-                        colorClass="bg-blue-400"
-                        badgeClass="bg-blue-50 text-blue-700"
+                        colorClass="bg-accent"
+                        badgeClass="bg-accent-soft text-accent"
                       />
                     ))}
                 </div>
@@ -408,7 +395,7 @@ export default function ReportsOverview() {
 
             <SectionCard title="Lead berdasarkan Prioritas">
               {Object.keys(leadPriorities).length === 0 ? (
-                <p className="text-xs text-gray-400">Belum ada data prioritas</p>
+                <p className="text-xs text-faint">Belum ada data prioritas</p>
               ) : (
                 <div className="space-y-2">
                   {(["urgent", "high", "medium", "low"] as const).map((p) => {
@@ -421,12 +408,12 @@ export default function ReportsOverview() {
                         total={leads.length}
                         colorClass={
                           p === "urgent"
-                            ? "bg-red-500"
+                            ? "bg-danger"
                             : p === "high"
-                            ? "bg-orange-500"
+                            ? "bg-warning"
                             : p === "medium"
-                            ? "bg-blue-400"
-                            : "bg-gray-400"
+                            ? "bg-accent"
+                            : "bg-faint"
                         }
                         badgeClass={priorityBadge[p]}
                       />
@@ -441,27 +428,27 @@ export default function ReportsOverview() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Tahap</th>
-                    <th className="text-right py-2 px-3 text-xs font-semibold text-gray-500">Jumlah</th>
-                    <th className="text-right py-2 px-3 text-xs font-semibold text-gray-500">% dari Total</th>
-                    <th className="text-right py-2 px-3 text-xs font-semibold text-gray-500">Drop-off ke berikutnya</th>
+                  <tr className="border-b border-line">
+                    <th className="text-left py-2 px-3 text-xs font-semibold text-muted">Tahap</th>
+                    <th className="text-right py-2 px-3 text-xs font-semibold text-muted">Jumlah</th>
+                    <th className="text-right py-2 px-3 text-xs font-semibold text-muted">% dari Total</th>
+                    <th className="text-right py-2 px-3 text-xs font-semibold text-muted">Drop-off ke berikutnya</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-line">
                   {LEAD_STATUSES.filter((s) => s !== "Deal Lost").map((s, i, arr) => {
                     const cnt = leads.filter((l) => l.status === s).length;
                     const nextStatus = arr[i + 1];
                     const nextCnt = nextStatus ? leads.filter((l) => l.status === nextStatus).length : null;
                     const dropoff = nextCnt != null && cnt > 0 ? `${100 - pct(nextCnt, cnt)}%` : "-";
                     return (
-                      <tr key={s} className="hover:bg-gray-50">
+                      <tr key={s} className="hover:bg-hover">
                         <td className="py-2.5 px-3">
                           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${leadBadge[s]}`}>{s}</span>
                         </td>
-                        <td className="py-2.5 px-3 text-right text-xs font-semibold text-gray-900">{cnt}</td>
-                        <td className="py-2.5 px-3 text-right text-xs text-gray-600">{pct(cnt, leads.length)}%</td>
-                        <td className="py-2.5 px-3 text-right text-xs text-gray-500">{dropoff}</td>
+                        <td className="py-2.5 px-3 text-right text-xs font-semibold text-ink">{cnt}</td>
+                        <td className="py-2.5 px-3 text-right text-xs text-muted">{pct(cnt, leads.length)}%</td>
+                        <td className="py-2.5 px-3 text-right text-xs text-muted">{dropoff}</td>
                       </tr>
                     );
                   })}
@@ -506,7 +493,7 @@ export default function ReportsOverview() {
 
             <SectionCard title="Project per Penanggung Jawab">
               {Object.keys(projectByAssignee).length === 0 ? (
-                <p className="text-xs text-gray-400">Belum ada data</p>
+                <p className="text-xs text-faint">Belum ada data</p>
               ) : (
                 <div className="space-y-2">
                   {Object.entries(projectByAssignee)
@@ -517,8 +504,8 @@ export default function ReportsOverview() {
                         label={name}
                         count={cnt}
                         total={projects.length}
-                        colorClass="bg-purple-400"
-                        badgeClass="bg-purple-50 text-purple-700"
+                        colorClass="bg-accent"
+                        badgeClass="bg-accent-soft text-accent"
                       />
                     ))}
                 </div>
@@ -531,28 +518,28 @@ export default function ReportsOverview() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-gray-100">
-                      <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Nama Proyek</th>
-                      <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Status</th>
-                      <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Deadline</th>
-                      <th className="text-right py-2 px-3 text-xs font-semibold text-gray-500">Nilai</th>
-                      <th className="text-right py-2 px-3 text-xs font-semibold text-gray-500">Progress</th>
+                    <tr className="border-b border-line">
+                      <th className="text-left py-2 px-3 text-xs font-semibold text-muted">Nama Proyek</th>
+                      <th className="text-left py-2 px-3 text-xs font-semibold text-muted">Status</th>
+                      <th className="text-left py-2 px-3 text-xs font-semibold text-muted">Deadline</th>
+                      <th className="text-right py-2 px-3 text-xs font-semibold text-muted">Nilai</th>
+                      <th className="text-right py-2 px-3 text-xs font-semibold text-muted">Progress</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody className="divide-y divide-line">
                     {overdueProjects.map((p) => (
-                      <tr key={p.id} className="hover:bg-red-50">
-                        <td className="py-2.5 px-3 text-xs font-medium text-gray-900">{p.name}</td>
+                      <tr key={p.id} className="hover:bg-danger-soft">
+                        <td className="py-2.5 px-3 text-xs font-medium text-ink">{p.name}</td>
                         <td className="py-2.5 px-3">
                           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${projectBadge[p.status]}`}>
                             {p.status}
                           </span>
                         </td>
-                        <td className="py-2.5 px-3 text-xs text-red-600 font-medium">
+                        <td className="py-2.5 px-3 text-xs text-danger font-medium">
                           {p.deadline ? new Date(p.deadline).toLocaleDateString("id-ID") : "-"}
                         </td>
-                        <td className="py-2.5 px-3 text-right text-xs text-gray-700">{formatCurrency(p.value)}</td>
-                        <td className="py-2.5 px-3 text-right text-xs text-gray-700">{p.progress ?? 0}%</td>
+                        <td className="py-2.5 px-3 text-right text-xs text-ink">{formatCurrency(p.value)}</td>
+                        <td className="py-2.5 px-3 text-right text-xs text-ink">{p.progress ?? 0}%</td>
                       </tr>
                     ))}
                   </tbody>
@@ -563,41 +550,41 @@ export default function ReportsOverview() {
 
           <SectionCard title="Top 5 Proyek Bernilai Tertinggi">
             {topProjects.length === 0 ? (
-              <p className="text-xs text-gray-400">Belum ada proyek dengan nilai</p>
+              <p className="text-xs text-faint">Belum ada proyek dengan nilai</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-gray-100">
-                      <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">#</th>
-                      <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Nama Proyek</th>
-                      <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Status</th>
-                      <th className="text-right py-2 px-3 text-xs font-semibold text-gray-500">Nilai</th>
-                      <th className="text-right py-2 px-3 text-xs font-semibold text-gray-500">Progress</th>
+                    <tr className="border-b border-line">
+                      <th className="text-left py-2 px-3 text-xs font-semibold text-muted">#</th>
+                      <th className="text-left py-2 px-3 text-xs font-semibold text-muted">Nama Proyek</th>
+                      <th className="text-left py-2 px-3 text-xs font-semibold text-muted">Status</th>
+                      <th className="text-right py-2 px-3 text-xs font-semibold text-muted">Nilai</th>
+                      <th className="text-right py-2 px-3 text-xs font-semibold text-muted">Progress</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody className="divide-y divide-line">
                     {topProjects.map((p, i) => (
-                      <tr key={p.id} className="hover:bg-gray-50">
-                        <td className="py-2.5 px-3 text-xs text-gray-400 font-semibold">{i + 1}</td>
-                        <td className="py-2.5 px-3 text-xs font-medium text-gray-900">{p.name}</td>
+                      <tr key={p.id} className="hover:bg-hover">
+                        <td className="py-2.5 px-3 text-xs text-faint font-semibold">{i + 1}</td>
+                        <td className="py-2.5 px-3 text-xs font-medium text-ink">{p.name}</td>
                         <td className="py-2.5 px-3">
                           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${projectBadge[p.status]}`}>
                             {p.status}
                           </span>
                         </td>
-                        <td className="py-2.5 px-3 text-right text-xs font-semibold text-gray-900">
+                        <td className="py-2.5 px-3 text-right text-xs font-semibold text-ink">
                           {formatCurrency(p.value)}
                         </td>
                         <td className="py-2.5 px-3 text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <div className="w-16 bg-gray-100 rounded-full h-1.5">
+                            <div className="w-16 bg-hover rounded-full h-1.5">
                               <div
-                                className="bg-green-500 h-1.5 rounded-full"
+                                className="bg-success h-1.5 rounded-full"
                                 style={{ width: `${p.progress ?? 0}%` }}
                               />
                             </div>
-                            <span className="text-xs text-gray-600 w-8 text-right">{p.progress ?? 0}%</span>
+                            <span className="text-xs text-muted w-8 text-right">{p.progress ?? 0}%</span>
                           </div>
                         </td>
                       </tr>
@@ -632,7 +619,7 @@ export default function ReportsOverview() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <SectionCard title="Klien berdasarkan Jenis Properti">
               {Object.keys(clientByPropertyType).length === 0 ? (
-                <p className="text-xs text-gray-400">Belum ada data</p>
+                <p className="text-xs text-faint">Belum ada data</p>
               ) : (
                 <div className="space-y-2">
                   {Object.entries(clientByPropertyType)
@@ -643,8 +630,8 @@ export default function ReportsOverview() {
                         label={k}
                         count={v}
                         total={clients.length}
-                        colorClass="bg-blue-400"
-                        badgeClass="bg-blue-50 text-blue-700"
+                        colorClass="bg-accent"
+                        badgeClass="bg-accent-soft text-accent"
                       />
                     ))}
                 </div>
@@ -653,7 +640,7 @@ export default function ReportsOverview() {
 
             <SectionCard title="Klien berdasarkan Budget">
               {Object.keys(clientByBudget).length === 0 ? (
-                <p className="text-xs text-gray-400">Belum ada data</p>
+                <p className="text-xs text-faint">Belum ada data</p>
               ) : (
                 <div className="space-y-2">
                   {(["< 500jt", "500jt - 1M", "> 1M", "Tidak diketahui"] as const).map((k) => {
@@ -664,13 +651,13 @@ export default function ReportsOverview() {
                         label={k}
                         count={v}
                         total={clients.length}
-                        colorClass={k === "> 1M" ? "bg-green-500" : k === "500jt - 1M" ? "bg-yellow-400" : "bg-gray-400"}
+                        colorClass={k === "> 1M" ? "bg-success" : k === "500jt - 1M" ? "bg-warning" : "bg-faint"}
                         badgeClass={
                           k === "> 1M"
-                            ? "bg-green-50 text-green-700"
+                            ? "bg-success-soft text-success"
                             : k === "500jt - 1M"
-                            ? "bg-yellow-50 text-yellow-700"
-                            : "bg-gray-100 text-gray-600"
+                            ? "bg-warning-soft text-warning"
+                            : "tone-neutral"
                         }
                       />
                     );
@@ -681,7 +668,7 @@ export default function ReportsOverview() {
 
             <SectionCard title="Klien berdasarkan Sumber">
               {Object.keys(clientBySource).length === 0 ? (
-                <p className="text-xs text-gray-400">Belum ada data</p>
+                <p className="text-xs text-faint">Belum ada data</p>
               ) : (
                 <div className="space-y-2">
                   {Object.entries(clientBySource)
@@ -692,8 +679,8 @@ export default function ReportsOverview() {
                         label={k}
                         count={v}
                         total={clients.length}
-                        colorClass="bg-purple-400"
-                        badgeClass="bg-purple-50 text-purple-700"
+                        colorClass="bg-accent"
+                        badgeClass="bg-accent-soft text-accent"
                       />
                     ))}
                 </div>
@@ -702,7 +689,7 @@ export default function ReportsOverview() {
 
             <SectionCard title="Klien berdasarkan Status Lead">
               {Object.keys(clientByLeadStatus).length === 0 ? (
-                <p className="text-xs text-gray-400">Belum ada data</p>
+                <p className="text-xs text-faint">Belum ada data</p>
               ) : (
                 <div className="space-y-2">
                   {Object.entries(clientByLeadStatus)
@@ -713,8 +700,8 @@ export default function ReportsOverview() {
                         label={k}
                         count={v}
                         total={clients.length}
-                        colorClass="bg-orange-400"
-                        badgeClass="bg-orange-50 text-orange-700"
+                        colorClass="bg-warning"
+                        badgeClass="bg-warning-soft text-warning"
                       />
                     ))}
                 </div>
@@ -737,7 +724,7 @@ export default function ReportsOverview() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <SectionCard title="Invoice berdasarkan Status">
               {invoices.length === 0 ? (
-                <p className="text-xs text-gray-400">Belum ada invoice</p>
+                <p className="text-xs text-faint">Belum ada invoice</p>
               ) : (
                 <div className="space-y-2">
                   {["paid", "partial", "sent", "overdue", "draft"].map((s) => {
@@ -761,35 +748,35 @@ export default function ReportsOverview() {
 
             <SectionCard title="Tren Tagihan vs Terkumpul (6 Bulan)">
               {monthlyFinancial.every((m) => m.Tagihan === 0) ? (
-                <p className="text-xs text-gray-400">Belum ada data invoice</p>
+                <p className="text-xs text-faint">Belum ada data invoice</p>
               ) : (
                 <div className="space-y-3">
                   {monthlyFinancial.map((m) => (
                     <div key={m.label} className="space-y-1">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-gray-500 w-14">{m.label}</span>
-                        <span className="text-gray-400">{formatCurrency(m.Tagihan)}</span>
+                        <span className="text-muted w-14">{m.label}</span>
+                        <span className="text-faint">{formatCurrency(m.Tagihan)}</span>
                       </div>
                       <div className="flex gap-1 h-2">
                         <div
-                          className="bg-blue-400 rounded-full"
+                          className="bg-accent rounded-full"
                           style={{ width: `${totalTagihan > 0 ? (m.Tagihan / totalTagihan) * 100 : 0}%`, minWidth: m.Tagihan > 0 ? "4px" : "0" }}
                         />
                       </div>
                       <div className="flex gap-1 h-1.5">
                         <div
-                          className="bg-green-400 rounded-full"
+                          className="bg-success rounded-full"
                           style={{ width: `${totalTagihan > 0 ? (m.Terkumpul / totalTagihan) * 100 : 0}%`, minWidth: m.Terkumpul > 0 ? "4px" : "0" }}
                         />
                       </div>
                     </div>
                   ))}
                   <div className="flex gap-4 pt-1">
-                    <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                      <span className="w-2.5 h-2.5 rounded-full bg-blue-400" /> Tagihan
+                    <div className="flex items-center gap-1.5 text-xs text-muted">
+                      <span className="w-2.5 h-2.5 rounded-full bg-accent" /> Tagihan
                     </div>
-                    <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                      <span className="w-2.5 h-2.5 rounded-full bg-green-400" /> Terkumpul
+                    <div className="flex items-center gap-1.5 text-xs text-muted">
+                      <span className="w-2.5 h-2.5 rounded-full bg-success" /> Terkumpul
                     </div>
                   </div>
                 </div>
@@ -802,34 +789,34 @@ export default function ReportsOverview() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-gray-100">
-                      <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">No. Invoice</th>
-                      <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 hidden sm:table-cell">Project / Client</th>
-                      <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Jatuh Tempo</th>
-                      <th className="text-right py-2 px-3 text-xs font-semibold text-gray-500">Total</th>
-                      <th className="text-right py-2 px-3 text-xs font-semibold text-gray-500">Sisa</th>
+                    <tr className="border-b border-line">
+                      <th className="text-left py-2 px-3 text-xs font-semibold text-muted">No. Invoice</th>
+                      <th className="text-left py-2 px-3 text-xs font-semibold text-muted hidden sm:table-cell">Project / Client</th>
+                      <th className="text-left py-2 px-3 text-xs font-semibold text-muted">Jatuh Tempo</th>
+                      <th className="text-right py-2 px-3 text-xs font-semibold text-muted">Total</th>
+                      <th className="text-right py-2 px-3 text-xs font-semibold text-muted">Sisa</th>
                       <th className="py-2 px-3" />
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody className="divide-y divide-line">
                     {overdueInvoices.map((inv) => {
                       const proj = projects.find((p) => p.id === inv.project_id);
                       const cl = clients.find((c) => c.id === inv.client_id);
                       return (
-                      <tr key={inv.id} className="hover:bg-red-50">
-                        <td className="py-2.5 px-3 text-xs font-medium text-gray-900">{inv.invoice_number}</td>
-                        <td className="py-2.5 px-3 text-xs text-gray-600 hidden sm:table-cell">
+                      <tr key={inv.id} className="hover:bg-danger-soft">
+                        <td className="py-2.5 px-3 text-xs font-medium text-ink">{inv.invoice_number}</td>
+                        <td className="py-2.5 px-3 text-xs text-muted hidden sm:table-cell">
                           {proj?.name ?? cl?.name ?? "—"}
                         </td>
-                        <td className="py-2.5 px-3 text-xs text-red-600 font-medium">
+                        <td className="py-2.5 px-3 text-xs text-danger font-medium">
                           {inv.due_date ? new Date(inv.due_date).toLocaleDateString("id-ID") : "-"}
                         </td>
-                        <td className="py-2.5 px-3 text-right text-xs text-gray-700">{formatCurrency(inv.total_amount)}</td>
-                        <td className="py-2.5 px-3 text-right text-xs font-semibold text-red-600">
+                        <td className="py-2.5 px-3 text-right text-xs text-ink">{formatCurrency(inv.total_amount)}</td>
+                        <td className="py-2.5 px-3 text-right text-xs font-semibold text-danger">
                           {formatCurrency(inv.total_amount - inv.paid_amount)}
                         </td>
                         <td className="py-2.5 px-3 text-right">
-                          <Link href={`/invoices/${inv.id}`} className="text-xs text-blue-600 hover:underline">
+                          <Link href={`/invoices/${inv.id}`} className="text-xs text-accent hover:underline">
                             Detail
                           </Link>
                         </td>
@@ -877,13 +864,13 @@ export default function ReportsOverview() {
                     const jumlah = expenseByCategory[k] ?? 0;
                     const pct = totalPengeluaran > 0 ? Math.round((jumlah / totalPengeluaran) * 100) : 0;
                     return (
-                      <div key={k} className="bg-gray-50 rounded-xl p-3">
-                        <p className="text-xs text-gray-500 mb-0.5">{KATEGORI_LABELS[k]}</p>
-                        <p className="text-sm font-bold text-gray-900">{formatCurrency(jumlah)}</p>
-                        <div className="mt-2 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                          <div className="h-full bg-orange-400 rounded-full" style={{ width: `${pct}%` }} />
+                      <div key={k} className="bg-surface rounded-md p-3">
+                        <p className="text-xs text-muted mb-0.5">{KATEGORI_LABELS[k]}</p>
+                        <p className="text-sm font-semibold text-ink">{formatCurrency(jumlah)}</p>
+                        <div className="mt-2 h-1.5 bg-line rounded-full overflow-hidden">
+                          <div className="h-full bg-warning rounded-full" style={{ width: `${pct}%` }} />
                         </div>
-                        <p className="text-xs text-gray-400 mt-1">{pct}% dari total</p>
+                        <p className="text-xs text-faint mt-1">{pct}% dari total</p>
                       </div>
                     );
                   })}
@@ -894,43 +881,43 @@ export default function ReportsOverview() {
             {/* Tabel per project */}
             <SectionCard title="Laba Rugi per Project">
               {rows.length === 0 ? (
-                <p className="text-xs text-gray-400">Belum ada data pengeluaran atau pembayaran yang terhubung ke project.</p>
+                <p className="text-xs text-faint">Belum ada data pengeluaran atau pembayaran yang terhubung ke project.</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-gray-100">
-                        <th className="text-left py-2.5 px-3 text-xs font-semibold text-gray-500">Project</th>
-                        <th className="text-left py-2.5 px-3 text-xs font-semibold text-gray-500 hidden sm:table-cell">Status</th>
-                        <th className="text-right py-2.5 px-3 text-xs font-semibold text-gray-500">Terkumpul</th>
-                        <th className="text-right py-2.5 px-3 text-xs font-semibold text-gray-500">Pengeluaran</th>
-                        <th className="text-right py-2.5 px-3 text-xs font-semibold text-gray-500">Laba</th>
-                        <th className="text-right py-2.5 px-3 text-xs font-semibold text-gray-500 hidden md:table-cell">Margin</th>
+                      <tr className="border-b border-line">
+                        <th className="text-left py-2.5 px-3 text-xs font-semibold text-muted">Project</th>
+                        <th className="text-left py-2.5 px-3 text-xs font-semibold text-muted hidden sm:table-cell">Status</th>
+                        <th className="text-right py-2.5 px-3 text-xs font-semibold text-muted">Terkumpul</th>
+                        <th className="text-right py-2.5 px-3 text-xs font-semibold text-muted">Pengeluaran</th>
+                        <th className="text-right py-2.5 px-3 text-xs font-semibold text-muted">Laba</th>
+                        <th className="text-right py-2.5 px-3 text-xs font-semibold text-muted hidden md:table-cell">Margin</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-50">
+                    <tbody className="divide-y divide-line">
                       {rows.map(({ project: p, terkumpul, pengeluaran, laba, margin }) => {
                         const cl = clients.find((c) => c.id === p.client_id);
                         const isRugi = laba < 0;
                         return (
-                          <tr key={p.id} className={`hover:bg-gray-50 ${isRugi ? "bg-red-50/40" : ""}`}>
+                          <tr key={p.id} className={`hover:bg-hover ${isRugi ? "bg-danger-soft/40" : ""}`}>
                             <td className="py-2.5 px-3">
-                              <p className="text-xs font-medium text-gray-900">{p.name}</p>
-                              {cl && <p className="text-xs text-gray-400">{cl.name}</p>}
+                              <p className="text-xs font-medium text-ink">{p.name}</p>
+                              {cl && <p className="text-xs text-faint">{cl.name}</p>}
                             </td>
                             <td className="py-2.5 px-3 hidden sm:table-cell">
-                              <span className={`text-xs px-2 py-0.5 rounded-full ${projectBadge[p.status] ?? "bg-gray-100 text-gray-600"}`}>
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${projectBadge[p.status] ?? "tone-neutral"}`}>
                                 {p.status}
                               </span>
                             </td>
-                            <td className="py-2.5 px-3 text-right text-xs text-gray-700">{formatCurrency(terkumpul)}</td>
-                            <td className="py-2.5 px-3 text-right text-xs text-orange-600">{formatCurrency(pengeluaran)}</td>
-                            <td className={`py-2.5 px-3 text-right text-xs font-semibold ${isRugi ? "text-red-600" : "text-green-600"}`}>
+                            <td className="py-2.5 px-3 text-right text-xs text-ink">{formatCurrency(terkumpul)}</td>
+                            <td className="py-2.5 px-3 text-right text-xs text-warning">{formatCurrency(pengeluaran)}</td>
+                            <td className={`py-2.5 px-3 text-right text-xs font-semibold ${isRugi ? "text-danger" : "text-success"}`}>
                               {formatCurrency(laba)}
                             </td>
                             <td className="py-2.5 px-3 text-right text-xs hidden md:table-cell">
                               {margin !== null ? (
-                                <span className={`font-semibold ${margin < 0 ? "text-red-600" : margin < 20 ? "text-yellow-600" : "text-green-600"}`}>
+                                <span className={`font-semibold ${margin < 0 ? "text-danger" : margin < 20 ? "text-warning" : "text-success"}`}>
                                   {margin}%
                                 </span>
                               ) : "—"}
@@ -940,15 +927,15 @@ export default function ReportsOverview() {
                       })}
                     </tbody>
                     <tfoot>
-                      <tr className="border-t-2 border-gray-200 bg-gray-50">
-                        <td className="py-2.5 px-3 text-xs font-bold text-gray-900" colSpan={2}>Total</td>
-                        <td className="py-2.5 px-3 text-right text-xs font-bold text-gray-900">{formatCurrency(totalTerkumpul)}</td>
-                        <td className="py-2.5 px-3 text-right text-xs font-bold text-orange-600">{formatCurrency(totalPengeluaran)}</td>
-                        <td className={`py-2.5 px-3 text-right text-xs font-bold ${totalLaba < 0 ? "text-red-600" : "text-green-600"}`}>
+                      <tr className="border-t-2 border-line bg-surface">
+                        <td className="py-2.5 px-3 text-xs font-semibold text-ink" colSpan={2}>Total</td>
+                        <td className="py-2.5 px-3 text-right text-xs font-semibold text-ink">{formatCurrency(totalTerkumpul)}</td>
+                        <td className="py-2.5 px-3 text-right text-xs font-semibold text-warning">{formatCurrency(totalPengeluaran)}</td>
+                        <td className={`py-2.5 px-3 text-right text-xs font-semibold ${totalLaba < 0 ? "text-danger" : "text-success"}`}>
                           {formatCurrency(totalLaba)}
                         </td>
-                        <td className="py-2.5 px-3 text-right text-xs font-bold hidden md:table-cell">
-                          <span className={totalMargin < 0 ? "text-red-600" : totalMargin < 20 ? "text-yellow-600" : "text-green-600"}>
+                        <td className="py-2.5 px-3 text-right text-xs font-semibold hidden md:table-cell">
+                          <span className={totalMargin < 0 ? "text-danger" : totalMargin < 20 ? "text-warning" : "text-success"}>
                             {totalMargin}%
                           </span>
                         </td>

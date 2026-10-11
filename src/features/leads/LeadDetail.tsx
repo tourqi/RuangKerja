@@ -17,6 +17,7 @@ import { LEAD_CONTACT_CHANNELS, LEAD_CONTACT_CHANNEL_LABELS } from "@/constants/
 import { LeadFormModal } from "./LeadFormModal";
 import { ActionDropdown } from "@/components/ActionDropdown";
 import { DetailTabs, useTabParam } from "@/components/DetailTabs";
+import { StatusDot, LEAD_STATUS_TONE } from "@/components/ui/StatusDot";
 import { formatIDR } from "@/utils/format";
 
 const formatDate = (s?: string) =>
@@ -25,35 +26,20 @@ const formatDate = (s?: string) =>
 const formatCurrency = (n?: number) =>
   n == null ? "-" : formatIDR(n);
 
-const statusColors: Record<string, string> = {
-  "New Lead": "bg-blue-100 text-blue-800",
-  Contacted: "bg-yellow-100 text-yellow-800",
-  Survey: "bg-purple-100 text-purple-800",
-  Deal: "bg-indigo-100 text-indigo-800",
-  "Deal Won": "bg-green-100 text-green-800",
-  "Deal Lost": "bg-red-100 text-red-800",
-};
-
-const priorityColors: Record<string, string> = {
-  low: "bg-gray-100 text-gray-600",
-  medium: "bg-blue-100 text-blue-700",
-  high: "bg-orange-100 text-orange-700",
-  urgent: "bg-red-100 text-red-700",
-};
-
 const TAB_KEYS = ["ringkasan", "kontak", "rab"] as const;
+const LEAD_STAGES = ["New Lead", "Contacted", "Survey", "Deal", "Deal Won"] as const;
 
 const rabStatusColors: Record<string, string> = {
-  draft: "bg-gray-100 text-gray-600",
-  sent: "bg-blue-100 text-blue-700",
-  approved: "bg-green-100 text-green-700",
+  draft: "tone-neutral",
+  sent: "tone-active",
+  approved: "tone-success",
 };
 
 function InfoRow({ label, value }: { label: string; value?: string | null }) {
   return (
     <div>
-      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-0.5">{label}</p>
-      <p className="text-sm text-gray-800">{value || "-"}</p>
+      <p className="text-xs font-medium text-faint mb-0.5">{label}</p>
+      <p className="text-sm text-ink">{value || "-"}</p>
     </div>
   );
 }
@@ -83,7 +69,7 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
   if (loading || lr) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-gray-900" />
+        <div className="animate-spin rounded-full h-6 w-6 border-2 border-line border-t-ink" />
       </div>
     );
   }
@@ -93,11 +79,11 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
   if (!lead) {
     return (
       <div className="p-6">
-        <button onClick={() => router.back()} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition mb-6">
+        <button onClick={() => router.back()} className="flex items-center gap-1.5 text-sm text-muted hover:text-ink transition mb-6">
           <span>←</span> Kembali
         </button>
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-12 text-center">
-          <p className="text-gray-400 text-sm">Lead tidak ditemukan.</p>
+        <div className="bg-white rounded-md border border-line p-12 text-center">
+          <p className="text-faint text-sm">Lead tidak ditemukan.</p>
         </div>
       </div>
     );
@@ -200,63 +186,69 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <Link href="/leads" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition">
-        <span>←</span> Kembali ke Leads
-      </Link>
-
+    <div className="space-y-5">
       {/* Header */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{client?.name ?? "Unknown Client"}</h1>
-            {lead.project_name && (
-              <p className="text-sm text-gray-500 mt-0.5">{lead.project_name}</p>
-            )}
-            <div className="flex flex-wrap gap-2 mt-3">
-              <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${statusColors[lead.status] ?? "bg-gray-100 text-gray-700"}`}>
-                {lead.status}
-              </span>
-              {lead.is_stale && (
-                <span title="Contacted > 7 hari tanpa kontak terbaru" className="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-200 text-gray-700">
-                  Stale
-                </span>
-              )}
-              {lead.priority && (
-                <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${priorityColors[lead.priority] ?? "bg-gray-100 text-gray-600"}`}>
-                  {lead.priority}
-                </span>
-              )}
-              {lead.source && (
-                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">
-                  {lead.source}
-                </span>
-              )}
-            </div>
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-xl font-semibold tracking-tight text-ink truncate">{client?.name ?? "Unknown Client"}</h1>
+            {lead.project_name && <p className="text-[13px] text-muted mt-0.5">{lead.project_name}</p>}
           </div>
-          <div className="flex items-start gap-4 flex-shrink-0">
-            <div className="flex gap-6 text-center">
-              <div>
-                <p className="text-2xl font-bold text-gray-900">{rabList.length}</p>
-                <p className="text-xs text-gray-400 mt-0.5">RAB</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">
-                  {rabList.filter((r) => r.status === "approved").length}
-                </p>
-                <p className="text-xs text-gray-400 mt-0.5">Disetujui</p>
-              </div>
-            </div>
-            {lead.status === "Deal Won" && (
-              <Link
-                href={`/projects?client_id=${lead.client_id}&lead_id=${leadId}`}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                Buat Project
-              </Link>
-            )}
-          </div>
+          {lead.status === "Deal Won" && (
+            <Link
+              href={`/projects?client_id=${lead.client_id}&lead_id=${leadId}`}
+              className="self-start px-2.5 py-1.5 text-[13px] font-medium rounded-md bg-accent text-white hover:bg-accent-hover transition-colors shrink-0"
+            >
+              + Buat Project
+            </Link>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[13px] text-muted">
+          <StatusDot tone={LEAD_STATUS_TONE[lead.status] ?? "neutral"}>{lead.status}</StatusDot>
+          {lead.is_stale && (
+            <span title="Contacted > 7 hari tanpa kontak terbaru" className="text-warning font-medium">Stale</span>
+          )}
+          {lead.priority && <span>Prioritas <span className="text-ink font-medium capitalize">{lead.priority}</span></span>}
+          {lead.source && <span>Sumber <span className="text-ink font-medium">{lead.source}</span></span>}
+          {lead.assigned_to && <span>PIC <span className="text-ink font-medium">{lead.assigned_to}</span></span>}
+          {lead.follow_up_date && <span className="tabular-nums">Follow-up <span className="text-ink font-medium">{formatDate(lead.follow_up_date)}</span></span>}
+        </div>
+        {lead.status === "Deal Lost" ? (
+          <p className="text-xs text-danger">Lead ditutup sebagai Deal Lost{lead.alasan_lost ? ` · ${lead.alasan_lost}` : ""}</p>
+        ) : (
+          <ol className="grid grid-cols-5 gap-1 pt-1" aria-label="Tahapan lead">
+            {LEAD_STAGES.map((stage, i) => {
+              const current = LEAD_STAGES.indexOf(lead.status as (typeof LEAD_STAGES)[number]);
+              const done = i < current || lead.status === "Deal Won";
+              const now = i === current && lead.status !== "Deal Won";
+              return (
+                <li key={stage} className={`grid gap-1.5 text-xs ${done || now ? "text-ink" : "text-faint"} ${now ? "font-medium" : ""}`}>
+                  <span className={`h-[3px] rounded-full ${done ? "bg-ink" : now ? "bg-accent" : "bg-line"}`} />
+                  <span className="truncate">{stage}</span>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+      </div>
+
+      {/* Angka utama */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 border-y border-line -mx-4 sm:-mx-6 lg:-mx-8 [&>div]:px-4 sm:[&>div]:px-6 lg:[&>div]:px-8">
+        <div className="py-3 border-r border-line">
+          <p className="text-xs text-muted">RAB</p>
+          <p className="font-mono text-base font-medium text-ink mt-0.5">{rabList.length}</p>
+        </div>
+        <div className="py-3 lg:border-r border-line">
+          <p className="text-xs text-muted">RAB disetujui</p>
+          <p className="font-mono text-base font-medium text-ink mt-0.5">{rabList.filter((r) => r.status === "approved").length}</p>
+        </div>
+        <div className="py-3 border-r border-t lg:border-t-0 border-line">
+          <p className="text-xs text-muted">Budget klien</p>
+          <p className="font-mono text-base font-medium text-ink mt-0.5">{formatCurrency(lead.budget)}</p>
+        </div>
+        <div className="py-3 border-t lg:border-t-0 border-line">
+          <p className="text-xs text-muted">Nominal deal</p>
+          <p className="font-mono text-base font-medium text-ink mt-0.5">{formatCurrency(lead.nominal_deal)}</p>
         </div>
       </div>
 
@@ -281,12 +273,12 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
 
       {activeTab === "ringkasan" && (<>
       {/* Informasi Lead */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 space-y-5">
+      <div className="bg-white rounded-md border border-line p-6 space-y-5">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-800">Informasi Lead</h2>
+          <h2 className="text-sm font-semibold text-ink">Informasi Lead</h2>
           <button
             onClick={() => setEditOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-accent bg-accent-soft rounded-md hover:bg-accent-soft transition"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -301,19 +293,19 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
           <InfoRow label="Status" value={lead.status} />
           <InfoRow label="Prioritas" value={lead.priority} />
           <div>
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-0.5">No Response Count</p>
+            <p className="text-xs font-medium text-faint mb-0.5">No Response Count</p>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-800">{lead.no_response_count ?? 0}</span>
+              <span className="text-sm text-ink">{lead.no_response_count ?? 0}</span>
               <button
                 onClick={() => handleNoResponseChange(1)}
                 title="Tandai follow-up tanpa respon (+1)"
-                className="w-5 h-5 flex items-center justify-center rounded bg-gray-100 text-gray-600 hover:bg-gray-200 text-xs leading-none"
+                className="w-5 h-5 flex items-center justify-center rounded bg-hover text-muted hover:bg-hover text-xs leading-none"
               >+</button>
               <button
                 onClick={() => handleNoResponseChange(-1)}
                 title="Kurangi (mis. client akhirnya merespon)"
                 disabled={(lead.no_response_count ?? 0) === 0}
-                className="w-5 h-5 flex items-center justify-center rounded bg-gray-100 text-gray-600 hover:bg-gray-200 text-xs leading-none disabled:opacity-40 disabled:cursor-not-allowed"
+                className="w-5 h-5 flex items-center justify-center rounded bg-hover text-muted hover:bg-hover text-xs leading-none disabled:opacity-40 disabled:cursor-not-allowed"
               >−</button>
             </div>
           </div>
@@ -327,9 +319,9 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
           {lead.status === "Deal Lost" && <InfoRow label="Alasan Lost" value={lead.alasan_lost} />}
         </div>
         {lead.notes && (
-          <div className="pt-5 border-t border-gray-100">
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Catatan</p>
-            <p className="text-sm text-gray-700 whitespace-pre-wrap">{lead.notes}</p>
+          <div className="pt-5 border-t border-line">
+            <p className="text-xs font-medium text-faint mb-1">Catatan</p>
+            <p className="text-sm text-ink whitespace-pre-wrap">{lead.notes}</p>
           </div>
         )}
       </div>
@@ -340,12 +332,12 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
       {/* Log Kontak — syarat New Lead → Contacted: minimal 1 record */}
       {activeTab === "kontak" && (
       <div className="space-y-4">
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-3">
+        <div className="bg-white rounded-md border border-line p-4 space-y-3">
           <div className="flex flex-col sm:flex-row gap-2">
             <select
               value={contactChannel}
               onChange={(e) => setContactChannel(e.target.value as LeadContactChannel)}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900"
+              className="border border-line rounded-md px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent/25"
             >
               {LEAD_CONTACT_CHANNELS.map((c) => (
                 <option key={c} value={c}>{LEAD_CONTACT_CHANNEL_LABELS[c]}</option>
@@ -356,29 +348,29 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
               placeholder="Catatan kontak (opsional)"
               value={contactNotes}
               onChange={(e) => setContactNotes(e.target.value)}
-              className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900"
+              className="flex-1 border border-line rounded-md px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent/25"
             />
             <button
               onClick={handleAddContact}
               disabled={savingContact}
-              className="px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-700 disabled:opacity-50 transition shrink-0"
+              className="px-4 py-2 bg-accent text-white text-sm rounded-md hover:bg-accent-hover disabled:opacity-50 transition shrink-0"
             >
               {savingContact ? "Menyimpan..." : "Catat Kontak"}
             </button>
           </div>
           {contacts.length === 0 ? (
-            <p className="text-sm text-gray-400">Belum ada kontak tercatat. Wajib ada minimal 1 sebelum status bisa pindah ke Contacted.</p>
+            <p className="text-sm text-faint">Belum ada kontak tercatat. Wajib ada minimal 1 sebelum status bisa pindah ke Contacted.</p>
           ) : (
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-line">
               {contacts.map((c) => (
                 <div key={c.id} className="py-2 flex items-start justify-between gap-3">
                   <div>
-                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                    <span className="text-xs px-2 py-0.5 rounded-md border border-line text-muted">
                       {LEAD_CONTACT_CHANNEL_LABELS[c.channel]}
                     </span>
-                    {c.notes && <p className="text-sm text-gray-700 mt-1">{c.notes}</p>}
+                    {c.notes && <p className="text-sm text-ink mt-1">{c.notes}</p>}
                   </div>
-                  <p className="text-xs text-gray-400 shrink-0">{formatDate(c.created_at)}</p>
+                  <p className="text-xs text-faint shrink-0">{formatDate(c.created_at)}</p>
                 </div>
               ))}
             </div>
@@ -391,7 +383,7 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
       {activeTab === "rab" && (
       <div className="space-y-4">
         {/* Add RAB */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+        <div className="bg-white rounded-md border border-line p-4">
           {showAddRab ? (
             <div className="flex items-center gap-3">
               <input
@@ -401,18 +393,18 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
                 value={newRabNama}
                 onChange={(e) => setNewRabNama(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleAddRab()}
-                className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                className="flex-1 border border-line rounded-md px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent/25 focus:border-transparent"
               />
               <button
                 onClick={handleAddRab}
                 disabled={saving || !newRabNama.trim()}
-                className="px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-700 disabled:opacity-50 transition"
+                className="px-4 py-2 bg-accent text-white text-sm rounded-md hover:bg-accent-hover disabled:opacity-50 transition"
               >
                 {saving ? "Menyimpan..." : "Simpan"}
               </button>
               <button
                 onClick={() => { setShowAddRab(false); setNewRabNama(""); }}
-                className="px-4 py-2 text-sm text-gray-500 hover:text-gray-800 transition"
+                className="px-4 py-2 text-sm text-muted hover:text-ink transition"
               >
                 Batal
               </button>
@@ -420,7 +412,7 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
           ) : (
             <button
               onClick={() => setShowAddRab(true)}
-              className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition"
+              className="flex items-center gap-2 text-sm text-muted hover:text-ink transition"
             >
               <span className="text-lg leading-none">+</span> Buat RAB Baru
             </button>
@@ -429,25 +421,25 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
 
         {/* RAB list */}
         {rabList.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-12 text-center">
-            <p className="text-gray-400 text-sm">Belum ada RAB untuk lead ini.</p>
+          <div className="bg-white rounded-md border border-line p-12 text-center">
+            <p className="text-faint text-sm">Belum ada RAB untuk lead ini.</p>
           </div>
         ) : (
           <div className="space-y-3">
             {rabList.map((rab) => {
               const lunas = isRabLunas(rab.id);
               return (
-              <div key={rab.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+              <div key={rab.id} className="bg-white rounded-md border border-line p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{rab.nama}</p>
+                    <p className="text-sm font-semibold text-ink truncate">{rab.nama}</p>
                     {lunas && (
-                      <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700 shrink-0">
+                      <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full tone-success shrink-0">
                         ✓ Lunas
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-gray-400 mt-0.5">Dibuat {formatDate(rab.created_at)}</p>
+                  <p className="text-xs text-faint mt-0.5">Dibuat {formatDate(rab.created_at)}</p>
                 </div>
                 <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                   <select
@@ -455,7 +447,7 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
                     onChange={(e) => handleStatusChange(rab, e.target.value as Rab["status"])}
                     disabled={lunas}
                     title={lunas ? "RAB sudah lunas, status tidak dapat diubah" : undefined}
-                    className={`text-xs font-medium px-2.5 py-1 rounded-full border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-300 disabled:cursor-not-allowed disabled:opacity-70 ${rabStatusColors[rab.status]}`}
+                    className={`text-xs font-medium px-2.5 py-1 rounded-full border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent/25 disabled:cursor-not-allowed disabled:opacity-70 ${rabStatusColors[rab.status]}`}
                   >
                     <option value="draft">Draft</option>
                     <option value="sent">Terkirim</option>
@@ -463,7 +455,7 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
                   </select>
                   <Link
                     href={`/leads/${leadId}/rab/${rab.id}`}
-                    className="px-3 py-1.5 text-xs font-medium bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition"
+                    className="px-3 py-1.5 text-xs font-medium bg-accent text-white rounded-md hover:bg-accent-hover transition"
                   >
                     Buka
                   </Link>
@@ -473,7 +465,7 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
                     onClick={() => handleDuplicateRab(rab.id)}
                     disabled={duplicatingId === rab.id}
                     title="Duplikasi RAB (untuk membuat penawaran harga alternatif dengan komponen yang sama)"
-                    className="hidden sm:inline-flex px-3 py-1.5 text-xs font-medium text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 hover:text-gray-800 transition disabled:opacity-50"
+                    className="hidden sm:inline-flex px-3 py-1.5 text-xs font-medium text-muted border border-line rounded-md hover:bg-hover hover:text-ink transition disabled:opacity-50"
                   >
                     {duplicatingId === rab.id ? "..." : "Duplikasi"}
                   </button>
@@ -481,7 +473,7 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
                     onClick={() => handleDeleteRab(rab.id)}
                     disabled={deletingId === rab.id || lunas}
                     title={lunas ? "RAB sudah lunas dan tidak dapat dihapus" : undefined}
-                    className="hidden sm:inline-flex px-3 py-1.5 text-xs font-medium text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                    className="hidden sm:inline-flex px-3 py-1.5 text-xs font-medium text-danger hover:text-danger hover:bg-danger-soft rounded-md transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                   >
                     {deletingId === rab.id ? "..." : "Hapus"}
                   </button>
@@ -491,7 +483,7 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
                     <ActionDropdown
                       align="right"
                       label="⋯"
-                      buttonClassName="px-2.5 py-1.5 text-sm font-medium text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 hover:text-gray-800 transition"
+                      buttonClassName="px-2.5 py-1.5 text-sm font-medium text-muted border border-line rounded-md hover:bg-hover hover:text-ink transition"
                       items={[
                         {
                           key: "duplicate",

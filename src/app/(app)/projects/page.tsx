@@ -5,8 +5,8 @@ export default function ProjectsPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Projects</h1>
-        <p className="text-sm text-gray-500 mt-1">Kelola proyek interior dan progres pengerjaannya</p>
+        <h1 className="text-xl font-semibold tracking-tight text-ink">Projects</h1>
+        <p className="text-sm text-muted mt-1">Kelola proyek interior dan progres pengerjaannya</p>
       </div>
       <Suspense>
         <ProjectsTable />

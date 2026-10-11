@@ -37,8 +37,8 @@ function SkeletonRow({ cols }: { cols: number }) {
   return (
     <tr>
       {Array.from({ length: cols }).map((_, i) => (
-        <td key={i} className="px-4 py-3">
-          <div className="h-3 bg-gray-100 rounded animate-pulse" style={{ width: `${60 + (i % 3) * 15}%` }} />
+        <td key={i} className="px-3 py-2">
+          <div className="h-3 bg-hover rounded animate-pulse" style={{ width: `${60 + (i % 3) * 15}%` }} />
         </td>
       ))}
     </tr>
@@ -158,18 +158,18 @@ export default function ClientsTable() {
   return (
     <div>
       {/* Toolbar */}
-      <div className="sticky top-0 z-10 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 bg-gray-50/95 backdrop-blur-sm py-3 mb-3 flex items-center justify-between">
+      <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center justify-between w-full">
-          <p className="text-sm text-gray-500">{filteredClients.length} client ditemukan</p>
+          <p className="text-sm text-muted">{filteredClients.length} client ditemukan</p>
           <div className="flex gap-2">
             <button
-              className="px-4 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition font-medium"
+              className="px-2.5 py-1.5 border border-line bg-white text-ink text-[13px] rounded-md hover:bg-hover transition-colors font-medium"
               onClick={handleExport}
             >
               ↓ Export CSV
             </button>
             <button
-              className="px-5 py-2 bg-black text-white text-sm rounded-lg hover:bg-gray-800 transition font-medium"
+              className="px-2.5 py-1.5 bg-accent text-white text-[13px] rounded-md hover:bg-accent-hover transition font-medium"
               onClick={() => { setEditingClient(null); setShowModal(true); }}
             >
               + Tambah Client
@@ -186,14 +186,14 @@ export default function ClientsTable() {
             value={filter.name}
             onChange={handleFilterChange}
             placeholder="Cari Nama..."
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-black focus:border-black outline-none"
+            className="px-2.5 py-1.5 border border-line rounded-md text-[13px] text-ink focus:ring-2 focus:ring-accent/25 focus:border-accent outline-none"
           />
           <input
             name="project_name"
             value={filter.project_name}
             onChange={handleFilterChange}
             placeholder="Cari Project..."
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-black focus:border-black outline-none"
+            className="px-2.5 py-1.5 border border-line rounded-md text-[13px] text-ink focus:ring-2 focus:ring-accent/25 focus:border-accent outline-none"
           />
           <MultiSelect
             placeholder="Semua Tipe"
@@ -229,7 +229,7 @@ export default function ClientsTable() {
           />
           <button
             onClick={() => setFilter({ name: "", project_name: "", property_type: [], budget_range: [], lead_status: [], source: [], priority: [] })}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 hover:bg-gray-50 transition outline-none"
+            className="px-2.5 py-1.5 border border-line rounded-md text-[13px] text-ink hover:bg-hover transition outline-none"
           >
             Reset Filter
           </button>
@@ -237,41 +237,38 @@ export default function ClientsTable() {
       </div>
 
       {/* Table (desktop) */}
-      <div className="hidden sm:block bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
-          <h3 className="text-base font-semibold text-gray-800">Daftar Client</h3>
-        </div>
+      <div className="hidden sm:block bg-white rounded-md border border-line overflow-hidden">
         <div className="w-full overflow-x-auto">
           {loading ? (
-            <table className="w-full min-w-[960px] text-sm">
-              <tbody className="divide-y divide-gray-100">
+            <table className="w-full min-w-[960px] text-[13px]">
+              <tbody className="divide-y divide-line">
                 {Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} cols={12} />)}
               </tbody>
             </table>
           ) : error ? (
-            <div className="px-6 py-8 text-center text-red-500 text-sm">{error}</div>
+            <div className="px-6 py-8 text-center text-danger text-sm">{error}</div>
           ) : (
-            <table className="w-full min-w-[960px] text-sm">
-              <thead className="bg-gray-50 border-b border-gray-100">
+            <table className="w-full min-w-[960px] text-[13px]">
+              <thead className="bg-surface border-b border-line">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Aksi</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted whitespace-nowrap w-10"><span className="sr-only">Aksi</span></th>
                   <SortableHeader label="Nama" col="name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <SortableHeader label="No. HP" col="phone" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Alamat</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Nama Project</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted whitespace-nowrap">Alamat</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted whitespace-nowrap">Nama Project</th>
                   <SortableHeader label="Tipe" col="property_type" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <SortableHeader label="Budget" col="budget_range" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <SortableHeader label="Status" col="lead_status" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Follow-up</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted whitespace-nowrap">Follow-up</th>
                   <SortableHeader label="Sumber" col="source" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <SortableHeader label="Prioritas" col="priority" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Catatan</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted whitespace-nowrap">Catatan</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-line">
                 {pagedClients.map((client) => (
-                  <tr key={client.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onDoubleClick={() => router.push(`/clients/${client.id}`)}>
-                    <td className="px-4 py-3 whitespace-nowrap" onDoubleClick={(e) => e.stopPropagation()}>
+                  <tr key={client.id} className="hover:bg-hover transition-colors cursor-pointer" onDoubleClick={() => router.push(`/clients/${client.id}`)}>
+                    <td className="px-3 py-2 whitespace-nowrap" onDoubleClick={(e) => e.stopPropagation()}>
                       <ActionDropdown
                         align="left"
                         items={[
@@ -303,37 +300,37 @@ export default function ClientsTable() {
                         ]}
                       />
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap max-w-[150px] truncate">
-                      <Link href={`/clients/${client.id}`} className="font-medium text-gray-900 hover:text-blue-600 hover:underline transition-colors">
+                    <td className="px-3 py-2 whitespace-nowrap max-w-[150px] truncate">
+                      <Link href={`/clients/${client.id}`} className="font-medium text-ink hover:text-accent-hover hover:underline transition-colors">
                         {client.name}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{client.phone || "-"}</td>
-                    <td className="px-4 py-3 text-gray-500 max-w-[160px] truncate">{client.address || "-"}</td>
-                    <td className="px-4 py-3 text-gray-500 max-w-[150px] truncate">{client.project_name || "-"}</td>
-                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{client.property_type || "-"}</td>
-                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{client.budget_range || "-"}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="px-3 py-2 text-muted whitespace-nowrap">{client.phone || "-"}</td>
+                    <td className="px-3 py-2 text-muted max-w-[160px] truncate">{client.address || "-"}</td>
+                    <td className="px-3 py-2 text-muted max-w-[150px] truncate">{client.project_name || "-"}</td>
+                    <td className="px-3 py-2 text-muted whitespace-nowrap">{client.property_type || "-"}</td>
+                    <td className="px-3 py-2 text-muted whitespace-nowrap">{client.budget_range || "-"}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">
                       {client.lead_status ? (
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${CLIENT_LEAD_STATUS_COLORS[client.lead_status] || "bg-gray-100 text-gray-700"}`}>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${CLIENT_LEAD_STATUS_COLORS[client.lead_status] || "tone-neutral"}`}>
                           {client.lead_status}
                         </span>
                       ) : "-"}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="px-3 py-2 whitespace-nowrap">
                       {(() => {
                         const latestLead = getLatestLead(client.id);
-                        if (!latestLead) return <span className="text-gray-400 text-sm">-</span>;
+                        if (!latestLead) return <span className="text-faint">-</span>;
                         const overdue = !!latestLead.follow_up_date
                           && latestLead.follow_up_date < new Date().toISOString().slice(0, 10)
                           && latestLead.status !== "Deal Won" && latestLead.status !== "Deal Lost";
                         return (
                           <div className="flex items-center gap-1.5">
-                            <span className={`text-sm ${overdue ? "text-red-600 font-medium" : "text-gray-600"}`}>
+                            <span className={`${overdue ? "text-danger font-medium" : "text-muted"}`}>
                               {formatDate(latestLead.follow_up_date)}
                             </span>
                             {latestLead.is_stale && (
-                              <span title="Contacted > 7 hari tanpa kontak terbaru" className="px-1.5 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-700">
+                              <span title="Contacted > 7 hari tanpa kontak terbaru" className="px-1.5 py-px rounded text-[11px] font-medium border border-line text-warning">
                                 Stale
                               </span>
                             )}
@@ -341,20 +338,20 @@ export default function ClientsTable() {
                         );
                       })()}
                     </td>
-                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{client.source || "-"}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="px-3 py-2 text-muted whitespace-nowrap">{client.source || "-"}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">
                       {client.priority ? (
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${PRIORITY_COLORS[client.priority] || "bg-gray-100 text-gray-700"}`}>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${PRIORITY_COLORS[client.priority] || "tone-neutral"}`}>
                           {client.priority}
                         </span>
                       ) : "-"}
                     </td>
-                    <td className="px-4 py-3 text-gray-500 max-w-[180px] truncate">{client.notes || "-"}</td>
+                    <td className="px-3 py-2 text-muted max-w-[180px] truncate">{client.notes || "-"}</td>
                   </tr>
                 ))}
                 {filteredClients.length === 0 && (
                   <tr>
-                    <td colSpan={12} className="px-6 py-12 text-center text-gray-400 text-sm">
+                    <td colSpan={12} className="px-6 py-12 text-center text-faint text-sm">
                       Tidak ada client yang ditemukan
                     </td>
                   </tr>
@@ -380,11 +377,11 @@ export default function ClientsTable() {
         {loading ? (
           <div className="space-y-3">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-32 bg-white rounded-2xl border border-gray-100 animate-pulse" />
+              <div key={i} className="h-32 bg-white rounded-lg border border-line animate-pulse" />
             ))}
           </div>
         ) : error ? (
-          <div className="px-6 py-8 text-center text-red-500 text-sm bg-white rounded-2xl border border-gray-100">{error}</div>
+          <div className="px-6 py-8 text-center text-danger text-sm bg-white rounded-lg border border-line">{error}</div>
         ) : (
           <>
             <MobileCardList>
@@ -392,7 +389,7 @@ export default function ClientsTable() {
                 <MobileCard key={client.id} onClick={() => router.push(`/clients/${client.id}`)}>
                   <MobileCardHeader
                     title={client.name}
-                    subtitle={client.phone ? <span className="text-xs text-gray-400">{client.phone}</span> : undefined}
+                    subtitle={client.phone ? <span className="text-xs text-faint">{client.phone}</span> : undefined}
                     actions={
                       <>
                         <MobileCardIconButton title="Lihat Detail" onClick={() => setViewingClient(client)}><EyeIcon /></MobileCardIconButton>
@@ -407,7 +404,7 @@ export default function ClientsTable() {
                   <MobileCardRow label="Budget">{client.budget_range || "-"}</MobileCardRow>
                   <MobileCardRow label="Status">
                     {client.lead_status ? (
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${CLIENT_LEAD_STATUS_COLORS[client.lead_status] || "bg-gray-100 text-gray-700"}`}>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${CLIENT_LEAD_STATUS_COLORS[client.lead_status] || "tone-neutral"}`}>
                         {client.lead_status}
                       </span>
                     ) : "-"}
@@ -421,9 +418,9 @@ export default function ClientsTable() {
                         && latestLead.status !== "Deal Won" && latestLead.status !== "Deal Lost";
                       return (
                         <span className="inline-flex items-center gap-1.5">
-                          <span className={overdue ? "text-red-600 font-medium" : ""}>{formatDate(latestLead.follow_up_date)}</span>
+                          <span className={overdue ? "text-danger font-medium" : ""}>{formatDate(latestLead.follow_up_date)}</span>
                           {latestLead.is_stale && (
-                            <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-gray-200 text-gray-700">Stale</span>
+                            <span className="px-1.5 py-px rounded text-[11px] font-medium border border-line text-warning">Stale</span>
                           )}
                         </span>
                       );
@@ -432,7 +429,7 @@ export default function ClientsTable() {
                   <MobileCardRow label="Sumber">{client.source || "-"}</MobileCardRow>
                   <MobileCardRow label="Prioritas">
                     {client.priority ? (
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${PRIORITY_COLORS[client.priority] || "bg-gray-100 text-gray-700"}`}>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${PRIORITY_COLORS[client.priority] || "tone-neutral"}`}>
                         {client.priority}
                       </span>
                     ) : "-"}
@@ -441,12 +438,12 @@ export default function ClientsTable() {
                 </MobileCard>
               ))}
               {filteredClients.length === 0 && (
-                <div className="py-12 text-center text-gray-400 text-sm bg-white rounded-2xl border border-gray-100">
+                <div className="py-12 text-center text-faint text-sm bg-white rounded-lg border border-line">
                   Tidak ada client yang ditemukan
                 </div>
               )}
             </MobileCardList>
-            <div className="mt-3 bg-white rounded-2xl border border-gray-100 overflow-hidden">
+            <div className="mt-3 bg-white rounded-lg border border-line overflow-hidden">
               <Pagination
                 page={page}
                 totalPages={totalPages}

@@ -48,8 +48,8 @@ export default function RabPrintView({ rab, groups, onClose }: Props) {
         <thead>
           <tr className="bg-gray-200">
             <th className="text-center w-8">NO</th>
-            <th className="text-center w-32">DESKRIPSI</th>
-            <th className="text-center">SPESIFIKASI</th>
+            <th className="text-center w-32">PEKERJAAN</th>
+            <th className="text-center">DESKRIPSI</th>
             <th className="text-center w-14">QTY</th>
             <th className="text-center w-10">SAT</th>
             <th className="text-center w-28">HARGA</th>

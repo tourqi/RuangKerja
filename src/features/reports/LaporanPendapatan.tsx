@@ -21,9 +21,9 @@ const methodLabels: Record<string, string> = {
 };
 
 const methodBadge: Record<string, string> = {
-  transfer: "bg-blue-100 text-blue-700",
-  cash: "bg-green-100 text-green-700",
-  check: "bg-gray-100 text-gray-600",
+  transfer: "tone-active",
+  cash: "tone-success",
+  check: "tone-neutral",
 };
 
 function fmt(v: number) {
@@ -64,30 +64,30 @@ export function LaporanPendapatan({
   return (
     <div className="space-y-4">
       {/* Filter */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+      <div className="bg-white rounded-md border border-line p-4">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="text-xs font-semibold text-gray-500">Filter Tanggal:</span>
+          <span className="text-xs font-semibold text-muted">Filter Tanggal:</span>
           <div className="flex items-center gap-2">
-            <label className="text-xs text-gray-500">Dari</label>
+            <label className="text-xs text-muted">Dari</label>
             <input
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-900/10"
+              className="text-xs border border-line rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/25"
             />
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-xs text-gray-500">Sampai</label>
+            <label className="text-xs text-muted">Sampai</label>
             <input
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-900/10"
+              className="text-xs border border-line rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/25"
             />
           </div>
           <button
             onClick={() => { setDateFrom(defaultFrom); setDateTo(defaultTo); }}
-            className="text-xs text-gray-400 hover:text-gray-600 underline"
+            className="text-xs text-faint hover:text-muted underline"
           >
             Reset
           </button>
@@ -96,20 +96,20 @@ export function LaporanPendapatan({
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 col-span-2 lg:col-span-1">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Total Pendapatan</p>
-          <p className="text-2xl font-bold text-green-600">{fmt(total)}</p>
-          <p className="text-xs text-gray-400 mt-1">{filtered.length} transaksi</p>
+        <div className="bg-white rounded-md border border-line p-5 col-span-2 lg:col-span-1">
+          <p className="text-xs font-semibold text-faint mb-1">Total Pendapatan</p>
+          <p className="text-2xl font-semibold text-success">{fmt(total)}</p>
+          <p className="text-xs text-faint mt-1">{filtered.length} transaksi</p>
         </div>
         {(["transfer", "cash", "check"] as const).map((method) => (
-          <div key={method} className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">
+          <div key={method} className="bg-white rounded-md border border-line p-5">
+            <p className="text-xs font-semibold text-faint mb-1">
               {methodLabels[method]}
             </p>
-            <p className="text-xl font-bold text-gray-900">{fmt(byMethod[method] ?? 0)}</p>
-            <div className="mt-2 bg-gray-100 rounded-full h-1.5">
+            <p className="text-xl font-semibold text-ink">{fmt(byMethod[method] ?? 0)}</p>
+            <div className="mt-2 bg-hover rounded-full h-1.5">
               <div
-                className="bg-green-400 h-1.5 rounded-full"
+                className="bg-success h-1.5 rounded-full"
                 style={{
                   width: total > 0 ? `${Math.round(((byMethod[method] ?? 0) / total) * 100)}%` : "0%",
                 }}
@@ -120,10 +120,10 @@ export function LaporanPendapatan({
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-gray-100">
-          <h3 className="text-sm font-semibold text-gray-800">Detail Pembayaran Masuk</h3>
-          <p className="text-xs text-gray-400 mt-0.5">
+      <div className="bg-white rounded-md border border-line overflow-hidden">
+        <div className="p-4 border-b border-line">
+          <h3 className="text-sm font-semibold text-ink">Detail Pembayaran Masuk</h3>
+          <p className="text-xs text-faint mt-0.5">
             {new Date(dateFrom).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
             {" "}&ndash;{" "}
             {new Date(dateTo).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
@@ -131,25 +131,25 @@ export function LaporanPendapatan({
         </div>
 
         {filtered.length === 0 ? (
-          <div className="p-10 text-center text-sm text-gray-400">
+          <div className="p-10 text-center text-sm text-faint">
             Tidak ada data pendapatan pada periode yang dipilih.
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100 bg-gray-50">
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 w-10">No</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500">Tanggal</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500">Klien</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500">Project</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500">No. Invoice</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500">Metode</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 hidden md:table-cell">Catatan</th>
-                  <th className="text-right py-3 px-4 text-xs font-semibold text-gray-500">Jumlah</th>
+                <tr className="border-b border-line bg-surface">
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-muted w-10">No</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-muted">Tanggal</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-muted">Klien</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-muted">Project</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-muted">No. Invoice</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-muted">Metode</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-muted hidden md:table-cell">Catatan</th>
+                  <th className="text-right py-3 px-4 text-xs font-semibold text-muted">Jumlah</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-line">
                 {filtered.map((payment, idx) => {
                   const invoice = invoiceMap.get(payment.invoice_id);
                   const project = invoice?.project_id ? projectMap.get(invoice.project_id) : undefined;
@@ -159,33 +159,33 @@ export function LaporanPendapatan({
                     ? clientMap.get(project.client_id)
                     : undefined;
                   return (
-                    <tr key={payment.id} className="hover:bg-gray-50">
-                      <td className="py-2.5 px-4 text-xs text-gray-400">{idx + 1}</td>
-                      <td className="py-2.5 px-4 text-xs text-gray-700 whitespace-nowrap">
+                    <tr key={payment.id} className="hover:bg-hover">
+                      <td className="py-2.5 px-4 text-xs text-faint">{idx + 1}</td>
+                      <td className="py-2.5 px-4 text-xs text-ink whitespace-nowrap">
                         {new Date(payment.payment_date).toLocaleDateString("id-ID", {
                           day: "numeric",
                           month: "short",
                           year: "numeric",
                         })}
                       </td>
-                      <td className="py-2.5 px-4 text-xs text-gray-700">{client?.name ?? "—"}</td>
-                      <td className="py-2.5 px-4 text-xs text-gray-700">{project?.name ?? "—"}</td>
-                      <td className="py-2.5 px-4 text-xs font-mono text-gray-600">
+                      <td className="py-2.5 px-4 text-xs text-ink">{client?.name ?? "—"}</td>
+                      <td className="py-2.5 px-4 text-xs text-ink">{project?.name ?? "—"}</td>
+                      <td className="py-2.5 px-4 text-xs font-mono text-muted">
                         {invoice?.invoice_number ?? "—"}
                       </td>
                       <td className="py-2.5 px-4">
                         <span
                           className={`text-xs px-2 py-0.5 rounded-full ${
-                            methodBadge[payment.payment_method] ?? "bg-gray-100 text-gray-600"
+                            methodBadge[payment.payment_method] ?? "tone-neutral"
                           }`}
                         >
                           {methodLabels[payment.payment_method] ?? payment.payment_method}
                         </span>
                       </td>
-                      <td className="py-2.5 px-4 text-xs text-gray-400 hidden md:table-cell max-w-[160px] truncate">
+                      <td className="py-2.5 px-4 text-xs text-faint hidden md:table-cell max-w-[160px] truncate">
                         {payment.notes || "—"}
                       </td>
-                      <td className="py-2.5 px-4 text-right text-xs font-semibold text-green-600 whitespace-nowrap">
+                      <td className="py-2.5 px-4 text-right text-xs font-semibold text-success whitespace-nowrap">
                         {fmt(payment.amount)}
                       </td>
                     </tr>
@@ -193,11 +193,11 @@ export function LaporanPendapatan({
                 })}
               </tbody>
               <tfoot>
-                <tr className="border-t-2 border-gray-200 bg-gray-50">
-                  <td className="py-3 px-4 text-xs font-bold text-gray-900" colSpan={7}>
+                <tr className="border-t-2 border-line bg-surface">
+                  <td className="py-3 px-4 text-xs font-semibold text-ink" colSpan={7}>
                     Total Pendapatan
                   </td>
-                  <td className="py-3 px-4 text-right text-sm font-bold text-green-600 whitespace-nowrap">
+                  <td className="py-3 px-4 text-right text-sm font-semibold text-success whitespace-nowrap">
                     {fmt(total)}
                   </td>
                 </tr>

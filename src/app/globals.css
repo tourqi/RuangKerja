@@ -2,7 +2,7 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #0f1115;
   /* This app is styled for light mode only (no `dark:` classes are used anywhere).
      Without this, browsers auto-theme native controls (inputs, selects, date
      pickers, number spinners) to dark on a dark-mode OS, clashing with the
@@ -11,15 +11,113 @@
   color-scheme: light;
 }
 
+/* Design tokens — arah "Presisi": netral hampir monokrom + satu aksen kobalt.
+   Pakai utility-nya (text-ink, bg-surface, border-line, text-accent, …)
+   alih-alih kelas gray atau warna pastel bawaan Tailwind. */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-plex-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+@theme {
+  --color-ink: #0f1115;
+  --color-muted: #646a73;
+  --color-faint: #9097a1;
+  --color-line: #e5e7eb;
+  --color-surface: #f7f8fa;
+  --color-hover: #f2f3f6;
+  --color-accent: #3247d1;
+  --color-accent-hover: #2839b0;
+  --color-accent-soft: #eef0fc;
+  --color-danger: #c4352b;
+  --color-danger-soft: #fdf5f4;
+  --color-danger-line: #f1d2cf;
+  --color-line-strong: #d4d7dd;
+  --color-warning: #b7791f;
+  --color-warning-soft: #fdf7ec;
+  --color-success: #2f8a4e;
+  --color-success-soft: #f0f8f3;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Label status: titik warna + teks (pengganti pill pastel).
+   Sengaja di luar @layer supaya menang atas padding/background utility
+   yang masih menempel di elemen pill lama. */
+.tone-neutral,
+.tone-active,
+.tone-success,
+.tone-warning,
+.tone-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding-inline: 0;
+  background: none;
+  color: var(--color-ink);
+  white-space: nowrap;
+}
+.tone-neutral::before,
+.tone-active::before,
+.tone-success::before,
+.tone-warning::before,
+.tone-danger::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+.tone-neutral { --tone-dot: var(--color-faint); }
+.tone-active { --tone-dot: var(--color-accent); }
+.tone-success { --tone-dot: var(--color-success); }
+.tone-warning { --tone-dot: var(--color-warning); }
+.tone-danger { --tone-dot: var(--color-danger); }
+.tone-neutral::before,
+.tone-active::before,
+.tone-success::before,
+.tone-warning::before,
+.tone-danger::before { background: var(--tone-dot); }
+
+/* <select> tidak bisa punya ::before, jadi titiknya digambar lewat background. */
+select.tone-neutral,
+select.tone-active,
+select.tone-success,
+select.tone-warning,
+select.tone-danger {
+  display: inline-block;
+  -webkit-appearance: none;
+  appearance: none;
+  padding: 4px 26px 4px 22px;
+  border: 1px solid var(--color-line);
+  border-radius: 6px;
+  line-height: 1.4;
+  cursor: pointer;
+  background:
+    radial-gradient(circle at 11px 50%, var(--tone-dot) 3.5px, transparent 4px) no-repeat,
+    url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 12 12%27 fill=%27none%27 stroke=%27%23646a73%27 stroke-width=%271.5%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M3 4.5 6 7.5 9 4.5%27/%3E%3C/svg%3E") no-repeat right 8px center / 12px 12px,
+    #fff;
+}
+select.tone-neutral:disabled,
+select.tone-active:disabled,
+select.tone-success:disabled,
+select.tone-warning:disabled,
+select.tone-danger:disabled { cursor: not-allowed; opacity: 0.7; }
+
+/* Input angka tanpa panah spinner bawaan browser (angka diketik, bukan diklik). */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }

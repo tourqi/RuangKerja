@@ -25,39 +25,39 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-surface flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <img src="/logo.png" alt="RuangKerja" className="h-16 w-auto mx-auto mb-5" />
-          <h1 className="text-2xl font-bold text-gray-900">Masuk ke RuangKerja</h1>
-          <p className="text-sm text-gray-500 mt-1">Masukkan email dan password Anda</p>
+          <h1 className="text-xl font-semibold tracking-tight text-ink">Masuk ke RuangKerja</h1>
+          <p className="text-sm text-muted mt-1">Masukkan email dan password Anda</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div className="bg-white rounded-lg border border-line p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">
+              <label className="block text-xs font-medium text-ink mb-1.5">
                 Email
               </label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900"
+                className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25"
                 placeholder="nama@perusahaan.com"
                 required
                 autoComplete="email"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">
+              <label className="block text-xs font-medium text-ink mb-1.5">
                 Password
               </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900"
+                className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25"
                 placeholder="••••••••"
                 required
                 autoComplete="current-password"
@@ -65,7 +65,7 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <p className="text-xs text-red-600 bg-red-50 border border-red-100 px-3 py-2 rounded-lg">
+              <p className="text-xs text-danger bg-danger-soft border border-danger-line px-3 py-2 rounded-md">
                 {error}
               </p>
             )}
@@ -73,14 +73,14 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gray-900 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-gray-800 disabled:opacity-50 transition-colors mt-1"
+              className="w-full bg-accent text-white text-sm font-medium py-2.5 rounded-md hover:bg-accent-hover disabled:opacity-50 transition-colors mt-1"
             >
               {loading ? "Memproses…" : "Masuk"}
             </button>
           </form>
         </div>
 
-        <p className="text-center text-xs text-gray-400 mt-6">
+        <p className="text-center text-xs text-faint mt-6">
           Belum punya akun? Hubungi administrator.
         </p>
       </div>

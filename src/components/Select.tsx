@@ -18,7 +18,7 @@ type Props = {
 };
 
 const DEFAULT_TRIGGER_CLASS =
-  "w-full flex items-center justify-between gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white outline-none hover:border-gray-400 transition focus:ring-2 focus:ring-gray-900 disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-gray-50";
+  "w-full flex items-center justify-between gap-2 px-2.5 py-1.5 border border-line rounded-md text-[13px] bg-white outline-none hover:border-faint transition focus:ring-2 focus:ring-accent/25 disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-surface";
 
 export function Select({ value, onChange, options, placeholder = "Pilih...", className, disabled, includeEmptyOption = true }: Props) {
   const [open, setOpen] = useState(false);
@@ -89,11 +89,11 @@ export function Select({ value, onChange, options, placeholder = "Pilih...", cla
         aria-expanded={open}
         className={className ?? DEFAULT_TRIGGER_CLASS}
       >
-        <span className={`truncate ${selected ? "text-gray-900" : "text-gray-400"}`}>
+        <span className={`truncate ${selected ? "text-ink" : "text-faint"}`}>
           {selected ? selected.label : placeholder}
         </span>
         <svg
-          className={`w-4 h-4 text-gray-400 shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+          className={`w-4 h-4 text-faint shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -106,7 +106,7 @@ export function Select({ value, onChange, options, placeholder = "Pilih...", cla
         <div
           ref={menuRef}
           role="listbox"
-          className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 max-h-60 overflow-y-auto"
+          className="fixed z-50 bg-white border border-line rounded-md shadow-lg py-1 max-h-60 overflow-y-auto"
           style={pos}
         >
           {includeEmptyOption && (
@@ -115,8 +115,8 @@ export function Select({ value, onChange, options, placeholder = "Pilih...", cla
               role="option"
               aria-selected={value === ""}
               onClick={() => pick("")}
-              className={`w-full text-left px-3 py-2 text-sm transition-colors hover:bg-gray-50 ${
-                value === "" ? "text-gray-500 font-medium" : "text-gray-400"
+              className={`w-full text-left px-3 py-2 text-sm transition-colors hover:bg-hover ${
+                value === "" ? "text-muted font-medium" : "text-faint"
               }`}
             >
               {placeholder}
@@ -133,10 +133,10 @@ export function Select({ value, onChange, options, placeholder = "Pilih...", cla
               onClick={() => !opt.disabled && pick(opt.value)}
               className={`w-full text-left px-3 py-2 text-sm transition-colors ${
                 opt.disabled
-                  ? "text-gray-300 cursor-not-allowed"
+                  ? "text-faint cursor-not-allowed"
                   : opt.value === value
-                  ? "bg-gray-50 font-medium text-gray-900 hover:bg-gray-50"
-                  : "text-gray-700 hover:bg-gray-50"
+                  ? "bg-surface font-medium text-ink hover:bg-hover"
+                  : "text-ink hover:bg-hover"
               }`}
             >
               {opt.label}

@@ -19,20 +19,20 @@ export function DeleteConfirmModal({
 }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
-        <h3 className="text-base font-semibold text-gray-900 mb-2">{title}</h3>
-        <p className="text-sm text-gray-500 mb-5">{description}</p>
+      <div className="bg-white rounded-lg shadow-2xl w-full max-w-sm p-6">
+        <h3 className="text-base font-semibold text-ink mb-2">{title}</h3>
+        <p className="text-sm text-muted mb-5">{description}</p>
         <div className="flex gap-2">
           <button
             onClick={onConfirm}
             disabled={saving}
-            className="flex-1 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition disabled:opacity-50"
+            className="flex-1 px-4 py-2 bg-danger text-white text-sm font-medium rounded-md hover:bg-danger/90 transition disabled:opacity-50"
           >
             {saving ? "Menghapus..." : confirmLabel}
           </button>
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition"
+            className="flex-1 px-4 py-2 bg-hover text-ink text-sm font-medium rounded-md hover:bg-hover transition"
           >
             Batal
           </button>

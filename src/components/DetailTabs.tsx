@@ -26,21 +26,21 @@ export function DetailTabs<K extends string>({
   onChange: (tab: K) => void;
 }) {
   return (
-    <div className="border-b border-gray-200 overflow-x-auto">
-      <nav className="flex gap-1 min-w-max">
+    <div className="border-b border-line overflow-x-auto">
+      <nav className="flex gap-5 min-w-max">
         {tabs.map((t) => (
           <button
             key={t.key}
             onClick={() => onChange(t.key)}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition whitespace-nowrap ${
+            className={`py-2.5 text-[13px] border-b-2 -mb-px transition-colors whitespace-nowrap ${
               active === t.key
-                ? "border-gray-900 text-gray-900"
-                : "border-transparent text-gray-400 hover:text-gray-700"
+                ? "border-ink text-ink font-medium"
+                : "border-transparent text-muted hover:text-ink"
             }`}
           >
             {t.label}
             {t.count != null && t.count > 0 && (
-              <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 text-xs font-medium">{t.count}</span>
+              <span className="ml-1.5 font-mono text-[11px] text-faint">{t.count}</span>
             )}
           </button>
         ))}

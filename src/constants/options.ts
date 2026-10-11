@@ -17,12 +17,12 @@ export const LEAD_STATUSES = [
 export type LeadStatus = (typeof LEAD_STATUSES)[number];
 
 export const LEAD_STATUS_COLORS: Record<string, string> = {
-  "New Lead": "bg-blue-100 text-blue-800",
-  Contacted: "bg-yellow-100 text-yellow-800",
-  Survey: "bg-purple-100 text-purple-800",
-  Deal: "bg-indigo-100 text-indigo-800",
-  "Deal Won": "bg-green-100 text-green-800",
-  "Deal Lost": "bg-red-100 text-red-800",
+  "New Lead": "tone-neutral",
+  Contacted: "tone-active",
+  Survey: "tone-active",
+  Deal: "tone-warning",
+  "Deal Won": "tone-success",
+  "Deal Lost": "tone-danger",
 };
 
 // ------------------------------------------------------------------
@@ -68,11 +68,11 @@ export const PROJECT_STATUS_LABELS: Record<string, string> = {
 };
 
 export const PROJECT_STATUS_COLORS: Record<string, string> = {
-  Planning: "bg-gray-100 text-gray-700",
-  Design: "bg-blue-100 text-blue-800",
-  Production: "bg-yellow-100 text-yellow-800",
-  Installation: "bg-purple-100 text-purple-800",
-  Done: "bg-green-100 text-green-800",
+  Planning: "tone-neutral",
+  Design: "tone-active",
+  Production: "tone-active",
+  Installation: "tone-active",
+  Done: "tone-success",
 };
 
 // ------------------------------------------------------------------
@@ -90,15 +90,15 @@ export const PRIORITY_LABELS: Record<string, string> = {
 };
 
 export const PRIORITY_COLORS: Record<string, string> = {
-  low: "bg-gray-100 text-gray-700",
-  medium: "bg-blue-100 text-blue-700",
-  high: "bg-orange-100 text-orange-700",
-  urgent: "bg-red-100 text-red-700",
+  low: "tone-neutral",
+  medium: "tone-active",
+  high: "tone-warning",
+  urgent: "tone-danger",
   // Fallback untuk data lama yang mungkin menyimpan capitalized
-  Low: "bg-gray-100 text-gray-700",
-  Medium: "bg-blue-100 text-blue-700",
-  High: "bg-orange-100 text-orange-700",
-  Urgent: "bg-red-100 text-red-700",
+  Low: "tone-neutral",
+  Medium: "tone-active",
+  High: "tone-warning",
+  Urgent: "tone-danger",
 };
 
 // ------------------------------------------------------------------
@@ -148,11 +148,11 @@ export const INVOICE_STATUS_LABELS: Record<string, string> = {
 };
 
 export const INVOICE_STATUS_COLORS: Record<string, string> = {
-  draft: "bg-gray-100 text-gray-600",
-  sent: "bg-blue-100 text-blue-700",
-  partial: "bg-yellow-100 text-yellow-700",
-  paid: "bg-green-100 text-green-700",
-  overdue: "bg-red-100 text-red-700",
+  draft: "tone-neutral",
+  sent: "tone-active",
+  partial: "tone-warning",
+  paid: "tone-success",
+  overdue: "tone-danger",
 };
 
 // ------------------------------------------------------------------

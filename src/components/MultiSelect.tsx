@@ -39,15 +39,15 @@ export function MultiSelect({ options, value, onChange, placeholder, className =
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white outline-none hover:border-gray-400 transition"
+        className="w-full flex items-center justify-between gap-2 px-2.5 py-1.5 border border-line rounded-md text-[13px] bg-white outline-none hover:border-faint transition"
       >
-        <span className={value.length === 0 ? "text-gray-500" : "text-gray-900 font-medium"}>
+        <span className={value.length === 0 ? "text-muted" : "text-ink font-medium"}>
           {displayLabel}
         </span>
         <span className="flex items-center gap-1 shrink-0">
           {value.length > 0 && (
             <span
-              className="w-4 h-4 rounded-full bg-gray-200 text-gray-600 text-[10px] flex items-center justify-center hover:bg-gray-300 leading-none"
+              className="w-4 h-4 rounded-full bg-line text-muted text-[10px] flex items-center justify-center hover:bg-accent-hover leading-none"
               onMouseDown={(e) => { e.stopPropagation(); onChange([]); }}
               title="Hapus filter"
             >
@@ -55,7 +55,7 @@ export function MultiSelect({ options, value, onChange, placeholder, className =
             </span>
           )}
           <svg
-            className={`w-4 h-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
+            className={`w-4 h-4 text-faint transition-transform ${open ? "rotate-180" : ""}`}
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -66,20 +66,20 @@ export function MultiSelect({ options, value, onChange, placeholder, className =
       </button>
 
       {open && (
-        <div className="absolute z-30 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+        <div className="absolute z-30 left-0 right-0 mt-1 bg-white border border-line rounded-md shadow-lg max-h-60 overflow-y-auto">
           {options.length === 0 && (
-            <div className="px-3 py-2 text-sm text-gray-400">Tidak ada pilihan</div>
+            <div className="px-3 py-2 text-sm text-faint">Tidak ada pilihan</div>
           )}
           {options.map((opt) => (
             <label
               key={opt.value}
-              className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm text-gray-900 select-none"
+              className="flex items-center gap-2 px-3 py-1.5 hover:bg-hover cursor-pointer text-[13px] text-ink select-none"
             >
               <input
                 type="checkbox"
                 checked={value.includes(opt.value)}
                 onChange={() => toggle(opt.value)}
-                className="w-4 h-4 rounded border-gray-300 accent-black"
+                className="w-4 h-4 rounded border-line-strong accent-[#3247d1]"
               />
               {opt.label}
             </label>

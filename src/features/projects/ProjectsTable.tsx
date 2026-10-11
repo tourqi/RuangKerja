@@ -32,8 +32,8 @@ function SkeletonRow({ cols }: { cols: number }) {
   return (
     <tr>
       {Array.from({ length: cols }).map((_, i) => (
-        <td key={i} className="px-4 py-3">
-          <div className="h-3 bg-gray-100 rounded animate-pulse" style={{ width: `${60 + (i % 3) * 15}%` }} />
+        <td key={i} className="px-3 py-2">
+          <div className="h-3 bg-hover rounded animate-pulse" style={{ width: `${60 + (i % 3) * 15}%` }} />
         </td>
       ))}
     </tr>
@@ -176,9 +176,9 @@ export default function ProjectsTable() {
 
   if (loading)
     return (
-      <div className="bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
-        <table className="w-full text-sm">
-          <tbody className="divide-y divide-gray-100">
+      <div className="bg-white rounded-md border border-line overflow-hidden">
+        <table className="w-full text-[13px]">
+          <tbody className="divide-y divide-line">
             {Array.from({ length: 7 }).map((_, i) => <SkeletonRow key={i} cols={10} />)}
           </tbody>
         </table>
@@ -186,27 +186,27 @@ export default function ProjectsTable() {
     );
 
   if (error)
-    return <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">Error: {error}</div>;
+    return <div className="bg-danger-soft border border-danger-line rounded-md p-4 text-danger text-sm">Error: {error}</div>;
 
   return (
     <div>
       {/* Toolbar */}
-      <div className="sticky top-0 z-10 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 bg-gray-50/95 backdrop-blur-sm py-3 mb-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
+      <div className="mb-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
         <div className="flex items-center gap-4">
-          <p className="text-sm text-gray-500">{filteredProjects.length} project</p>
-          <p className="text-sm font-semibold text-green-700">
+          <p className="text-sm text-muted">{filteredProjects.length} project</p>
+          <p className="text-sm font-semibold text-success">
             Total: {formatRupiah(filteredProjects.reduce((sum, p) => sum + getProjectValue(p), 0))}
           </p>
         </div>
         <div className="flex gap-2">
           <button
-            className="px-4 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition font-medium"
+            className="px-2.5 py-1.5 border border-line bg-white text-ink text-[13px] rounded-md hover:bg-hover transition-colors font-medium"
             onClick={handleExport}
           >
             ↓ Export CSV
           </button>
           <button
-            className="px-5 py-2 bg-black text-white text-sm rounded-lg hover:bg-gray-800 transition font-medium"
+            className="px-2.5 py-1.5 bg-accent text-white text-[13px] rounded-md hover:bg-accent-hover transition font-medium"
             onClick={() => { setEditingProject(null); setAutoClientId(null); setAutoLeadId(null); setShowModal(true); }}
           >
             + Tambah Project
@@ -215,21 +215,21 @@ export default function ProjectsTable() {
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-white rounded-xl shadow border border-gray-100 p-4 mb-5 flex flex-col gap-3">
+      <div className="bg-white rounded-md border border-line p-4 mb-5 flex flex-col gap-3">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <input
             type="text"
             value={filterName}
             onChange={e => setFilterName(e.target.value)}
             placeholder="Cari nama project..."
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black placeholder:text-gray-400 focus:ring-2 focus:ring-gray-900 outline-none"
+            className="px-2.5 py-1.5 border border-line rounded-md text-[13px] text-ink placeholder:text-faint focus:ring-2 focus:ring-accent/25 outline-none"
           />
           <input
             type="text"
             value={filterClient}
             onChange={e => setFilterClient(e.target.value)}
             placeholder="Cari nama client..."
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black placeholder:text-gray-400 focus:ring-2 focus:ring-gray-900 outline-none"
+            className="px-2.5 py-1.5 border border-line rounded-md text-[13px] text-ink placeholder:text-faint focus:ring-2 focus:ring-accent/25 outline-none"
           />
           <MultiSelect
             placeholder="Semua Status"
@@ -242,52 +242,49 @@ export default function ProjectsTable() {
             value={filterAssigned}
             onChange={e => setFilterAssigned(e.target.value)}
             placeholder="Assigned to..."
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black placeholder:text-gray-400 focus:ring-2 focus:ring-gray-900 outline-none"
+            className="px-2.5 py-1.5 border border-line rounded-md text-[13px] text-ink placeholder:text-faint focus:ring-2 focus:ring-accent/25 outline-none"
           />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Start Date</label>
+            <label className="block text-xs font-medium text-muted mb-1">Start Date</label>
             <div className="flex items-center gap-2">
-              <input type="date" value={filterStartFrom} onChange={e => setFilterStartFrom(e.target.value)} className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-gray-900 outline-none" />
-              <span className="text-gray-400 shrink-0">—</span>
-              <input type="date" value={filterStartTo} onChange={e => setFilterStartTo(e.target.value)} className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-gray-900 outline-none" />
+              <input type="date" value={filterStartFrom} onChange={e => setFilterStartFrom(e.target.value)} className="flex-1 min-w-0 px-2.5 py-1.5 border border-line rounded-md text-[13px] text-ink focus:ring-2 focus:ring-accent/25 outline-none" />
+              <span className="text-faint shrink-0">—</span>
+              <input type="date" value={filterStartTo} onChange={e => setFilterStartTo(e.target.value)} className="flex-1 min-w-0 px-2.5 py-1.5 border border-line rounded-md text-[13px] text-ink focus:ring-2 focus:ring-accent/25 outline-none" />
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Deadline</label>
+            <label className="block text-xs font-medium text-muted mb-1">Deadline</label>
             <div className="flex items-center gap-2">
-              <input type="date" value={filterDeadlineFrom} onChange={e => setFilterDeadlineFrom(e.target.value)} className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-gray-900 outline-none" />
-              <span className="text-gray-400 shrink-0">—</span>
-              <input type="date" value={filterDeadlineTo} onChange={e => setFilterDeadlineTo(e.target.value)} className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-gray-900 outline-none" />
+              <input type="date" value={filterDeadlineFrom} onChange={e => setFilterDeadlineFrom(e.target.value)} className="flex-1 min-w-0 px-2.5 py-1.5 border border-line rounded-md text-[13px] text-ink focus:ring-2 focus:ring-accent/25 outline-none" />
+              <span className="text-faint shrink-0">—</span>
+              <input type="date" value={filterDeadlineTo} onChange={e => setFilterDeadlineTo(e.target.value)} className="flex-1 min-w-0 px-2.5 py-1.5 border border-line rounded-md text-[13px] text-ink focus:ring-2 focus:ring-accent/25 outline-none" />
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Progress (%)</label>
+            <label className="block text-xs font-medium text-muted mb-1">Progress (%)</label>
             <div className="flex items-center gap-2">
-              <input type="number" min={0} max={100} value={filterProgressMin} onChange={e => setFilterProgressMin(e.target.value)} placeholder="Min" className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-gray-900 outline-none" />
-              <span className="text-gray-400 shrink-0">—</span>
-              <input type="number" min={0} max={100} value={filterProgressMax} onChange={e => setFilterProgressMax(e.target.value)} placeholder="Max" className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-gray-900 outline-none" />
+              <input type="number" min={0} max={100} value={filterProgressMin} onChange={e => setFilterProgressMin(e.target.value)} placeholder="Min" className="flex-1 min-w-0 px-2.5 py-1.5 border border-line rounded-md text-[13px] text-ink focus:ring-2 focus:ring-accent/25 outline-none" />
+              <span className="text-faint shrink-0">—</span>
+              <input type="number" min={0} max={100} value={filterProgressMax} onChange={e => setFilterProgressMax(e.target.value)} placeholder="Max" className="flex-1 min-w-0 px-2.5 py-1.5 border border-line rounded-md text-[13px] text-ink focus:ring-2 focus:ring-accent/25 outline-none" />
             </div>
           </div>
         </div>
         <div className="flex justify-end">
-          <button onClick={resetFilters} className="px-4 py-1.5 text-sm text-gray-500 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+          <button onClick={resetFilters} className="px-4 py-1.5 text-[13px] text-muted border border-line rounded-md hover:bg-hover transition">
             Reset Filter
           </button>
         </div>
       </div>
 
       {/* Table (desktop) */}
-      <div className="hidden sm:block bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
-          <h3 className="text-base font-semibold text-gray-800">Daftar Project</h3>
-        </div>
+      <div className="hidden sm:block bg-white rounded-md border border-line overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] text-sm">
-            <thead className="bg-gray-50 border-b border-gray-100">
+          <table className="w-full min-w-[900px] text-[13px]">
+            <thead className="bg-surface border-b border-line">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Aksi</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-muted whitespace-nowrap w-10"><span className="sr-only">Aksi</span></th>
                 <SortableHeader label="Nama Project" col="name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Client" col="client_name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Nilai Project" col="value" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
@@ -296,16 +293,16 @@ export default function ProjectsTable() {
                 <SortableHeader label="Deadline" col="deadline" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Assigned To" col="assigned_to" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Progress" col="progress" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Status Pembayaran</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-muted whitespace-nowrap">Status Pembayaran</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-line">
               {pagedProjects.map((project) => {
                 const client = clients.find((c) => c.id === project.client_id);
                 const progress = project.progress ?? 0;
                 return (
-                  <tr key={project.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onDoubleClick={() => router.push(`/projects/${project.id}`)}>
-                    <td className="px-4 py-3 whitespace-nowrap" onDoubleClick={(e) => e.stopPropagation()}>
+                  <tr key={project.id} className="hover:bg-hover transition-colors cursor-pointer" onDoubleClick={() => router.push(`/projects/${project.id}`)}>
+                    <td className="px-3 py-2 whitespace-nowrap" onDoubleClick={(e) => e.stopPropagation()}>
                       <ActionDropdown
                         align="left"
                         items={[
@@ -337,34 +334,34 @@ export default function ProjectsTable() {
                         ]}
                       />
                     </td>
-                    <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">{project.name}</td>
-                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{client?.name || "-"}</td>
-                    <td className="px-4 py-3 text-gray-700 font-medium whitespace-nowrap">{formatRupiah(getProjectValue(project))}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="px-3 py-2 font-medium text-ink whitespace-nowrap">{project.name}</td>
+                    <td className="px-3 py-2 text-muted whitespace-nowrap">{client?.name || "-"}</td>
+                    <td className="px-3 py-2 text-ink font-medium whitespace-nowrap">{formatRupiah(getProjectValue(project))}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${PROJECT_STATUS_COLORS[project.status]}`}>
                         {PROJECT_STATUS_LABELS[project.status]}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{formatDate(project.start_date)}</td>
-                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{formatDate(project.deadline)}</td>
-                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{project.assigned_to || "-"}</td>
-                    <td className="px-4 py-3 whitespace-nowrap min-w-[120px]">
+                    <td className="px-3 py-2 text-muted whitespace-nowrap">{formatDate(project.start_date)}</td>
+                    <td className="px-3 py-2 text-muted whitespace-nowrap">{formatDate(project.deadline)}</td>
+                    <td className="px-3 py-2 text-muted whitespace-nowrap">{project.assigned_to || "-"}</td>
+                    <td className="px-3 py-2 whitespace-nowrap min-w-[120px]">
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-gray-200 rounded-full h-1.5">
+                        <div className="flex-1 bg-line rounded-full h-1.5">
                           <div
-                            className="bg-green-500 h-1.5 rounded-full transition-all"
+                            className="bg-success h-1.5 rounded-full transition-all"
                             style={{ width: `${progress}%` }}
                           />
                         </div>
-                        <span className="text-xs text-gray-500 w-8 text-right">{progress}%</span>
+                        <span className="text-xs text-muted w-8 text-right">{progress}%</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="px-3 py-2 whitespace-nowrap">
                       {(() => {
                         const ps = getPaymentStatus(project.id);
-                        if (ps === null) return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">Belum Ada Invoice</span>;
-                        if (ps === 'lunas') return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Lunas</span>;
-                        return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">Belum Lunas</span>;
+                        if (ps === null) return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-hover text-muted">Belum Ada Invoice</span>;
+                        if (ps === 'lunas') return <span className="px-2 py-0.5 rounded-full text-xs font-medium tone-success">Lunas</span>;
+                        return <span className="px-2 py-0.5 rounded-full text-xs font-medium tone-danger">Belum Lunas</span>;
                       })()}
                     </td>
                   </tr>
@@ -372,7 +369,7 @@ export default function ProjectsTable() {
               })}
               {filteredProjects.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="px-6 py-12 text-center text-gray-400 text-sm">
+                  <td colSpan={10} className="px-6 py-12 text-center text-faint text-sm">
                     Belum ada project. Klik "Tambah Project" untuk memulai.
                   </td>
                 </tr>
@@ -403,7 +400,7 @@ export default function ProjectsTable() {
               <MobileCard key={project.id} onClick={() => router.push(`/projects/${project.id}`)}>
                 <MobileCardHeader
                   title={project.name}
-                  subtitle={<span className="text-xs text-gray-400">{client?.name || "-"}</span>}
+                  subtitle={<span className="text-xs text-faint">{client?.name || "-"}</span>}
                   actions={
                     <>
                       <MobileCardIconButton title="Lihat Detail" onClick={() => router.push(`/projects/${project.id}`)}><EyeIcon /></MobileCardIconButton>
@@ -423,31 +420,31 @@ export default function ProjectsTable() {
                 <MobileCardRow label="Assigned To">{project.assigned_to || "-"}</MobileCardRow>
                 <MobileCardRow label="Progress">
                   <span className="inline-flex items-center gap-2">
-                    <span className="w-16 bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                      <span className="block bg-green-500 h-1.5 rounded-full" style={{ width: `${progress}%` }} />
+                    <span className="w-16 bg-line rounded-full h-1.5 overflow-hidden">
+                      <span className="block bg-success h-1.5 rounded-full" style={{ width: `${progress}%` }} />
                     </span>
                     {progress}%
                   </span>
                 </MobileCardRow>
                 <MobileCardRow label="Status Pembayaran">
                   {ps === null ? (
-                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">Belum Ada Invoice</span>
+                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-hover text-muted">Belum Ada Invoice</span>
                   ) : ps === "lunas" ? (
-                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Lunas</span>
+                    <span className="px-2 py-0.5 rounded-full text-xs font-medium tone-success">Lunas</span>
                   ) : (
-                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">Belum Lunas</span>
+                    <span className="px-2 py-0.5 rounded-full text-xs font-medium tone-danger">Belum Lunas</span>
                   )}
                 </MobileCardRow>
               </MobileCard>
             );
           })}
           {filteredProjects.length === 0 && (
-            <div className="py-12 text-center text-gray-400 text-sm bg-white rounded-2xl border border-gray-100">
+            <div className="py-12 text-center text-faint text-sm bg-white rounded-lg border border-line">
               Belum ada project. Klik &quot;Tambah Project&quot; untuk memulai.
             </div>
           )}
         </MobileCardList>
-        <div className="mt-3 bg-white rounded-2xl border border-gray-100 overflow-hidden">
+        <div className="mt-3 bg-white rounded-lg border border-line overflow-hidden">
           <Pagination
             page={page}
             totalPages={totalPages}

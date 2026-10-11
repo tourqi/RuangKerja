@@ -156,16 +156,16 @@ export default function HelpGuideModal({ onClose }: { onClose: () => void }) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl max-h-[85vh] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+        className="w-full max-w-2xl max-h-[85vh] bg-white rounded-lg shadow-2xl overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-line shrink-0">
           <div>
-            <h2 className="text-base font-semibold text-gray-900">Panduan Pemakaian</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Cara mengisi data dan syarat/kondisi tiap form di aplikasi</p>
+            <h2 className="text-base font-semibold text-ink">Panduan Pemakaian</h2>
+            <p className="text-xs text-faint mt-0.5">Cara mengisi data dan syarat/kondisi tiap form di aplikasi</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors shrink-0">
+          <button onClick={onClose} className="text-faint hover:text-muted transition-colors shrink-0">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -178,21 +178,21 @@ export default function HelpGuideModal({ onClose }: { onClose: () => void }) {
             const isOpen = openId === s.id;
             const SectionIcon = s.icon;
             return (
-              <div key={s.id} className="border border-gray-100 rounded-xl overflow-hidden">
+              <div key={s.id} className="border border-line rounded-md overflow-hidden">
                 <button
                   type="button"
                   onClick={() => setOpenId(isOpen ? null : s.id)}
-                  className="w-full flex items-center gap-3 px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+                  className="w-full flex items-center gap-3 px-4 py-3 bg-surface hover:bg-hover transition-colors text-left"
                 >
-                  <div className="w-8 h-8 rounded-lg bg-white border border-gray-100 p-1.5 shrink-0 text-gray-500">
+                  <div className="w-8 h-8 rounded-md bg-white border border-line p-1.5 shrink-0 text-muted">
                     <SectionIcon />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-gray-800">{s.title}</p>
-                    <p className="text-xs text-gray-400 truncate">{s.where}</p>
+                    <p className="text-sm font-semibold text-ink">{s.title}</p>
+                    <p className="text-xs text-faint truncate">{s.where}</p>
                   </div>
                   <svg
-                    className={`w-4 h-4 text-gray-400 shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                    className={`w-4 h-4 text-faint shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`}
                     fill="none" stroke="currentColor" viewBox="0 0 24 24"
                   >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -202,18 +202,18 @@ export default function HelpGuideModal({ onClose }: { onClose: () => void }) {
                   <div className="px-4 py-3 space-y-2.5">
                     {s.fields.map((f) => (
                       <div key={f.name} className="flex gap-2 text-xs">
-                        <span className="font-semibold text-gray-700 w-36 shrink-0">
+                        <span className="font-semibold text-ink w-36 shrink-0">
                           {f.name}
-                          {f.required && <span className="text-red-500"> *</span>}
+                          {f.required && <span className="text-danger"> *</span>}
                         </span>
-                        <span className="text-gray-500">{f.rule}</span>
+                        <span className="text-muted">{f.rule}</span>
                       </div>
                     ))}
                     {s.notes && s.notes.length > 0 && (
                       <div className="mt-2 space-y-2">
                         {s.notes.map((note, i) => (
-                          <div key={i} className="flex items-start gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
-                            <span className="w-4 h-4 text-amber-500 shrink-0 mt-0.5"><LockIcon /></span>
+                          <div key={i} className="flex items-start gap-2 px-3 py-2 bg-warning-soft border border-warning/25 rounded-md text-xs text-warning">
+                            <span className="w-4 h-4 text-warning shrink-0 mt-0.5"><LockIcon /></span>
                             <span>{note}</span>
                           </div>
                         ))}

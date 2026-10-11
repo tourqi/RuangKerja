@@ -33,8 +33,8 @@ function SkeletonRow({ cols }: { cols: number }) {
   return (
     <tr>
       {Array.from({ length: cols }).map((_, i) => (
-        <td key={i} className="px-4 py-3">
-          <div className="h-3 bg-gray-100 rounded animate-pulse" style={{ width: `${60 + (i % 3) * 15}%` }} />
+        <td key={i} className="px-3 py-2">
+          <div className="h-3 bg-hover rounded animate-pulse" style={{ width: `${60 + (i % 3) * 15}%` }} />
         </td>
       ))}
     </tr>
@@ -165,9 +165,9 @@ export default function LeadsTable() {
 
   if (loading)
     return (
-      <div className="bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
-        <table className="w-full text-sm">
-          <tbody className="divide-y divide-gray-100">
+      <div className="bg-white rounded-md border border-line overflow-hidden">
+        <table className="w-full text-[13px]">
+          <tbody className="divide-y divide-line">
             {Array.from({ length: 7 }).map((_, i) => <SkeletonRow key={i} cols={13} />)}
           </tbody>
         </table>
@@ -175,22 +175,22 @@ export default function LeadsTable() {
     );
 
   if (error)
-    return <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">Error: {error}</div>;
+    return <div className="bg-danger-soft border border-danger-line rounded-md p-4 text-danger text-sm">Error: {error}</div>;
 
   return (
     <div>
       {/* Toolbar */}
-      <div className="sticky top-0 z-10 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 bg-gray-50/95 backdrop-blur-sm py-3 mb-2 flex items-center justify-between">
-        <p className="text-sm text-gray-500">{filteredLeads.length} lead</p>
+      <div className="mb-2 flex items-center justify-between">
+        <p className="text-sm text-muted">{filteredLeads.length} lead</p>
         <div className="flex gap-2">
           <button
-            className="px-4 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition font-medium"
+            className="px-2.5 py-1.5 border border-line bg-white text-ink text-[13px] rounded-md hover:bg-hover transition-colors font-medium"
             onClick={handleExport}
           >
             ↓ Export CSV
           </button>
           <button
-            className="px-5 py-2 bg-black text-white text-sm rounded-lg hover:bg-gray-800 transition font-medium"
+            className="px-2.5 py-1.5 bg-accent text-white text-[13px] rounded-md hover:bg-accent-hover transition font-medium"
             onClick={() => { setEditingLead(null); setShowModal(true); }}
           >
             + Tambah Lead
@@ -199,7 +199,7 @@ export default function LeadsTable() {
       </div>
 
       {/* FILTER BAR */}
-      <div className="bg-white rounded-xl shadow border border-gray-100 p-4 mb-6 flex flex-col gap-4">
+      <div className="bg-white rounded-md border border-line p-4 mb-6 flex flex-col gap-4">
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {/* Client autocomplete */}
           <div className="relative">
@@ -211,24 +211,24 @@ export default function LeadsTable() {
                 setSelectedClient("");
               }}
               placeholder="Cari Client (nama/telepon)"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black placeholder:text-gray-400 focus:ring-2 focus:ring-gray-900"
+              className="w-full px-2.5 py-1.5 border border-line rounded-md text-[13px] text-ink placeholder:text-faint focus:ring-2 focus:ring-accent/25"
               autoComplete="off"
             />
             {clientQuery && (
-              <div className="absolute z-10 left-0 right-0 bg-white border border-gray-200 rounded-b-lg shadow max-h-48 overflow-y-auto">
+              <div className="absolute z-10 left-0 right-0 bg-white border border-line rounded-b-lg shadow max-h-48 overflow-y-auto">
                 {filteredClients.length === 0 && (
-                  <div className="px-3 py-2 text-gray-400 text-sm">Tidak ditemukan</div>
+                  <div className="px-3 py-2 text-faint text-sm">Tidak ditemukan</div>
                 )}
                 {filteredClients.map((c: typeof clients[0]) => (
                   <div
                     key={c.id}
-                    className={`px-3 py-2 cursor-pointer hover:bg-purple-50 text-sm text-gray-900 ${selectedClient === c.id ? "bg-purple-100" : ""}`}
+                    className={`px-3 py-2 cursor-pointer hover:bg-accent-soft text-sm text-ink ${selectedClient === c.id ? "bg-accent-soft" : ""}`}
                     onClick={() => {
                       setSelectedClient(c.id);
                       setClientQuery(c.name + (c.phone ? ` (${c.phone})` : ""));
                     }}
                   >
-                    {c.name} {c.phone && <span className="text-xs text-gray-400">({c.phone})</span>}
+                    {c.name} {c.phone && <span className="text-xs text-faint">({c.phone})</span>}
                   </div>
                 ))}
               </div>
@@ -259,39 +259,39 @@ export default function LeadsTable() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Follow Up Date Range */}
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Follow Up Date</label>
+            <label className="block text-xs font-medium text-muted mb-1">Follow Up Date</label>
             <div className="flex items-center gap-2">
               <input
                 type="date"
                 value={followUpStart}
                 onChange={e => setFollowUpStart(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-gray-900 flex-1 min-w-0"
+                className="px-2.5 py-1.5 border border-line rounded-md text-[13px] text-ink focus:ring-2 focus:ring-accent/25 flex-1 min-w-0"
               />
-              <span className="text-gray-400 shrink-0">—</span>
+              <span className="text-faint shrink-0">—</span>
               <input
                 type="date"
                 value={followUpEnd}
                 onChange={e => setFollowUpEnd(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-gray-900 flex-1 min-w-0"
+                className="px-2.5 py-1.5 border border-line rounded-md text-[13px] text-ink focus:ring-2 focus:ring-accent/25 flex-1 min-w-0"
               />
             </div>
           </div>
           {/* Updated At Date Range */}
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Updated At</label>
+            <label className="block text-xs font-medium text-muted mb-1">Updated At</label>
             <div className="flex items-center gap-2">
               <input
                 type="date"
                 value={updatedStart}
                 onChange={e => setUpdatedStart(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-gray-900 flex-1 min-w-0"
+                className="px-2.5 py-1.5 border border-line rounded-md text-[13px] text-ink focus:ring-2 focus:ring-accent/25 flex-1 min-w-0"
               />
-              <span className="text-gray-400 shrink-0">—</span>
+              <span className="text-faint shrink-0">—</span>
               <input
                 type="date"
                 value={updatedEnd}
                 onChange={e => setUpdatedEnd(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-gray-900 flex-1 min-w-0"
+                className="px-2.5 py-1.5 border border-line rounded-md text-[13px] text-ink focus:ring-2 focus:ring-accent/25 flex-1 min-w-0"
               />
             </div>
           </div>
@@ -299,35 +299,32 @@ export default function LeadsTable() {
       </div>
 
       {/* Table (desktop) */}
-      <div className="hidden sm:block bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
-          <h3 className="text-base font-semibold text-gray-800">Pipeline Lead</h3>
-        </div>
+      <div className="hidden sm:block bg-white rounded-md border border-line overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[600px] text-sm">
-            <thead className="bg-gray-50 border-b border-gray-100">
+          <table className="w-full min-w-[600px] text-[13px]">
+            <thead className="bg-surface border-b border-line">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Aksi</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-muted whitespace-nowrap w-10"><span className="sr-only">Aksi</span></th>
                 <SortableHeader label="Client" col="client_name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Nama Project" col="project_name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Status" col="status" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Priority" col="priority" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Nilai</th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">No Response</th>
+                <th className="px-3 py-2 text-right text-xs font-medium text-muted whitespace-nowrap">Nilai</th>
+                <th className="px-3 py-2 text-center text-xs font-medium text-muted whitespace-nowrap">No Response</th>
                 <SortableHeader label="Source" col="source" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Follow Up" col="follow_up_date" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Last Contact" col="last_contacted_at" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Closed At" col="closed_at" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Updated At" col="updated_at" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Catatan</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-muted whitespace-nowrap">Catatan</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-line">
               {pagedLeads.map((lead) => {
                 const client = clients.find((c) => c.id === lead.client_id);
                 return (
-                  <tr key={lead.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onDoubleClick={() => router.push(`/leads/${lead.id}`)}>
-                    <td className="px-4 py-3 whitespace-nowrap" onDoubleClick={(e) => e.stopPropagation()}>
+                  <tr key={lead.id} className="hover:bg-hover transition-colors cursor-pointer" onDoubleClick={() => router.push(`/leads/${lead.id}`)}>
+                    <td className="px-3 py-2 whitespace-nowrap" onDoubleClick={(e) => e.stopPropagation()}>
                       <ActionDropdown
                         align="left"
                         items={[
@@ -367,67 +364,67 @@ export default function LeadsTable() {
                         ]}
                       />
                     </td>
-                    <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">
+                    <td className="px-3 py-2 font-medium text-ink whitespace-nowrap">
                       <div>{client?.name || "-"}</div>
-                      {client?.phone && <div className="text-xs text-gray-400">{client.phone}</div>}
+                      {client?.phone && <div className="text-xs text-faint">{client.phone}</div>}
                     </td>
-                    <td className="px-4 py-3 text-gray-700 whitespace-nowrap text-sm">{lead.project_name || "-"}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${LEAD_STATUS_COLORS[lead.status] || "bg-gray-100 text-gray-700"}`}>
+                    <td className="px-3 py-2 text-ink whitespace-nowrap">{lead.project_name || "-"}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${LEAD_STATUS_COLORS[lead.status] || "tone-neutral"}`}>
                         {lead.status}
                       </span>
                       {lead.is_stale && (
-                        <span title="Contacted > 7 hari tanpa kontak terbaru" className="ml-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-700">
+                        <span title="Contacted > 7 hari tanpa kontak terbaru" className="ml-1.5 px-1.5 py-px rounded text-[11px] font-medium border border-line text-warning">
                           Stale
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="px-3 py-2 whitespace-nowrap">
                       {lead.priority ? (
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${PRIORITY_COLORS[lead.priority] || "bg-gray-100 text-gray-600"}`}>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${PRIORITY_COLORS[lead.priority] || "tone-neutral"}`}>
                           {lead.priority}
                         </span>
-                      ) : <span className="text-gray-400">-</span>}
+                      ) : <span className="text-faint">-</span>}
                     </td>
-                    <td className="px-4 py-3 text-right whitespace-nowrap text-sm">
+                    <td className="px-3 py-2 text-right whitespace-nowrap">
                       {lead.nominal_deal != null ? (
-                        <span className="text-gray-900 font-medium">{formatRupiah(lead.nominal_deal)}</span>
+                        <span className="text-ink font-medium">{formatRupiah(lead.nominal_deal)}</span>
                       ) : lead.budget != null ? (
-                        <span className="text-gray-400 italic" title="Estimasi budget, belum final">{formatRupiah(lead.budget)}</span>
+                        <span className="text-faint italic" title="Estimasi budget, belum final">{formatRupiah(lead.budget)}</span>
                       ) : (
-                        <span className="text-gray-400">-</span>
+                        <span className="text-faint">-</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-center whitespace-nowrap text-sm">
+                    <td className="px-3 py-2 text-center whitespace-nowrap">
                       {lead.no_response_count ? (
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${lead.no_response_count >= 2 ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-600"}`}>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${lead.no_response_count >= 2 ? "tone-danger" : "tone-neutral"}`}>
                           {lead.no_response_count}
                         </span>
-                      ) : <span className="text-gray-400">-</span>}
+                      ) : <span className="text-faint">-</span>}
                     </td>
-                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap text-sm">{lead.source || client?.source || "-"}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm">
+                    <td className="px-3 py-2 text-muted whitespace-nowrap">{lead.source || client?.source || "-"}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">
                       {(() => {
                         const overdue = !!lead.follow_up_date
                           && lead.follow_up_date < new Date().toISOString().slice(0, 10)
                           && lead.status !== "Deal Won" && lead.status !== "Deal Lost";
                         return (
-                          <span className={overdue ? "text-red-600 font-medium" : "text-gray-600"}>
+                          <span className={overdue ? "text-danger font-medium" : "text-muted"}>
                             {formatDate(lead.follow_up_date)}
                           </span>
                         );
                       })()}
                     </td>
-                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap text-sm">{formatDate(lead.last_contacted_at)}</td>
-                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap text-sm">{formatDate(lead.closed_at)}</td>
-                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap text-sm">{formatDate(lead.updated_at)}</td>
-                    <td className="px-4 py-3 text-gray-500 max-w-[160px] truncate text-sm">{lead.notes || "-"}</td>
+                    <td className="px-3 py-2 text-muted whitespace-nowrap">{formatDate(lead.last_contacted_at)}</td>
+                    <td className="px-3 py-2 text-muted whitespace-nowrap">{formatDate(lead.closed_at)}</td>
+                    <td className="px-3 py-2 text-muted whitespace-nowrap">{formatDate(lead.updated_at)}</td>
+                    <td className="px-3 py-2 text-muted max-w-[160px] truncate">{lead.notes || "-"}</td>
                   </tr>
                 );
               })}
               {filteredLeads.length === 0 && (
                 <tr>
-                  <td colSpan={13} className="px-6 py-12 text-center text-gray-400 text-sm">
+                  <td colSpan={13} className="px-6 py-12 text-center text-faint text-sm">
                     Belum ada lead. Klik "Tambah Lead" untuk memulai.
                   </td>
                 </tr>
@@ -459,7 +456,7 @@ export default function LeadsTable() {
               <MobileCard key={lead.id} onClick={() => router.push(`/leads/${lead.id}`)}>
                 <MobileCardHeader
                   title={client?.name || "-"}
-                  subtitle={client?.phone ? <span className="text-xs text-gray-400">{client.phone}</span> : undefined}
+                  subtitle={client?.phone ? <span className="text-xs text-faint">{client.phone}</span> : undefined}
                   actions={
                     <>
                       <MobileCardIconButton title="Lihat" onClick={() => setViewingLead(lead)}><EyeIcon /></MobileCardIconButton>
@@ -471,17 +468,17 @@ export default function LeadsTable() {
                 <MobileCardRow label="Nama Project">{lead.project_name || "-"}</MobileCardRow>
                 <MobileCardRow label="Status">
                   <span className="inline-flex items-center gap-1.5">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${LEAD_STATUS_COLORS[lead.status] || "bg-gray-100 text-gray-700"}`}>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${LEAD_STATUS_COLORS[lead.status] || "tone-neutral"}`}>
                       {lead.status}
                     </span>
                     {lead.is_stale && (
-                      <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-gray-200 text-gray-700">Stale</span>
+                      <span className="px-1.5 py-px rounded text-[11px] font-medium border border-line text-warning">Stale</span>
                     )}
                   </span>
                 </MobileCardRow>
                 <MobileCardRow label="Priority">
                   {lead.priority ? (
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${PRIORITY_COLORS[lead.priority] || "bg-gray-100 text-gray-600"}`}>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${PRIORITY_COLORS[lead.priority] || "tone-neutral"}`}>
                       {lead.priority}
                     </span>
                   ) : "-"}
@@ -493,14 +490,14 @@ export default function LeadsTable() {
                 </MobileCardRow>
                 <MobileCardRow label="No Response">
                   {lead.no_response_count ? (
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${lead.no_response_count >= 2 ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-600"}`}>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${lead.no_response_count >= 2 ? "tone-danger" : "tone-neutral"}`}>
                       {lead.no_response_count}
                     </span>
                   ) : "-"}
                 </MobileCardRow>
                 <MobileCardRow label="Source">{lead.source || client?.source || "-"}</MobileCardRow>
                 <MobileCardRow label="Follow Up">
-                  <span className={overdue ? "text-red-600 font-medium" : ""}>{formatDate(lead.follow_up_date)}</span>
+                  <span className={overdue ? "text-danger font-medium" : ""}>{formatDate(lead.follow_up_date)}</span>
                 </MobileCardRow>
                 <MobileCardRow label="Last Contact">{formatDate(lead.last_contacted_at)}</MobileCardRow>
                 <MobileCardRow label="Updated At">{formatDate(lead.updated_at)}</MobileCardRow>
@@ -509,12 +506,12 @@ export default function LeadsTable() {
             );
           })}
           {filteredLeads.length === 0 && (
-            <div className="py-12 text-center text-gray-400 text-sm bg-white rounded-2xl border border-gray-100">
+            <div className="py-12 text-center text-faint text-sm bg-white rounded-lg border border-line">
               Belum ada lead. Klik &quot;Tambah Lead&quot; untuk memulai.
             </div>
           )}
         </MobileCardList>
-        <div className="mt-3 bg-white rounded-2xl border border-gray-100 overflow-hidden">
+        <div className="mt-3 bg-white rounded-lg border border-line overflow-hidden">
           <Pagination
             page={page}
             totalPages={totalPages}

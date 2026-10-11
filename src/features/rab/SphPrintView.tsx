@@ -220,8 +220,8 @@ export default function SphPrintView({ rab, groups, config, onClose }: Props) {
             <thead>
               <tr>
                 <th style={{ width: "22px" }}>NO</th>
-                <th style={{ width: "90px" }}>DESKRIPSI</th>
-                <th>SPESIFIKASI</th>
+                <th style={{ width: "90px" }}>PEKERJAAN</th>
+                <th>DESKRIPSI</th>
                 <th style={{ width: "34px" }}>QTY</th>
                 <th style={{ width: "26px" }}>SAT</th>
                 <th style={{ width: "68px" }}>HARGA</th>

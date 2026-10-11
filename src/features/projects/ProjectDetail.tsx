@@ -18,6 +18,7 @@ import { projectStatusLabel } from "@/types/db";
 import { formatIDR } from "@/utils/format";
 import { ProjectRabSection, rabGross } from "./ProjectRabSection";
 import { DetailTabs, useTabParam } from "@/components/DetailTabs";
+import { StatusDot, PROJECT_STATUS_TONE, INVOICE_STATUS_TONE } from "@/components/ui/StatusDot";
 
 const TAB_KEYS = ["ringkasan", "rab", "pengeluaran", "tagihan"] as const;
 
@@ -35,27 +36,12 @@ const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
 };
 
 const CATEGORY_COLORS: Record<ExpenseCategory, string> = {
-  material: "bg-blue-100 text-blue-700",
-  jasa: "bg-purple-100 text-purple-700",
-  transport: "bg-orange-100 text-orange-700",
-  lainnya: "bg-gray-100 text-gray-600",
+  material: "bg-surface text-ink",
+  jasa: "bg-surface text-ink",
+  transport: "bg-surface text-ink",
+  lainnya: "bg-surface text-ink",
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  Planning: "bg-gray-100 text-gray-700",
-  Design: "bg-blue-100 text-blue-800",
-  Production: "bg-yellow-100 text-yellow-800",
-  Installation: "bg-purple-100 text-purple-800",
-  Done: "bg-green-100 text-green-800",
-};
-
-const INV_STATUS_COLORS: Record<string, string> = {
-  draft: "bg-gray-100 text-gray-600",
-  sent: "bg-blue-100 text-blue-700",
-  partial: "bg-yellow-100 text-yellow-700",
-  paid: "bg-green-100 text-green-700",
-  overdue: "bg-red-100 text-red-700",
-};
 const INV_STATUS_LABELS: Record<string, string> = {
   draft: "Draft", sent: "Terkirim", partial: "Sebagian", paid: "Lunas", overdue: "Jatuh Tempo",
 };
@@ -154,7 +140,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
   if (lp || lc) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-gray-900" />
+        <div className="animate-spin rounded-full h-6 w-6 border-2 border-line border-t-ink" />
       </div>
     );
   }
@@ -163,11 +149,11 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
   if (!project) {
     return (
       <div className="p-6">
-        <button onClick={() => router.back()} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition mb-6">
+        <button onClick={() => router.back()} className="flex items-center gap-1.5 text-sm text-muted hover:text-ink transition mb-6">
           <span>←</span> Kembali
         </button>
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-12 text-center">
-          <p className="text-gray-400 text-sm">Project tidak ditemukan.</p>
+        <div className="bg-white rounded-md border border-line p-12 text-center">
+          <p className="text-faint text-sm">Project tidak ditemukan.</p>
         </div>
       </div>
     );
@@ -256,62 +242,99 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
 
   const hasFilter = filterKategori !== "" || filterVendor !== "";
 
-  return (
-    <div className="p-6 space-y-6">
-      <Link href="/projects" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition">
-        <span>←</span> Kembali ke Projects
-      </Link>
+  // Pipeline: Lead → RAB disetujui → Project → Ditagih → Lunas
+  const totalTagih = projectInvoices.reduce((s, i) => s + i.total_amount, 0);
+  const totalBayar = projectInvoices.reduce((s, i) => s + i.paid_amount, 0);
+  const belumBayar = totalTagih - totalBayar;
+  const pipeline = [
+    { label: "Lead", done: !!project.lead_id },
+    { label: "RAB disetujui", done: approvedRabs.length > 0 },
+    { label: `Project ${progress}%`, done: project.status === "Done" },
+    { label: "Ditagih", done: projectValue > 0 && totalTagih >= projectValue },
+    { label: "Lunas", done: totalTagih > 0 && totalBayar >= totalTagih && totalTagih >= projectValue },
+  ];
+  const currentStep = pipeline.findIndex((p) => !p.done);
 
+  const today = new Date().toISOString().slice(0, 10);
+  const deadlineLate = !!project.deadline && project.deadline < today && project.status !== "Done";
+  const daysLate = (d: string) => Math.floor((Date.parse(today) - Date.parse(d.slice(0, 10))) / 86_400_000);
+  const overdueInvoices = projectInvoices.filter(
+    (i) => i.status !== "paid" && (i.status === "overdue" || (!!i.due_date && i.due_date.slice(0, 10) < today))
+  );
+
+  return (
+    <div className="space-y-5">
       {/* Header */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 space-y-4">
+      <div className="space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold text-gray-900 truncate">{project.name}</h1>
-            {client && <p className="text-sm text-gray-500 mt-0.5">{client.name}</p>}
-            <div className="flex flex-wrap items-center gap-2 mt-3">
-              <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_COLORS[project.status] ?? "bg-gray-100 text-gray-700"}`}>
-                {projectStatusLabel[project.status]}
-              </span>
-              {project.assigned_to && (
-                <span className="text-xs text-gray-500 bg-gray-50 px-2.5 py-1 rounded-full">{project.assigned_to}</span>
-              )}
-            </div>
-          </div>
-          <div className="flex flex-col gap-3 items-end">
-            <div className="w-full sm:w-40">
-              <div className="flex justify-between text-xs text-gray-500 mb-1.5">
-                <span>Progress</span>
-                <span className="font-semibold text-gray-900">{progress}%</span>
-              </div>
-              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all ${progress >= 100 ? "bg-green-500" : "bg-blue-500"}`}
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            </div>
-          </div>
+          <h1 className="text-xl font-semibold tracking-tight text-ink min-w-0 truncate">{project.name}</h1>
+          <button
+            onClick={() => { setActiveTab("tagihan"); setShowInvoiceModal(true); }}
+            className="self-start px-2.5 py-1.5 text-[13px] font-medium rounded-md bg-accent text-white hover:bg-accent-hover transition-colors shrink-0"
+          >
+            + Invoice
+          </button>
         </div>
-        {/* KPI row */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-gray-50">
-          <div className="bg-gray-50 rounded-lg px-4 py-3">
-            <p className="text-xs text-gray-400 mb-1">Nilai Project</p>
-            <p className="text-base font-bold text-gray-900">{projectValue ? formatCurrency(projectValue) : "-"}</p>
-          </div>
-          <div className="bg-red-50 rounded-lg px-4 py-3">
-            <p className="text-xs text-red-400 mb-1">Total Pengeluaran</p>
-            <p className="text-base font-bold text-red-500">{formatCurrency(totalPengeluaran)}</p>
-          </div>
-          <div className={`rounded-lg px-4 py-3 ${estimasiProfit >= 0 ? "bg-green-50" : "bg-red-50"}`}>
-            <p className={`text-xs mb-1 ${estimasiProfit >= 0 ? "text-green-500" : "text-red-400"}`}>
-              Estimasi Profit{marginPct ? ` (${marginPct}%)` : ""}
-            </p>
-            <p className={`text-base font-bold ${estimasiProfit >= 0 ? "text-green-600" : "text-red-500"}`}>
-              {formatCurrency(estimasiProfit)}
-            </p>
-          </div>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[13px] text-muted">
+          <StatusDot tone={PROJECT_STATUS_TONE[project.status] ?? "neutral"}>{projectStatusLabel[project.status]}</StatusDot>
+          {client && (
+            <span>Klien <Link href={`/clients/${client.id}`} className="text-ink font-medium hover:underline">{client.name}</Link></span>
+          )}
+          {project.assigned_to && <span>PIC <span className="text-ink font-medium">{project.assigned_to}</span></span>}
+          {project.start_date && <span className="tabular-nums">Mulai <span className="text-ink font-medium">{formatDate(project.start_date)}</span></span>}
+          {project.deadline && (
+            <span className={`tabular-nums ${deadlineLate ? "text-danger" : ""}`}>
+              Tenggat <span className={deadlineLate ? "font-medium" : "text-ink font-medium"}>{formatDate(project.deadline)}</span>
+              {deadlineLate && ` · lewat ${daysLate(project.deadline)} hari`}
+            </span>
+          )}
+        </div>
+        <ol className="grid grid-cols-5 gap-1 pt-1" aria-label="Tahapan project">
+          {pipeline.map((p, i) => (
+            <li key={p.label} className={`grid gap-1.5 text-xs ${p.done || i === currentStep ? "text-ink" : "text-faint"} ${i === currentStep ? "font-medium" : ""}`}>
+              <span className={`h-[3px] rounded-full ${p.done ? "bg-ink" : i === currentStep ? "bg-accent" : "bg-line"}`} />
+              <span className="truncate">{p.label}</span>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      {/* Angka utama */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 border-y border-line -mx-4 sm:-mx-6 lg:-mx-8 [&>div]:px-4 sm:[&>div]:px-6 lg:[&>div]:px-8">
+        <div className="py-3 border-r border-line">
+          <p className="text-xs text-muted">Nilai project</p>
+          <p className="font-mono text-base font-medium tabular-nums text-ink mt-0.5">{projectValue ? formatCurrency(projectValue) : "—"}</p>
+          <p className="text-[11.5px] text-faint mt-0.5">{approvedRabs.length} RAB disetujui</p>
+        </div>
+        <div className="py-3 lg:border-r border-line">
+          <p className="text-xs text-muted">Pengeluaran</p>
+          <p className="font-mono text-base font-medium tabular-nums text-ink mt-0.5">{formatCurrency(totalPengeluaran)}</p>
+          <p className="text-[11.5px] text-faint mt-0.5">{expenses.length} transaksi</p>
+        </div>
+        <div className="py-3 border-r border-t lg:border-t-0 border-line">
+          <p className="text-xs text-muted">Estimasi profit</p>
+          <p className={`font-mono text-base font-medium tabular-nums mt-0.5 ${estimasiProfit < 0 ? "text-danger" : "text-ink"}`}>{formatCurrency(estimasiProfit)}</p>
+          <p className="text-[11.5px] text-faint mt-0.5">{marginPct ? `Margin ${marginPct.replace(".", ",")}%` : "—"}</p>
+        </div>
+        <div className="py-3 border-t lg:border-t-0 border-line">
+          <p className="text-xs text-muted">Belum dibayar</p>
+          <p className={`font-mono text-base font-medium tabular-nums mt-0.5 ${belumBayar > 0 && overdueInvoices.length > 0 ? "text-danger" : "text-ink"}`}>{formatCurrency(belumBayar)}</p>
+          <p className="text-[11.5px] text-faint mt-0.5">{overdueInvoices.length > 0 ? `${overdueInvoices.length} invoice lewat jatuh tempo` : `dari ${projectInvoices.length} invoice`}</p>
         </div>
       </div>
+
+      {/* Hal yang butuh tindakan */}
+      {overdueInvoices.map((inv) => (
+        <div key={inv.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-md border border-danger-line bg-danger-soft text-[13px] text-ink">
+          <StatusDot tone="danger">
+            <span className="font-normal">
+              {inv.invoice_number}{inv.notes ? ` · ${inv.notes}` : ""}
+              {inv.due_date ? ` · jatuh tempo ${formatDate(inv.due_date)}, lewat ${daysLate(inv.due_date)} hari` : ""}
+            </span>
+          </StatusDot>
+          <Link href={`/invoices/${inv.id}`} className="text-danger font-medium hover:underline">Catat pembayaran →</Link>
+        </div>
+      ))}
 
       <DetailTabs
         tabs={[
@@ -338,32 +361,32 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
 
       {activeTab === "ringkasan" && (<>
       {/* Informasi Project */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-        <h2 className="text-sm font-semibold text-gray-800 mb-4">Informasi Project</h2>
+      <div className="bg-white rounded-md border border-line p-6">
+        <h2 className="text-sm font-semibold text-ink mb-4">Informasi Project</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
           <div>
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-0.5">Client</p>
-            <p className="text-sm text-gray-800">{client?.name ?? "-"}</p>
+            <p className="text-xs font-medium text-faint mb-0.5">Client</p>
+            <p className="text-sm text-ink">{client?.name ?? "-"}</p>
           </div>
           <div>
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-0.5">Status</p>
-            <p className="text-sm text-gray-800">{projectStatusLabel[project.status]}</p>
+            <p className="text-xs font-medium text-faint mb-0.5">Status</p>
+            <p className="text-sm text-ink">{projectStatusLabel[project.status]}</p>
           </div>
           <div>
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-0.5">Assigned To</p>
-            <p className="text-sm text-gray-800">{project.assigned_to ?? "-"}</p>
+            <p className="text-xs font-medium text-faint mb-0.5">Assigned To</p>
+            <p className="text-sm text-ink">{project.assigned_to ?? "-"}</p>
           </div>
           <div>
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-0.5">Start Date</p>
-            <p className="text-sm text-gray-800">{formatDate(project.start_date)}</p>
+            <p className="text-xs font-medium text-faint mb-0.5">Start Date</p>
+            <p className="text-sm text-ink">{formatDate(project.start_date)}</p>
           </div>
           <div>
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-0.5">Deadline</p>
-            <p className="text-sm text-gray-800">{formatDate(project.deadline)}</p>
+            <p className="text-xs font-medium text-faint mb-0.5">Deadline</p>
+            <p className="text-sm text-ink">{formatDate(project.deadline)}</p>
           </div>
           <div>
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-0.5">Nilai Project</p>
-            <p className="text-sm font-semibold text-gray-800">{projectValue ? formatCurrency(projectValue) : "-"}</p>
+            <p className="text-xs font-medium text-faint mb-0.5">Nilai Project</p>
+            <p className="text-sm font-semibold text-ink">{projectValue ? formatCurrency(projectValue) : "-"}</p>
           </div>
         </div>
       </div>
@@ -399,7 +422,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
           <select
             value={filterKategori}
             onChange={(e) => setFilterKategori(e.target.value)}
-            className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white"
+            className="px-3 py-1.5 text-xs border border-line rounded-md text-ink focus:outline-none focus:ring-2 focus:ring-accent/25 bg-white"
           >
             <option value="">Semua Kategori</option>
             {(Object.keys(CATEGORY_LABELS) as ExpenseCategory[]).map((k) => (
@@ -410,7 +433,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
           <select
             value={filterVendor}
             onChange={(e) => setFilterVendor(e.target.value)}
-            className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white"
+            className="px-3 py-1.5 text-xs border border-line rounded-md text-ink focus:outline-none focus:ring-2 focus:ring-accent/25 bg-white"
           >
             <option value="">Semua Vendor</option>
             {vendorOptions.map((v) => (
@@ -421,27 +444,27 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
           {hasFilter && (
             <button
               onClick={() => { setFilterKategori(""); setFilterVendor(""); }}
-              className="px-3 py-1.5 text-xs text-gray-400 hover:text-gray-700 transition"
+              className="px-3 py-1.5 text-xs text-faint hover:text-ink transition"
             >
               Reset filter
             </button>
           )}
 
           {hasFilter && (
-            <span className="text-xs text-gray-400 ml-1">
+            <span className="text-xs text-faint ml-1">
               {filteredExpenses.length} dari {expenses.length} baris
             </span>
           )}
         </div>
 
         {/* Inline table */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-md border border-line overflow-hidden">
           {/* Add row button */}
-          <div className="px-3 py-2 border-b border-gray-100">
+          <div className="px-3 py-2 border-b border-line">
             <button
               onClick={handleAddRow}
               disabled={addingRow}
-              className="flex items-center gap-1.5 px-4 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition disabled:opacity-50"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-[13px] font-medium rounded-md border border-line bg-white text-ink hover:bg-hover transition-colors disabled:opacity-50"
             >
               <span className="text-base leading-none">+</span>
               {addingRow ? "Menambahkan..." : "Tambah Baris"}
@@ -451,30 +474,30 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
             {vendorOptions.map((v) => <option key={v} value={v} />)}
           </datalist>
           {loadingExp ? (
-            <div className="py-10 text-center text-xs text-gray-400">Memuat...</div>
+            <div className="py-10 text-center text-xs text-faint">Memuat...</div>
           ) : (
             <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] text-sm border-collapse">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-100">
-                  <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide w-28">Tanggal</th>
-                  <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Deskripsi</th>
-                  <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide w-28">Kategori</th>
-                  <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide w-32">Vendor</th>
-                  <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide w-36">Jumlah (IDR)</th>
+                <tr className="bg-surface border-b border-line">
+                  <th className="text-left px-3 py-2.5 text-xs font-medium text-muted w-28">Tanggal</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-medium text-muted">Deskripsi</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-medium text-muted w-28">Kategori</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-medium text-muted w-32">Vendor</th>
+                  <th className="text-right px-3 py-2.5 text-xs font-medium text-muted w-36">Jumlah (IDR)</th>
                   <th className="w-8" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-line">
                 {pagedExpenses.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-3 py-10 text-center text-sm text-gray-400">
+                    <td colSpan={6} className="px-3 py-10 text-center text-sm text-faint">
                       {hasFilter ? "Tidak ada data sesuai filter." : "Belum ada pengeluaran. Klik \"+ Tambah Baris\" di atas."}
                     </td>
                   </tr>
                 )}
                 {pagedExpenses.map((exp) => (
-                  <tr key={exp.id} className="group hover:bg-gray-50 transition-colors">
+                  <tr key={exp.id} className="group hover:bg-hover transition-colors">
                     {/* Tanggal */}
                     <td className="px-2 py-1.5">
                       <input
@@ -482,7 +505,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                         value={exp.tanggal}
                         onChange={(e) => updateLocal(exp.id, "tanggal", e.target.value)}
                         onBlur={() => handleBlur(exp, "tanggal")}
-                        className="w-full px-2 py-1 text-xs text-gray-700 bg-transparent border border-transparent rounded focus:outline-none focus:border-gray-300 focus:bg-white transition"
+                        className="w-full px-2 py-1 text-xs text-ink bg-transparent border border-transparent rounded focus:outline-none focus:border-accent focus:bg-white transition"
                       />
                     </td>
                     {/* Deskripsi */}
@@ -493,7 +516,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                         placeholder="Deskripsi pengeluaran..."
                         onChange={(e) => updateLocal(exp.id, "deskripsi", e.target.value)}
                         onBlur={() => handleBlur(exp, "deskripsi")}
-                        className="w-full px-2 py-1 text-sm text-gray-800 bg-transparent border border-transparent rounded focus:outline-none focus:border-gray-300 focus:bg-white transition placeholder-gray-300"
+                        className="w-full px-2 py-1 text-sm text-ink bg-transparent border border-transparent rounded focus:outline-none focus:border-accent focus:bg-white transition placeholder-faint"
                       />
                     </td>
                     {/* Kategori */}
@@ -506,7 +529,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                             toast("Gagal menyimpan kategori", "error");
                           });
                         }}
-                        className={`text-xs font-medium px-2 py-1 rounded-full border-0 cursor-pointer focus:outline-none focus:ring-1 focus:ring-gray-300 ${CATEGORY_COLORS[exp.kategori]}`}
+                        className={`text-xs font-medium px-2 py-1 rounded-full border-0 cursor-pointer focus:outline-none focus:ring-1 focus:ring-accent/25 ${CATEGORY_COLORS[exp.kategori]}`}
                       >
                         {(Object.keys(CATEGORY_LABELS) as ExpenseCategory[]).map((k) => (
                           <option key={k} value={k}>{CATEGORY_LABELS[k]}</option>
@@ -524,7 +547,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                         placeholder="—"
                         onChange={(e) => updateLocal(exp.id, "vendor", e.target.value)}
                         onBlur={() => handleBlur(exp, "vendor")}
-                        className="w-full px-2 py-1 text-xs text-gray-600 bg-transparent border border-transparent rounded focus:outline-none focus:border-gray-300 focus:bg-white transition placeholder-gray-300"
+                        className="w-full px-2 py-1 text-xs text-muted bg-transparent border border-transparent rounded focus:outline-none focus:border-accent focus:bg-white transition placeholder-faint"
                       />
                     </td>
                     {/* Jumlah */}
@@ -534,14 +557,14 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                         placeholder="0"
                         onValueChange={(v) => updateLocal(exp.id, "jumlah", v === "" ? 0 : Number(v))}
                         onBlur={() => handleBlur(exp, "jumlah")}
-                        className="w-full px-2 py-1 text-sm text-right font-medium text-red-500 bg-transparent border border-transparent rounded focus:outline-none focus:border-gray-300 focus:bg-white transition placeholder-gray-300"
+                        className="w-full px-2 py-1 text-sm text-right font-mono tabular-nums text-ink bg-transparent border border-transparent rounded focus:outline-none focus:border-accent focus:bg-white transition placeholder-faint"
                       />
                     </td>
                     {/* Delete */}
                     <td className="px-2 py-1.5 text-center">
                       <button
                         onClick={() => handleDelete(exp.id)}
-                        className="w-6 h-6 flex items-center justify-center rounded text-gray-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition mx-auto"
+                        className="w-6 h-6 flex items-center justify-center rounded text-faint hover:text-danger hover:bg-danger-soft opacity-0 group-hover:opacity-100 transition mx-auto"
                         title="Hapus baris"
                       >
                         ✕
@@ -552,11 +575,11 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
               </tbody>
               {filteredExpenses.length > 0 && (
                 <tfoot>
-                  <tr className="bg-gray-50 border-t border-gray-100">
-                    <td colSpan={4} className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  <tr className="bg-surface border-t border-line">
+                    <td colSpan={4} className="px-3 py-2.5 text-xs font-medium text-muted">
                       {hasFilter ? "Total (difilter)" : "Total Pengeluaran"}
                     </td>
-                    <td className="px-3 py-2.5 text-right font-bold text-gray-900">
+                    <td className="px-3 py-2.5 text-right font-mono tabular-nums font-medium text-ink">
                       {formatCurrency(totalFiltered)}
                     </td>
                     <td />
@@ -570,7 +593,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between text-xs text-gray-500">
+          <div className="flex items-center justify-between text-xs text-muted">
             <span>
               Halaman {page} dari {totalPages} · {filteredExpenses.length} data
             </span>
@@ -578,7 +601,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                className="px-3 py-1.5 rounded-md border border-line hover:bg-hover disabled:opacity-40 disabled:cursor-not-allowed transition"
               >
                 ← Prev
               </button>
@@ -596,10 +619,10 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                     <button
                       key={p}
                       onClick={() => setPage(p as number)}
-                      className={`px-3 py-1.5 rounded-lg border transition ${
+                      className={`px-3 py-1.5 rounded-md border transition ${
                         page === p
-                          ? "bg-gray-900 text-white border-gray-900"
-                          : "border-gray-200 hover:bg-gray-50"
+                          ? "bg-accent text-white border-accent"
+                          : "border-line hover:bg-hover"
                       }`}
                     >
                       {p}
@@ -609,7 +632,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                className="px-3 py-1.5 rounded-md border border-line hover:bg-hover disabled:opacity-40 disabled:cursor-not-allowed transition"
               >
                 Next →
               </button>
@@ -625,7 +648,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
         <div className="flex items-center justify-end">
           <button
             onClick={() => setShowInvoiceModal(true)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-[13px] font-medium rounded-md border border-line bg-white text-ink hover:bg-hover transition-colors"
           >
             <span className="text-base leading-none">+</span>
             Tambah Invoice
@@ -636,10 +659,10 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
         {approvedRabs.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {approvedRabs.map((rab) => (
-              <div key={rab.id} className="inline-flex items-center gap-2 text-xs bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full font-medium">
+              <div key={rab.id} className="inline-flex items-center gap-2 text-xs border border-line text-ink px-2.5 py-1 rounded-md">
                 <span>{rab.nama}</span>
                 {rabTotals[rab.id] != null && (
-                  <span className="font-bold">{formatCurrency(rabTotals[rab.id])}</span>
+                  <span className="font-mono tabular-nums text-muted">{formatCurrency(rabTotals[rab.id])}</span>
                 )}
               </div>
             ))}
@@ -656,25 +679,25 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
           return (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {totalRab > 0 && (
-                <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3">
-                  <p className="text-xs text-gray-400 mb-1">Total Nilai RAB</p>
-                  <p className="text-sm font-bold text-gray-900">{formatCurrency(totalRab)}</p>
+                <div className="bg-white rounded-md border border-line px-3 py-2">
+                  <p className="text-xs text-faint mb-1">Total Nilai RAB</p>
+                  <p className="font-mono text-sm font-medium tabular-nums text-ink">{formatCurrency(totalRab)}</p>
                 </div>
               )}
-              <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3">
-                <p className="text-xs text-gray-400 mb-1">Sudah Ditagih</p>
-                <p className="text-sm font-bold text-gray-900">{formatCurrency(totalTagih)}</p>
+              <div className="bg-white rounded-md border border-line px-3 py-2">
+                <p className="text-xs text-faint mb-1">Sudah Ditagih</p>
+                <p className="font-mono text-sm font-medium tabular-nums text-ink">{formatCurrency(totalTagih)}</p>
                 {belumTagih != null && belumTagih > 0 && (
-                  <p className="text-xs text-orange-500 mt-0.5">Sisa {formatCurrency(belumTagih)} belum ditagih</p>
+                  <p className="text-xs text-warning mt-0.5">Sisa {formatCurrency(belumTagih)} belum ditagih</p>
                 )}
               </div>
-              <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3">
-                <p className="text-xs text-gray-400 mb-1">Sudah Diterima</p>
-                <p className="text-sm font-bold text-green-600">{formatCurrency(totalBayar)}</p>
+              <div className="bg-white rounded-md border border-line px-3 py-2">
+                <p className="text-xs text-faint mb-1">Sudah Diterima</p>
+                <p className="font-mono text-sm font-medium tabular-nums text-success">{formatCurrency(totalBayar)}</p>
               </div>
-              <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3">
-                <p className="text-xs text-gray-400 mb-1">Belum Dibayar</p>
-                <p className={`text-sm font-bold ${belumBayar > 0 ? "text-red-600" : "text-green-600"}`}>
+              <div className="bg-white rounded-md border border-line px-3 py-2">
+                <p className="text-xs text-faint mb-1">Belum Dibayar</p>
+                <p className={`font-mono text-sm font-medium tabular-nums ${belumBayar > 0 ? "text-danger" : "text-success"}`}>
                   {formatCurrency(belumBayar)}
                 </p>
               </div>
@@ -683,27 +706,27 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
         })()}
 
         {/* Invoice table */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-md border border-line overflow-hidden">
           {loadingInvoices ? (
-            <div className="py-10 text-center text-xs text-gray-400">Memuat tagihan…</div>
+            <div className="py-10 text-center text-xs text-faint">Memuat tagihan…</div>
           ) : projectInvoices.length === 0 ? (
-            <div className="py-10 text-center text-sm text-gray-400">
+            <div className="py-10 text-center text-sm text-faint">
               Belum ada invoice untuk project ini.{" "}
-              <button onClick={() => setShowInvoiceModal(true)} className="text-gray-700 underline">Buat Invoice</button>
+              <button onClick={() => setShowInvoiceModal(true)} className="text-ink underline">Buat Invoice</button>
             </div>
           ) : (
             <div className="overflow-x-auto">
             <table className="w-full min-w-[1000px] text-sm">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-100">
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">No. Invoice</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">RAB</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Termin / Catatan</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Tgl Tagih</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Jatuh Tempo</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Tagihan</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Diterima</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Status</th>
+                <tr className="bg-surface border-b border-line">
+                  <th className="text-left px-3 py-2 text-xs font-medium text-muted">No. Invoice</th>
+                  <th className="text-left px-3 py-2 text-xs font-medium text-muted">RAB</th>
+                  <th className="text-left px-3 py-2 text-xs font-medium text-muted">Termin / Catatan</th>
+                  <th className="text-left px-3 py-2 text-xs font-medium text-muted">Tgl Tagih</th>
+                  <th className="text-left px-3 py-2 text-xs font-medium text-muted">Jatuh Tempo</th>
+                  <th className="text-right px-3 py-2 text-xs font-medium text-muted">Tagihan</th>
+                  <th className="text-right px-3 py-2 text-xs font-medium text-muted">Diterima</th>
+                  <th className="text-left px-3 py-2 text-xs font-medium text-muted">Status</th>
                   <th className="w-8" />
                 </tr>
               </thead>
@@ -715,85 +738,85 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                   return (
                     <React.Fragment key={inv.id}>
                       <tr
-                        className={`border-t border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer ${isExpanded ? "bg-blue-50/40" : ""}`}
+                        className={`border-t border-line hover:bg-hover transition-colors cursor-pointer ${isExpanded ? "bg-accent-soft/40" : ""}`}
                         onClick={() => setExpandedInvoice(isExpanded ? null : inv.id)}
                       >
-                        <td className="px-4 py-3">
+                        <td className="px-3 py-2">
                           <a
                             href={`/invoices/${inv.id}`}
                             onClick={(e) => e.stopPropagation()}
-                            className="font-medium text-gray-900 hover:underline"
+                            className="font-medium text-ink hover:underline"
                           >
                             {inv.invoice_number}
                           </a>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-3 py-2">
                           {inv.rab_id ? (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blue-50 text-blue-700 font-medium">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-accent-soft text-accent font-medium">
                               {approvedRabs.find((r) => r.id === inv.rab_id)?.nama ?? "RAB"}
                             </span>
                           ) : (
-                            <span className="text-gray-300 text-xs">—</span>
+                            <span className="text-faint text-xs">—</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-gray-500 text-xs max-w-[180px] truncate">
+                        <td className="px-3 py-2 text-muted text-xs max-w-[180px] truncate">
                           {inv.notes ?? "—"}
                         </td>
-                        <td className="px-4 py-3 text-gray-500 text-xs">
+                        <td className="px-3 py-2 text-muted text-xs">
                           {inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString("id-ID") : "—"}
                         </td>
-                        <td className="px-4 py-3 text-xs">
+                        <td className="px-3 py-2 text-xs">
                           {inv.due_date ? (
-                            <span className={new Date(inv.due_date) < new Date() && inv.status !== "paid" ? "text-red-500 font-medium" : "text-gray-500"}>
+                            <span className={new Date(inv.due_date) < new Date() && inv.status !== "paid" ? "text-danger font-medium" : "text-muted"}>
                               {new Date(inv.due_date).toLocaleDateString("id-ID")}
                             </span>
                           ) : "—"}
                         </td>
-                        <td className="px-4 py-3 text-right font-medium text-gray-900">
+                        <td className="px-3 py-2 text-right font-mono tabular-nums text-ink">
                           {formatCurrency(inv.total_amount)}
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-3 py-2 text-right">
                           <div>
-                            <span className={inv.paid_amount > 0 ? "text-green-600 font-medium" : "text-gray-300"}>
+                            <span className={inv.paid_amount > 0 ? "text-success font-medium" : "text-faint"}>
                               {formatCurrency(inv.paid_amount)}
                             </span>
                             {lastPay && (
-                              <p className="text-xs text-gray-400 mt-0.5">
+                              <p className="text-xs text-faint mt-0.5">
                                 {new Date(lastPay.payment_date).toLocaleDateString("id-ID")}
                               </p>
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-3">
-                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${INV_STATUS_COLORS[inv.status] ?? "bg-gray-100 text-gray-600"}`}>
+                        <td className="px-3 py-2">
+                          <StatusDot tone={INVOICE_STATUS_TONE[inv.status] ?? "neutral"}>
                             {INV_STATUS_LABELS[inv.status] ?? inv.status}
-                          </span>
+                          </StatusDot>
                         </td>
-                        <td className="px-4 py-3 text-gray-300">
+                        <td className="px-3 py-2 text-faint">
                           <svg className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                           </svg>
                         </td>
                       </tr>
                       {isExpanded && (
-                        <tr key={`${inv.id}-detail`} className="bg-blue-50/30">
+                        <tr key={`${inv.id}-detail`} className="bg-accent-soft/30">
                           <td colSpan={9} className="px-6 py-3">
                             {pays.length === 0 ? (
-                              <p className="text-xs text-gray-400 py-1">Belum ada pembayaran tercatat untuk invoice ini.</p>
+                              <p className="text-xs text-faint py-1">Belum ada pembayaran tercatat untuk invoice ini.</p>
                             ) : (
                               <div className="space-y-1">
-                                <p className="text-xs font-semibold text-gray-500 mb-2">Riwayat Pembayaran</p>
+                                <p className="text-xs font-semibold text-muted mb-2">Riwayat Pembayaran</p>
                                 {pays.map((p) => (
-                                  <div key={p.id} className="flex items-center gap-4 text-xs bg-white rounded-lg px-3 py-2 border border-blue-100">
-                                    <span className="text-gray-500 w-24 shrink-0">
+                                  <div key={p.id} className="flex items-center gap-4 text-xs bg-white rounded-md px-3 py-2 border border-accent/25">
+                                    <span className="text-muted w-24 shrink-0">
                                       {new Date(p.payment_date).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
                                     </span>
-                                    <span className="text-gray-400">{METHOD_LABELS[p.payment_method] ?? p.payment_method}</span>
-                                    {p.notes && <span className="text-gray-400 truncate flex-1">{p.notes}</span>}
-                                    <span className="ml-auto font-semibold text-green-600">{formatCurrency(p.amount)}</span>
+                                    <span className="text-faint">{METHOD_LABELS[p.payment_method] ?? p.payment_method}</span>
+                                    {p.notes && <span className="text-faint truncate flex-1">{p.notes}</span>}
+                                    <span className="ml-auto font-semibold text-success">{formatCurrency(p.amount)}</span>
                                   </div>
                                 ))}
-                                <div className="flex justify-end text-xs font-bold text-green-700 pt-1 pr-2">
+                                <div className="flex justify-end text-xs font-semibold text-success pt-1 pr-2">
                                   Total: {formatCurrency(pays.reduce((s, p) => s + p.amount, 0))}
                                 </div>
                               </div>
@@ -806,12 +829,12 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                 })}
               </tbody>
               <tfoot>
-                <tr className="bg-gray-50 border-t border-gray-100">
-                  <td colSpan={5} className="px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Total</td>
-                  <td className="px-4 py-2.5 text-right font-bold text-gray-900">
+                <tr className="bg-surface border-t border-line">
+                  <td colSpan={5} className="px-4 py-2.5 text-xs font-medium text-muted">Total</td>
+                  <td className="px-4 py-2.5 text-right font-mono tabular-nums font-medium text-ink">
                     {formatCurrency(projectInvoices.reduce((s, i) => s + i.total_amount, 0))}
                   </td>
-                  <td className="px-4 py-2.5 text-right font-bold text-green-600">
+                  <td className="px-4 py-2.5 text-right font-mono tabular-nums font-medium text-success">
                     {formatCurrency(projectInvoices.reduce((s, i) => s + i.paid_amount, 0))}
                   </td>
                   <td colSpan={2} />

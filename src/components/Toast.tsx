@@ -23,17 +23,17 @@ const ICONS: Record<ToastType, string> = {
 };
 
 const STYLES: Record<ToastType, string> = {
-  success: "bg-green-50 border-green-200 text-green-800",
-  error: "bg-red-50 border-red-200 text-red-800",
-  warning: "bg-orange-50 border-orange-200 text-orange-800",
-  info: "bg-blue-50 border-blue-200 text-blue-800",
+  success: "bg-success-soft border-success/25 text-success",
+  error: "bg-danger-soft border-danger-line text-danger",
+  warning: "bg-warning-soft border-warning/25 text-warning",
+  info: "bg-accent-soft border-accent/25 text-accent",
 };
 
 const ICON_STYLES: Record<ToastType, string> = {
-  success: "bg-green-500 text-white",
-  error: "bg-red-500 text-white",
-  warning: "bg-orange-500 text-white",
-  info: "bg-blue-500 text-white",
+  success: "bg-success text-white",
+  error: "bg-danger text-white",
+  warning: "bg-warning text-white",
+  info: "bg-accent text-white",
 };
 
 function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: number) => void }) {
@@ -51,7 +51,7 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: number) =
 
   return (
     <div
-      className={`flex items-start gap-3 px-4 py-3 rounded-xl border shadow-lg text-sm font-medium max-w-sm w-full transition-all duration-300 ${STYLES[toast.type]} ${
+      className={`flex items-start gap-3 px-4 py-3 rounded-md border shadow-lg text-sm font-medium max-w-sm w-full transition-all duration-300 ${STYLES[toast.type]} ${
         visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
       }`}
     >

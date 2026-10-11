@@ -148,8 +148,8 @@ export default function InvoicePrintView({ invoice, client, rab, groups }: Props
               <thead>
                 <tr>
                   <th>NO</th>
+                  <th>PEKERJAAN</th>
                   <th>DESKRIPSI</th>
-                  <th>SPESIFIKASI</th>
                   <th>QTY</th>
                   <th>SAT</th>
                   <th>HARGA</th>

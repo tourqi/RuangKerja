@@ -178,20 +178,20 @@ export function ProjectFormModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900">
+      <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-line">
+          <h2 className="text-lg font-semibold text-ink">
             {isEditing ? "Edit Project" : "Tambah Project Baru"}
           </h2>
           <button
-            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition"
+            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-hover text-faint hover:text-muted transition"
             onClick={onClose}
           >✕</button>
         </div>
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
           {/* Client autocomplete */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Client (Lead Deal Won)</label>
+            <label className="block text-sm font-medium text-ink mb-1">Client (Lead Deal Won)</label>
             <div className="relative">
               <input
                 type="text"
@@ -205,12 +205,12 @@ export function ProjectFormModal({
                 onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
                 placeholder="Cari nama client..."
                 autoComplete="off"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900"
+                className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25"
               />
               {showDropdown && (
-                <div className="absolute z-10 left-0 right-0 bg-white border border-gray-200 rounded-b-lg shadow max-h-48 overflow-y-auto">
+                <div className="absolute z-10 left-0 right-0 bg-white border border-line rounded-b-lg shadow max-h-48 overflow-y-auto">
                   {wonClients.filter((c) => !clientQuery || c.name?.toLowerCase().includes(clientQuery.toLowerCase())).length === 0 ? (
-                    <div className="px-3 py-2 text-gray-400 text-sm">
+                    <div className="px-3 py-2 text-faint text-sm">
                       {wonClients.length === 0 ? "Belum ada lead dengan status Deal Won." : "Tidak ditemukan"}
                     </div>
                   ) : (
@@ -219,7 +219,7 @@ export function ProjectFormModal({
                       .map((c) => (
                         <div
                           key={c.id}
-                          className={`px-3 py-2 cursor-pointer hover:bg-green-50 text-sm ${form.client_id === c.id ? "bg-green-100" : ""}`}
+                          className={`px-3 py-2 cursor-pointer hover:bg-success-soft text-sm ${form.client_id === c.id ? "bg-success-soft" : ""}`}
                           onMouseDown={() => {
                             setForm((prev) => ({ ...prev, client_id: c.id }));
                             setClientQuery(c.name ?? "");
@@ -233,15 +233,15 @@ export function ProjectFormModal({
                 </div>
               )}
             </div>
-            {form.client_id && <p className="text-xs text-green-600 mt-1">✓ Client dipilih</p>}
+            {form.client_id && <p className="text-xs text-success mt-1">✓ Client dipilih</p>}
           </div>
 
           {/* Lead selector — menentukan Nama Project, muncul setelah client dipilih */}
           {form.client_id && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nama Project <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-ink mb-1">Nama Project <span className="text-danger">*</span></label>
               {leadsForClient.length === 0 ? (
-                <p className="text-xs text-gray-400 mt-1">Tidak ada lead Deal Won untuk client ini</p>
+                <p className="text-xs text-faint mt-1">Tidak ada lead Deal Won untuk client ini</p>
               ) : (
                 <Select
                   value={form.lead_id || ""}
@@ -254,9 +254,9 @@ export function ProjectFormModal({
                   placeholder="— Pilih Lead —"
                 />
               )}
-              {form.lead_id && <p className="text-xs text-green-600 mt-1">✓ Nama &amp; nilai project otomatis dari lead ini</p>}
+              {form.lead_id && <p className="text-xs text-success mt-1">✓ Nama &amp; nilai project otomatis dari lead ini</p>}
               {!form.lead_id && form.name && (
-                <p className="text-xs text-gray-400 mt-1">Nama saat ini: {form.name}</p>
+                <p className="text-xs text-faint mt-1">Nama saat ini: {form.name}</p>
               )}
             </div>
           )}
@@ -264,17 +264,17 @@ export function ProjectFormModal({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Nilai Project */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nilai Project (Rp)</label>
+              <label className="block text-sm font-medium text-ink mb-1">Nilai Project (Rp)</label>
               <NumberInput
                 value={form.value ?? ""}
                 onValueChange={(v) => setForm((prev) => ({ ...prev, value: v === "" ? undefined : Number(v) }))}
                 placeholder="0"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900"
+                className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25"
               />
             </div>
             {/* Status */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-ink mb-1">Status <span className="text-danger">*</span></label>
               <Select
                 value={form.status || "Planning"}
                 onChange={(v) => setForm((prev) => ({ ...prev, status: v as ProjectStatus }))}
@@ -284,36 +284,36 @@ export function ProjectFormModal({
             </div>
             {/* Start Date */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-              <input name="start_date" value={form.start_date || ""} onChange={handleChange} type="date" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900" />
+              <label className="block text-sm font-medium text-ink mb-1">Start Date</label>
+              <input name="start_date" value={form.start_date || ""} onChange={handleChange} type="date" className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25" />
             </div>
             {/* Deadline */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Deadline</label>
-              <input name="deadline" value={form.deadline || ""} onChange={handleChange} type="date" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900" />
+              <label className="block text-sm font-medium text-ink mb-1">Deadline</label>
+              <input name="deadline" value={form.deadline || ""} onChange={handleChange} type="date" className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25" />
             </div>
             {/* Assigned To */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
-              <input name="assigned_to" value={form.assigned_to || ""} onChange={handleChange} placeholder="Nama tim / PIC" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900" />
+              <label className="block text-sm font-medium text-ink mb-1">Assigned To</label>
+              <input name="assigned_to" value={form.assigned_to || ""} onChange={handleChange} placeholder="Nama tim / PIC" className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25" />
             </div>
             {/* Progress */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Progress <span className="text-gray-400 font-normal">({form.progress ?? 0}%)</span>
+              <label className="block text-sm font-medium text-ink mb-1">
+                Progress <span className="text-faint font-normal">({form.progress ?? 0}%)</span>
               </label>
               <input name="progress" value={form.progress ?? 0} onChange={handleChange} type="range" min={0} max={100} step={5} className="w-full accent-green-600" />
-              <div className="flex justify-between text-xs text-gray-400 mt-0.5">
+              <div className="flex justify-between text-xs text-faint mt-0.5">
                 <span>0%</span><span>50%</span><span>100%</span>
               </div>
             </div>
           </div>
 
           <div className="flex gap-2 pt-1">
-            <button type="submit" disabled={saving} className="px-6 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition disabled:opacity-50">
+            <button type="submit" disabled={saving} className="px-6 py-2 bg-accent text-white text-sm font-medium rounded-md hover:bg-accent-hover transition disabled:opacity-50">
               {saving ? "Menyimpan..." : isEditing ? "Simpan Perubahan" : "Tambah Project"}
             </button>
-            <button type="button" className="px-6 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition" onClick={onClose}>
+            <button type="button" className="px-6 py-2 bg-hover text-ink text-sm font-medium rounded-md hover:bg-hover transition" onClick={onClose}>
               Batal
             </button>
           </div>

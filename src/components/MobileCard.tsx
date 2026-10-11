@@ -23,7 +23,7 @@ export function MobileCard({
   return (
     <div
       onClick={onClick}
-      className={`bg-white rounded-2xl border border-gray-100 shadow-sm p-4 ${onClick ? "cursor-pointer active:bg-gray-50" : ""}`}
+      className={`bg-white rounded-lg border border-line p-4 ${onClick ? "cursor-pointer active:bg-surface" : ""}`}
     >
       {children}
     </div>
@@ -40,9 +40,9 @@ export function MobileCardHeader({
   actions?: ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between gap-3 pb-3 mb-1 border-b border-gray-100">
+    <div className="flex items-start justify-between gap-3 pb-3 mb-1 border-b border-line">
       <div className="min-w-0">
-        <p className="text-sm font-bold text-gray-900 truncate">{title}</p>
+        <p className="text-sm font-semibold text-ink truncate">{title}</p>
         {subtitle && <div className="mt-1">{subtitle}</div>}
       </div>
       {actions && (
@@ -57,9 +57,9 @@ export function MobileCardHeader({
 /** Label kiri, value kanan — satu baris field dalam card, meniru pola "key: value" tabel aslinya. */
 export function MobileCardRow({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-3 py-2 border-b border-gray-50 last:border-0 text-sm">
-      <span className="text-gray-400 shrink-0">{label}</span>
-      <span className="text-gray-900 font-medium text-right min-w-0 truncate">{children}</span>
+    <div className="flex items-center justify-between gap-3 py-2 border-b border-line last:border-0 text-sm">
+      <span className="text-faint shrink-0">{label}</span>
+      <span className="text-ink font-medium text-right min-w-0 truncate">{children}</span>
     </div>
   );
 }
@@ -74,8 +74,8 @@ type IconButtonProps = {
 };
 
 export function MobileCardIconButton({ onClick, href, title, danger, disabled, children }: IconButtonProps) {
-  const cls = `w-7 h-7 flex items-center justify-center rounded-lg transition disabled:opacity-30 disabled:pointer-events-none ${
-    danger ? "text-red-500 hover:bg-red-50" : "text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+  const cls = `w-7 h-7 flex items-center justify-center rounded-md transition disabled:opacity-30 disabled:pointer-events-none ${
+    danger ? "text-danger hover:bg-danger-soft" : "text-faint hover:bg-hover hover:text-ink"
   }`;
   if (href) {
     return (

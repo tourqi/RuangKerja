@@ -85,25 +85,25 @@ export function ClientFormModal({ client, onSaved, onClose, onSavedAndAddLead }:
   if (savedClient && onSavedAndAddLead) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 text-center">
-          <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="bg-white rounded-lg shadow-2xl w-full max-w-sm p-8 text-center">
+          <div className="w-14 h-14 bg-success-soft rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-7 h-7 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-1">Client berhasil ditambahkan!</h3>
-          <p className="text-sm text-gray-500 mb-6">
-            Ingin langsung menambahkan data <span className="font-medium text-gray-700">leads</span> untuk <span className="font-medium text-gray-700">{savedClient.name}</span>?
+          <h3 className="text-lg font-semibold text-ink mb-1">Client berhasil ditambahkan!</h3>
+          <p className="text-sm text-muted mb-6">
+            Ingin langsung menambahkan data <span className="font-medium text-ink">leads</span> untuk <span className="font-medium text-ink">{savedClient.name}</span>?
           </p>
           <div className="flex flex-col gap-2">
             <button
-              className="w-full px-4 py-2.5 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition"
+              className="w-full px-4 py-2.5 bg-accent text-white text-sm font-medium rounded-md hover:bg-accent-hover transition"
               onClick={() => onSavedAndAddLead(savedClient)}
             >
               Ya, Input Data Leads
             </button>
             <button
-              className="w-full px-4 py-2.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition"
+              className="w-full px-4 py-2.5 bg-hover text-ink text-sm font-medium rounded-md hover:bg-hover transition"
               onClick={onSaved}
             >
               Lewati
@@ -116,13 +116,13 @@ export function ClientFormModal({ client, onSaved, onClose, onSavedAndAddLead }:
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900">
+      <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-line">
+          <h2 className="text-lg font-semibold text-ink">
             {isEditing ? "Edit Client" : "Tambah Client Baru"}
           </h2>
           <button
-            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition"
+            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-hover text-faint hover:text-muted transition"
             onClick={onClose}
           >
             ✕
@@ -131,11 +131,11 @@ export function ClientFormModal({ client, onSaved, onClose, onSavedAndAddLead }:
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nama <span className="text-red-500">*</span></label>
-              <input name="name" value={form.name || ""} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-black focus:border-black outline-none" />
+              <label className="block text-sm font-medium text-ink mb-1">Nama <span className="text-danger">*</span></label>
+              <input name="name" value={form.name || ""} onChange={handleChange} required className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink focus:ring-2 focus:ring-accent/25 focus:border-accent outline-none" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">No. HP <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-ink mb-1">No. HP <span className="text-danger">*</span></label>
               <input
                 name="phone"
                 value={form.phone || ""}
@@ -145,28 +145,28 @@ export function ClientFormModal({ client, onSaved, onClose, onSavedAndAddLead }:
                 pattern="[0-9]*"
                 placeholder="08xxxxxxxxxx"
                 aria-invalid={!!duplicateClient}
-                className={`w-full px-3 py-2 border rounded-lg text-sm text-gray-900 outline-none focus:ring-2 ${
+                className={`w-full px-3 py-2 border rounded-md text-sm text-ink outline-none focus:ring-2 ${
                   duplicateClient
-                    ? "border-red-400 focus:ring-red-500 focus:border-red-500"
-                    : "border-gray-300 focus:ring-black focus:border-black"
+                    ? "border-danger focus:ring-danger/25 focus:border-danger"
+                    : "border-line-strong focus:ring-accent/25 focus:border-accent"
                 }`}
               />
               {duplicateClient && (
-                <p className="text-xs text-red-600 mt-1">
+                <p className="text-xs text-danger mt-1">
                   No. HP ini sudah dipakai oleh client &ldquo;{duplicateClient.name}&rdquo;
                 </p>
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Alamat</label>
-              <input name="address" value={form.address || ""} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-black focus:border-black outline-none" />
+              <label className="block text-sm font-medium text-ink mb-1">Alamat</label>
+              <input name="address" value={form.address || ""} onChange={handleChange} className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink focus:ring-2 focus:ring-accent/25 focus:border-accent outline-none" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nama Project</label>
-              <input name="project_name" value={form.project_name || ""} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-black focus:border-black outline-none" />
+              <label className="block text-sm font-medium text-ink mb-1">Nama Project</label>
+              <input name="project_name" value={form.project_name || ""} onChange={handleChange} className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink focus:ring-2 focus:ring-accent/25 focus:border-accent outline-none" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tipe Properti</label>
+              <label className="block text-sm font-medium text-ink mb-1">Tipe Properti</label>
               <Select
                 value={form.property_type || ""}
                 onChange={(v) => setForm((prev) => ({ ...prev, property_type: v }))}
@@ -175,7 +175,7 @@ export function ClientFormModal({ client, onSaved, onClose, onSavedAndAddLead }:
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Budget</label>
+              <label className="block text-sm font-medium text-ink mb-1">Budget</label>
               <Select
                 value={form.budget_range || ""}
                 onChange={(v) => setForm((prev) => ({ ...prev, budget_range: v }))}
@@ -184,20 +184,20 @@ export function ClientFormModal({ client, onSaved, onClose, onSavedAndAddLead }:
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status Lead</label>
+              <label className="block text-sm font-medium text-ink mb-1">Status Lead</label>
               {form.lead_status ? (
                 <div className="flex items-center h-[38px]">
-                  <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${CLIENT_LEAD_STATUS_COLORS[form.lead_status] || "bg-gray-100 text-gray-700"}`}>
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${CLIENT_LEAD_STATUS_COLORS[form.lead_status] || "tone-neutral"}`}>
                     {form.lead_status}
                   </span>
                 </div>
               ) : (
-                <div className="flex items-center h-[38px] text-sm text-gray-400">Belum ada lead</div>
+                <div className="flex items-center h-[38px] text-sm text-faint">Belum ada lead</div>
               )}
-              <p className="text-xs text-gray-400 mt-1">Otomatis mengikuti status Lead terbaru, tidak bisa diedit manual.</p>
+              <p className="text-xs text-faint mt-1">Otomatis mengikuti status Lead terbaru, tidak bisa diedit manual.</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Sumber</label>
+              <label className="block text-sm font-medium text-ink mb-1">Sumber</label>
               <Select
                 value={form.source || ""}
                 onChange={(v) => setForm((prev) => ({ ...prev, source: v }))}
@@ -206,32 +206,32 @@ export function ClientFormModal({ client, onSaved, onClose, onSavedAndAddLead }:
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Prioritas</label>
+              <label className="block text-sm font-medium text-ink mb-1">Prioritas</label>
               {form.priority ? (
                 <div className="flex items-center h-[38px]">
-                  <span className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize ${PRIORITY_COLORS[form.priority] || "bg-gray-100 text-gray-700"}`}>
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize ${PRIORITY_COLORS[form.priority] || "tone-neutral"}`}>
                     {form.priority}
                   </span>
                 </div>
               ) : (
-                <div className="flex items-center h-[38px] text-sm text-gray-400">Belum ada lead</div>
+                <div className="flex items-center h-[38px] text-sm text-faint">Belum ada lead</div>
               )}
-              <p className="text-xs text-gray-400 mt-1">Otomatis mengikuti priority Lead terbaru, tidak bisa diedit manual.</p>
+              <p className="text-xs text-faint mt-1">Otomatis mengikuti priority Lead terbaru, tidak bisa diedit manual.</p>
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Catatan</label>
-            <textarea name="notes" value={form.notes || ""} onChange={handleChange} rows={3} placeholder="Catatan tambahan..." className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-black focus:border-black outline-none resize-none" />
+            <label className="block text-sm font-medium text-ink mb-1">Catatan</label>
+            <textarea name="notes" value={form.notes || ""} onChange={handleChange} rows={3} placeholder="Catatan tambahan..." className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink focus:ring-2 focus:ring-accent/25 focus:border-accent outline-none resize-none" />
           </div>
           <div className="flex gap-2 pt-1">
             <button
               type="submit"
               disabled={saving || !!duplicateClient}
-              className="px-6 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-2 bg-accent text-white text-sm font-medium rounded-md hover:bg-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving ? "Menyimpan..." : isEditing ? "Simpan Perubahan" : "Tambah Client"}
             </button>
-            <button type="button" className="px-6 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition" onClick={onClose}>
+            <button type="button" className="px-6 py-2 bg-hover text-ink text-sm font-medium rounded-md hover:bg-hover transition" onClick={onClose}>
               Batal
             </button>
           </div>

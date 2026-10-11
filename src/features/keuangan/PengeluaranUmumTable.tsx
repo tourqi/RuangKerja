@@ -20,10 +20,10 @@ const KATEGORI_LABEL: Record<GeneralExpenseKategori, string> = {
 };
 
 const KATEGORI_BADGE: Record<GeneralExpenseKategori, string> = {
-  operasional: "bg-blue-100 text-blue-700",
-  marketing: "bg-purple-100 text-purple-700",
-  gaji: "bg-amber-100 text-amber-700",
-  lainnya: "bg-gray-100 text-gray-600",
+  operasional: "tone-active",
+  marketing: "tone-active",
+  gaji: "tone-warning",
+  lainnya: "tone-neutral",
 };
 
 const KATEGORI_ALL = ["operasional", "marketing", "gaji", "lainnya"] as GeneralExpenseKategori[];
@@ -77,16 +77,16 @@ export function PengeluaranUmumTable({ expenses, loading, onRefresh }: Props) {
           {KATEGORI_ALL.map((k) => {
             const sum = expenses.filter((e) => e.kategori === k).reduce((s, e) => s + e.jumlah, 0);
             return (
-              <div key={k} className="bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3 min-w-[140px]">
-                <p className="text-xs text-gray-400 mb-0.5">{KATEGORI_LABEL[k]}</p>
-                <p className="text-sm font-bold text-gray-900">{fmt(sum)}</p>
+              <div key={k} className="bg-white rounded-md border border-line px-4 py-3 min-w-[140px]">
+                <p className="text-xs text-faint mb-0.5">{KATEGORI_LABEL[k]}</p>
+                <p className="text-sm font-semibold text-ink">{fmt(sum)}</p>
               </div>
             );
           })}
         </div>
         <button
           onClick={() => { setEditing(null); setModalOpen(true); }}
-          className="flex items-center gap-2 px-4 py-2.5 bg-black text-white rounded-xl text-sm font-medium hover:bg-gray-800 transition shadow-sm"
+          className="flex items-center gap-2 px-2.5 py-1.5 bg-accent text-white rounded-md text-[13px] font-medium hover:bg-accent-hover transition"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -96,19 +96,19 @@ export function PengeluaranUmumTable({ expenses, loading, onRefresh }: Props) {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+      <div className="bg-white rounded-md border border-line p-4">
         <div className="flex flex-wrap items-center gap-3">
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Cari deskripsi, vendor..."
-            className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900/10 w-48"
+            className="border border-line rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/25 w-48"
           />
           <select
             value={filterKategori}
             onChange={(e) => setFilterKategori(e.target.value as GeneralExpenseKategori | "")}
-            className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900/10"
+            className="border border-line rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/25"
           >
             <option value="">Semua Kategori</option>
             {KATEGORI_ALL.map((k) => (
@@ -118,44 +118,44 @@ export function PengeluaranUmumTable({ expenses, loading, onRefresh }: Props) {
           {(search || filterKategori) && (
             <button
               onClick={() => { setSearch(""); setFilterKategori(""); }}
-              className="text-xs text-gray-400 hover:text-gray-600 underline"
+              className="text-xs text-faint hover:text-muted underline"
             >
               Reset
             </button>
           )}
-          <span className="ml-auto text-xs text-gray-500">
-            {filtered.length} item &bull; Total: <span className="font-semibold text-gray-900">{fmt(total)}</span>
+          <span className="ml-auto text-xs text-muted">
+            {filtered.length} item &bull; Total: <span className="font-semibold text-ink">{fmt(total)}</span>
           </span>
         </div>
       </div>
 
       {/* Table (desktop) */}
-      <div className="hidden sm:block bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="hidden sm:block bg-white rounded-md border border-line overflow-hidden">
         {loading ? (
-          <div className="p-10 text-center text-sm text-gray-400">Memuat data...</div>
+          <div className="p-10 text-center text-sm text-faint">Memuat data...</div>
         ) : filtered.length === 0 ? (
-          <div className="p-10 text-center text-sm text-gray-400">
+          <div className="p-10 text-center text-sm text-faint">
             {expenses.length === 0
               ? "Belum ada pengeluaran. Klik \"Tambah Pengeluaran\" untuk mulai mencatat."
               : "Tidak ada data yang cocok dengan filter."}
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-[13px]">
               <thead>
-                <tr className="border-b border-gray-100 bg-gray-50">
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500">Aksi</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 w-10">No</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500">Tanggal</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500">Deskripsi</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500">Kategori</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 hidden md:table-cell">Vendor</th>
-                  <th className="text-right py-3 px-4 text-xs font-semibold text-gray-500">Jumlah</th>
+                <tr className="border-b border-line bg-surface">
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted w-10"><span className="sr-only">Aksi</span></th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted w-10">No</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted">Tanggal</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted">Deskripsi</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted">Kategori</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted hidden md:table-cell">Vendor</th>
+                  <th className="text-right py-3 px-4 text-xs font-medium text-muted">Jumlah</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-line">
                 {paged.map((expense, idx) => (
-                  <tr key={expense.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={expense.id} className="hover:bg-hover transition-colors">
                     <td className="py-3 px-4">
                       <ActionDropdown
                         align="left"
@@ -181,8 +181,8 @@ export function PengeluaranUmumTable({ expenses, loading, onRefresh }: Props) {
                         ]}
                       />
                     </td>
-                    <td className="py-3 px-4 text-xs text-gray-400">{from + idx}</td>
-                    <td className="py-3 px-4 text-xs text-gray-700 whitespace-nowrap">
+                    <td className="py-3 px-4 text-xs text-faint">{from + idx}</td>
+                    <td className="py-3 px-4 text-xs text-ink whitespace-nowrap">
                       {new Date(expense.tanggal).toLocaleDateString("id-ID", {
                         day: "numeric",
                         month: "short",
@@ -190,9 +190,9 @@ export function PengeluaranUmumTable({ expenses, loading, onRefresh }: Props) {
                       })}
                     </td>
                     <td className="py-3 px-4 max-w-[200px]">
-                      <p className="text-xs text-gray-900 font-medium truncate">{expense.deskripsi}</p>
+                      <p className="text-xs text-ink font-medium truncate">{expense.deskripsi}</p>
                       {expense.sub_kategori && (
-                        <p className="text-xs text-gray-400 truncate">{expense.sub_kategori}</p>
+                        <p className="text-xs text-faint truncate">{expense.sub_kategori}</p>
                       )}
                     </td>
                     <td className="py-3 px-4">
@@ -200,19 +200,19 @@ export function PengeluaranUmumTable({ expenses, loading, onRefresh }: Props) {
                         {KATEGORI_LABEL[expense.kategori]}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-xs text-gray-500 hidden md:table-cell">
+                    <td className="py-3 px-4 text-xs text-muted hidden md:table-cell">
                       {expense.vendor ?? "—"}
                     </td>
-                    <td className="py-3 px-4 text-right text-xs font-semibold text-red-600 whitespace-nowrap">
+                    <td className="py-3 px-4 text-right text-xs font-semibold text-danger whitespace-nowrap">
                       {fmt(expense.jumlah)}
                     </td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
-                <tr className="border-t-2 border-gray-200 bg-gray-50">
-                  <td colSpan={6} className="py-3 px-4 text-xs font-bold text-gray-900">Total</td>
-                  <td className="py-3 px-4 text-right text-xs font-bold text-red-600 whitespace-nowrap">{fmt(total)}</td>
+                <tr className="border-t-2 border-line bg-surface">
+                  <td colSpan={6} className="py-3 px-4 text-xs font-semibold text-ink">Total</td>
+                  <td className="py-3 px-4 text-right text-xs font-semibold text-danger whitespace-nowrap">{fmt(total)}</td>
                 </tr>
               </tfoot>
             </table>
@@ -237,11 +237,11 @@ export function PengeluaranUmumTable({ expenses, loading, onRefresh }: Props) {
         {loading ? (
           <div className="space-y-3">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-28 bg-white rounded-2xl border border-gray-100 animate-pulse" />
+              <div key={i} className="h-28 bg-white rounded-lg border border-line animate-pulse" />
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="p-10 text-center text-sm text-gray-400 bg-white rounded-2xl border border-gray-100">
+          <div className="p-10 text-center text-sm text-faint bg-white rounded-lg border border-line">
             {expenses.length === 0
               ? "Belum ada pengeluaran. Klik \"Tambah Pengeluaran\" untuk mulai mencatat."
               : "Tidak ada data yang cocok dengan filter."}
@@ -253,7 +253,7 @@ export function PengeluaranUmumTable({ expenses, loading, onRefresh }: Props) {
                 <MobileCard key={expense.id}>
                   <MobileCardHeader
                     title={expense.deskripsi}
-                    subtitle={expense.sub_kategori ? <span className="text-xs text-gray-400">{expense.sub_kategori}</span> : undefined}
+                    subtitle={expense.sub_kategori ? <span className="text-xs text-faint">{expense.sub_kategori}</span> : undefined}
                     actions={
                       <>
                         <MobileCardIconButton title="Edit" onClick={() => { setEditing(expense); setModalOpen(true); }}><PencilIcon /></MobileCardIconButton>
@@ -271,16 +271,16 @@ export function PengeluaranUmumTable({ expenses, loading, onRefresh }: Props) {
                   </MobileCardRow>
                   <MobileCardRow label="Vendor">{expense.vendor ?? "—"}</MobileCardRow>
                   <MobileCardRow label="Jumlah">
-                    <span className="text-red-600 font-semibold">{fmt(expense.jumlah)}</span>
+                    <span className="text-danger font-semibold">{fmt(expense.jumlah)}</span>
                   </MobileCardRow>
                 </MobileCard>
               ))}
             </MobileCardList>
-            <div className="bg-white rounded-2xl border border-gray-100 px-4 py-3 flex items-center justify-between text-xs text-gray-500">
+            <div className="bg-white rounded-lg border border-line px-4 py-3 flex items-center justify-between text-xs text-muted">
               <span>Total ({filtered.length} item)</span>
-              <span className="font-bold text-red-600">{fmt(total)}</span>
+              <span className="font-semibold text-danger">{fmt(total)}</span>
             </div>
-            <div className="mt-3 bg-white rounded-2xl border border-gray-100 overflow-hidden">
+            <div className="mt-3 bg-white rounded-lg border border-line overflow-hidden">
               <Pagination
                 page={page}
                 totalPages={totalPages}

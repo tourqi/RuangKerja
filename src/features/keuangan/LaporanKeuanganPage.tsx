@@ -16,10 +16,10 @@ export default function LaporanKeuanganPage() {
   const { clients } = useClients();
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-bold text-gray-900">Laporan Keuangan</h1>
-        <p className="text-sm text-gray-500 mt-0.5">
+        <h1 className="text-xl font-semibold tracking-tight text-ink">Laporan Keuangan</h1>
+        <p className="text-sm text-muted mt-0.5">
           Laporan terintegrasi: pemasukan dari invoice, biaya project, dan pengeluaran umum
         </p>
       </div>
