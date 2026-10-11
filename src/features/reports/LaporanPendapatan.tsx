@@ -2,6 +2,7 @@
 import { useState, useMemo } from "react";
 import type { Payment, Invoice, Project, Client } from "@/types/db";
 import { isDateInRange, sumAmounts, groupSumByKey } from "@/utils/reportCalculations";
+import { formatIDR } from "@/utils/format";
 
 function currentMonthRange() {
   const now = new Date();
@@ -26,11 +27,7 @@ const methodBadge: Record<string, string> = {
 };
 
 function fmt(v: number) {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-  }).format(v);
+  return formatIDR(v);
 }
 
 export function LaporanPendapatan({

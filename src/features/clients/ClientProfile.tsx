@@ -9,11 +9,15 @@ import { getProjectValue as computeProjectValue } from "@/utils/projectValue";
 import { ClientFormModal } from "./ClientFormModal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { DetailTabs, useTabParam } from "@/components/DetailTabs";
+
+const TAB_KEYS = ["ringkasan", "lead", "proyek", "invoice"] as const;
+import { formatIDR } from "@/utils/format";
 
 const formatCurrency = (v?: number) =>
   v == null
     ? "-"
-    : new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(v);
+    : formatIDR(v);
 
 const formatDate = (s?: string) =>
   s ? new Date(s).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "-";
@@ -82,6 +86,7 @@ export default function ClientProfile({ clientId }: { clientId: string }) {
 
   const getProjectValue = (p: { lead_id?: string; value?: number }) => computeProjectValue(p, rabTotals);
   const [editOpen, setEditOpen] = useState(false);
+  const [activeTab, setActiveTab] = useTabParam(TAB_KEYS, "ringkasan");
 
   const loading = lc || ll || lp || li;
 
@@ -183,6 +188,18 @@ export default function ClientProfile({ clientId }: { clientId: string }) {
         />
       )}
 
+      <DetailTabs
+        tabs={[
+          { key: "ringkasan", label: "Ringkasan" },
+          { key: "lead", label: "Lead", count: clientLeads.length },
+          { key: "proyek", label: "Proyek", count: clientProjects.length },
+          { key: "invoice", label: "Invoice", count: clientInvoices.length },
+        ]}
+        active={activeTab}
+        onChange={setActiveTab}
+      />
+
+      {activeTab === "ringkasan" && (<>
       {/* Info grid */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
         <div className="flex items-center justify-between mb-4">
@@ -213,7 +230,55 @@ export default function ClientProfile({ clientId }: { clientId: string }) {
         )}
       </div>
 
+      {/* Journey timeline */}
+      {(clientLeads.length > 0 || clientProjects.length > 0) && (
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+          <h2 className="text-sm font-semibold text-gray-800 mb-4">Kronologi</h2>
+          <div className="space-y-0">
+            {[
+              ...clientLeads.map((l) => ({
+                date: l.created_at,
+                label: `Lead dibuat`,
+                sub: `Status: ${l.status}${l.assigned_to ? ` · Oleh: ${l.assigned_to}` : ""}`,
+                color: "bg-blue-500",
+              })),
+              ...clientLeads
+                .filter((l) => l.closed_at)
+                .map((l) => ({
+                  date: l.closed_at,
+                  label: `Lead ditutup`,
+                  sub: `Status akhir: ${l.status}`,
+                  color: l.status === "Deal Won" ? "bg-green-500" : "bg-red-400",
+                })),
+              ...clientProjects.map((p) => ({
+                date: p.created_at,
+                label: `Proyek dibuat: ${p.name}`,
+                sub: `${projectStatusLabel[p.status] ?? p.status}${getProjectValue(p) ? ` · ${formatCurrency(getProjectValue(p))}` : ""}`,
+                color: "bg-purple-500",
+              })),
+            ]
+              .filter((e) => e.date)
+              .sort((a, b) => new Date(b.date!).getTime() - new Date(a.date!).getTime())
+              .map((event, i, arr) => (
+                <div key={i} className="flex gap-4">
+                  <div className="flex flex-col items-center">
+                    <div className={`w-2.5 h-2.5 rounded-full mt-1 flex-shrink-0 ${event.color}`} />
+                    {i < arr.length - 1 && <div className="w-px flex-1 bg-gray-100 mt-1" />}
+                  </div>
+                  <div className="pb-4">
+                    <p className="text-xs font-medium text-gray-800">{event.label}</p>
+                    <p className="text-xs text-gray-400">{event.sub}</p>
+                    <p className="text-xs text-gray-300 mt-0.5">{formatDate(event.date)}</p>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+      </>)}
+
       {/* Leads */}
+      {activeTab === "lead" && (
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h2 className="text-sm font-semibold text-gray-800">
@@ -266,8 +331,10 @@ export default function ClientProfile({ clientId }: { clientId: string }) {
           </div>
         )}
       </div>
+      )}
 
       {/* Projects */}
+      {activeTab === "proyek" && (
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h2 className="text-sm font-semibold text-gray-800">
@@ -340,8 +407,10 @@ export default function ClientProfile({ clientId }: { clientId: string }) {
           </div>
         )}
       </div>
+      )}
 
       {/* Invoices */}
+      {activeTab === "invoice" && (
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h2 className="text-sm font-semibold text-gray-800">
@@ -388,50 +457,6 @@ export default function ClientProfile({ clientId }: { clientId: string }) {
         )}
       </div>
 
-      {/* Journey timeline */}
-      {(clientLeads.length > 0 || clientProjects.length > 0) && (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-          <h2 className="text-sm font-semibold text-gray-800 mb-4">Kronologi</h2>
-          <div className="space-y-0">
-            {[
-              ...clientLeads.map((l) => ({
-                date: l.created_at,
-                label: `Lead dibuat`,
-                sub: `Status: ${l.status}${l.assigned_to ? ` · Oleh: ${l.assigned_to}` : ""}`,
-                color: "bg-blue-500",
-              })),
-              ...clientLeads
-                .filter((l) => l.closed_at)
-                .map((l) => ({
-                  date: l.closed_at,
-                  label: `Lead ditutup`,
-                  sub: `Status akhir: ${l.status}`,
-                  color: l.status === "Deal Won" ? "bg-green-500" : "bg-red-400",
-                })),
-              ...clientProjects.map((p) => ({
-                date: p.created_at,
-                label: `Proyek dibuat: ${p.name}`,
-                sub: `${projectStatusLabel[p.status] ?? p.status}${getProjectValue(p) ? ` · ${formatCurrency(getProjectValue(p))}` : ""}`,
-                color: "bg-purple-500",
-              })),
-            ]
-              .filter((e) => e.date)
-              .sort((a, b) => new Date(b.date!).getTime() - new Date(a.date!).getTime())
-              .map((event, i, arr) => (
-                <div key={i} className="flex gap-4">
-                  <div className="flex flex-col items-center">
-                    <div className={`w-2.5 h-2.5 rounded-full mt-1 flex-shrink-0 ${event.color}`} />
-                    {i < arr.length - 1 && <div className="w-px flex-1 bg-gray-100 mt-1" />}
-                  </div>
-                  <div className="pb-4">
-                    <p className="text-xs font-medium text-gray-800">{event.label}</p>
-                    <p className="text-xs text-gray-400">{event.sub}</p>
-                    <p className="text-xs text-gray-300 mt-0.5">{formatDate(event.date)}</p>
-                  </div>
-                </div>
-              ))}
-          </div>
-        </div>
       )}
     </div>
   );

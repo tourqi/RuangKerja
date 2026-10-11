@@ -4,6 +4,7 @@ import type { Notification } from '@/types/db';
 import { getNotifications, markAllRead, markRead, upsertNotification } from '@/services/notifications';
 import { useAuth } from '@/context/AuthContext';
 import type { Lead, Project, Invoice, Client } from '@/types/db';
+import { formatIDR } from "@/utils/format";
 
 async function generateNotifications(
   userId: string,
@@ -61,7 +62,7 @@ async function generateNotifications(
           user_id: userId,
           type: 'invoice_overdue',
           title: `Invoice Jatuh Tempo: ${inv.invoice_number}`,
-          body: `Outstanding: ${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(inv.total_amount - inv.paid_amount)}`,
+          body: `Outstanding: ${formatIDR(inv.total_amount - inv.paid_amount)}`,
           link: `/invoices/${inv.id}`,
           entity_id: inv.id,
           read: false,

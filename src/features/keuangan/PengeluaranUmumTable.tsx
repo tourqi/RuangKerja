@@ -7,9 +7,10 @@ import { ActionDropdown } from "@/components/ActionDropdown";
 import Pagination from "@/components/Pagination";
 import { usePagination } from "@/hooks/usePagination";
 import { MobileCardList, MobileCard, MobileCardHeader, MobileCardRow, MobileCardIconButton, PencilIcon, TrashIcon } from "@/components/MobileCard";
+import { formatIDR } from "@/utils/format";
 
 const fmt = (v: number) =>
-  new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(v);
+  formatIDR(v);
 
 const KATEGORI_LABEL: Record<GeneralExpenseKategori, string> = {
   operasional: "Operasional Kantor",

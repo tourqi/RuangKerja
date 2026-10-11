@@ -13,6 +13,7 @@ import { getProjectValue as computeProjectValue } from "@/utils/projectValue";
 import { QuestionCircleIcon } from "@/components/icons/AppIcons";
 import HelpGuideModal from "@/components/HelpGuideModal";
 import type { NotificationType } from "@/types/db";
+import { formatIDR } from "@/utils/format";
 
 /* ── Route config ── */
 const ROUTE_LABELS: Record<string, string> = {
@@ -28,7 +29,7 @@ const ROUTE_LABELS: Record<string, string> = {
 const formatCurrency = (v?: number) =>
   v == null
     ? ""
-    : new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(v);
+    : formatIDR(v);
 
 /* ── Breadcrumb ── */
 function Breadcrumb({ clients }: { clients: ReturnType<typeof useClients>["clients"] }) {

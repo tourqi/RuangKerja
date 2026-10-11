@@ -2,6 +2,7 @@
 import { useState, useMemo } from "react";
 import type { Payment, ProjectExpense, Invoice, Project, Client } from "@/types/db";
 import { isDateInRange, sumAmounts, sortCashFlowEntries, withRunningBalance } from "@/utils/reportCalculations";
+import { formatIDR } from "@/utils/format";
 
 function currentMonthRange() {
   const now = new Date();
@@ -14,11 +15,7 @@ function currentMonthRange() {
 }
 
 function fmt(v: number) {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-  }).format(v);
+  return formatIDR(v);
 }
 
 type CashFlowRow =

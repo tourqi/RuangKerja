@@ -13,11 +13,16 @@ import { useToast } from "@/components/Toast";
 import ActivityTimeline from "@/components/ActivityTimeline";
 import { NumberInput } from "@/components/NumberInput";
 import { InvoiceFormModal } from "@/features/invoices/InvoiceFormModal";
-import type { ExpenseCategory, Invoice, Payment, ProjectExpense, Rab } from "@/types/db";
+import type { ExpenseCategory, Invoice, Payment, ProjectExpense, Rab, RabGroup } from "@/types/db";
 import { projectStatusLabel } from "@/types/db";
+import { formatIDR } from "@/utils/format";
+import { ProjectRabSection, rabGross } from "./ProjectRabSection";
+import { DetailTabs, useTabParam } from "@/components/DetailTabs";
+
+const TAB_KEYS = ["ringkasan", "rab", "pengeluaran", "tagihan"] as const;
 
 const formatCurrency = (v: number) =>
-  new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(v);
+  formatIDR(v);
 
 const formatDate = (s?: string) =>
   s ? new Date(s).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "-";
@@ -71,6 +76,8 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
   const { leads } = useLeads();
   const { user } = useAuth();
 
+  const [activeTab, setActiveTab] = useTabParam(TAB_KEYS, "ringkasan");
+
   const [expenses, setExpenses] = useState<LocalExpense[]>([]);
   const [loadingExp, setLoadingExp] = useState(true);
   const [addingRow, setAddingRow] = useState(false);
@@ -81,12 +88,9 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
   const [loadingInvoices, setLoadingInvoices] = useState(true);
   const [expandedInvoice, setExpandedInvoice] = useState<string | null>(null);
   const [allRabs, setAllRabs] = useState<Rab[]>([]);
-  const [approvedRabs, setApprovedRabs] = useState<Rab[]>([]);
-  const [rabTotals, setRabTotals] = useState<Record<string, number>>({});
-  const [showRabModal, setShowRabModal] = useState(false);
+  const [rabGroups, setRabGroups] = useState<Record<string, RabGroup[]>>({});
+  const [loadingRabs, setLoadingRabs] = useState(true);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
-  const [rabGroupsCache, setRabGroupsCache] = useState<Record<string, { groups: import("@/types/db").RabGroup[]; loading: boolean }>>({});
-  const [expandedRabIds, setExpandedRabIds] = useState<Set<string>>(new Set());
 
   // Filters
   const [filterKategori, setFilterKategori] = useState<string>("");
@@ -126,30 +130,23 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
 
   useEffect(() => { loadInvoicesData(); }, [loadInvoicesData]);
 
-  // Load approved RABs and their totals for this project
-  useEffect(() => {
-    let cancelled = false;
-    async function loadRabs(leadId: string) {
-      try {
-        const rabs = await getRabByLead(leadId);
-        const approved = rabs.filter((r) => r.status === "approved");
-        if (cancelled) return;
-        setAllRabs(rabs);
-        setApprovedRabs(approved);
-        const totals: Record<string, number> = {};
-        await Promise.all(approved.map(async (rab) => {
-          const groups = await getRabWithGroups(rab.id);
-          const gross = groups.reduce((s, g) => s + (g.items ?? []).reduce((ss, it) => ss + it.qty * it.harga, 0), 0);
-          totals[rab.id] = gross - (rab.diskon_nilai ?? 0);
-        }));
-        if (!cancelled) setRabTotals(totals);
-      } catch { /* silent */ }
+  // Load semua RAB (beserta isinya) dari lead project ini
+  const leadId = projects.find((p) => p.id === projectId)?.lead_id;
+  const loadRabs = useCallback(async () => {
+    if (!leadId) { setLoadingRabs(false); return; }
+    try {
+      const rabs = await getRabByLead(leadId);
+      const entries = await Promise.all(
+        rabs.map(async (rab) => [rab.id, await getRabWithGroups(rab.id)] as [string, RabGroup[]])
+      );
+      setAllRabs(rabs);
+      setRabGroups(Object.fromEntries(entries));
+    } catch { /* silent */ } finally {
+      setLoadingRabs(false);
     }
-    // wait for project to be loaded
-    const proj = projects.find((p) => p.id === projectId);
-    if (proj?.lead_id) loadRabs(proj.lead_id);
-    return () => { cancelled = true; };
-  }, [projectId, projects]);
+  }, [leadId]);
+
+  useEffect(() => { loadRabs(); }, [loadRabs]);
 
   // Reset page when filters change
   useEffect(() => { setPage(1); }, [filterKategori, filterVendor]);
@@ -178,6 +175,11 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
 
   const client = clients.find((c) => c.id === project.client_id);
   const progress = project.progress ?? 0;
+  // Nilai project = total RAB yang sudah disetujui
+  const approvedRabs = allRabs.filter((r) => r.status === "approved");
+  const rabTotals: Record<string, number> = Object.fromEntries(
+    approvedRabs.map((r) => [r.id, rabGross(rabGroups[r.id]) - (r.diskon_nilai ?? 0)])
+  );
   const projectValue = Object.values(rabTotals).reduce((sum, v) => sum + v, 0);
   const totalPengeluaran = expenses.reduce((s, e) => s + e.jumlah, 0);
   const estimasiProfit = projectValue - totalPengeluaran;
@@ -245,24 +247,6 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
     }
   }
 
-  async function loadRabGroups(rabId: string) {
-    if (rabGroupsCache[rabId]) return;
-    setRabGroupsCache((prev) => ({ ...prev, [rabId]: { groups: [], loading: true } }));
-    try {
-      const groups = await getRabWithGroups(rabId);
-      setRabGroupsCache((prev) => ({ ...prev, [rabId]: { groups, loading: false } }));
-    } catch {
-      setRabGroupsCache((prev) => ({ ...prev, [rabId]: { groups: [], loading: false } }));
-    }
-  }
-
-  const RAB_STATUS_LABELS: Record<string, string> = { draft: "Draft", sent: "Terkirim", approved: "Disetujui" };
-  const RAB_STATUS_COLORS: Record<string, string> = {
-    draft: "bg-gray-100 text-gray-500",
-    sent: "bg-blue-100 text-blue-700",
-    approved: "bg-green-100 text-green-700",
-  };
-
   const byKategori = (Object.keys(CATEGORY_LABELS) as ExpenseCategory[]).map((k) => ({
     key: k,
     label: CATEGORY_LABELS[k],
@@ -294,18 +278,6 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
             </div>
           </div>
           <div className="flex flex-col gap-3 items-end">
-            {allRabs.length > 0 && (
-              <button
-                onClick={() => setShowRabModal(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Lihat RAB
-                <span className="ml-1 bg-blue-200 text-blue-800 text-xs font-bold px-1.5 py-0.5 rounded-full">{allRabs.length}</span>
-              </button>
-            )}
             <div className="w-full sm:w-40">
               <div className="flex justify-between text-xs text-gray-500 mb-1.5">
                 <span>Progress</span>
@@ -341,6 +313,30 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
         </div>
       </div>
 
+      <DetailTabs
+        tabs={[
+          { key: "ringkasan", label: "Ringkasan" },
+          { key: "rab", label: "RAB", count: allRabs.length },
+          { key: "pengeluaran", label: "Pengeluaran", count: expenses.length },
+          { key: "tagihan", label: "Tagihan & Pembayaran", count: projectInvoices.length },
+        ]}
+        active={activeTab}
+        onChange={setActiveTab}
+      />
+
+      {activeTab === "rab" && (
+        <ProjectRabSection
+          projectId={projectId}
+          leadId={project.lead_id}
+          rabs={allRabs}
+          groupsByRab={rabGroups}
+          invoices={projectInvoices}
+          loading={loadingRabs}
+          onChanged={loadRabs}
+        />
+      )}
+
+      {activeTab === "ringkasan" && (<>
       {/* Informasi Project */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
         <h2 className="text-sm font-semibold text-gray-800 mb-4">Informasi Project</h2>
@@ -372,12 +368,12 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
         </div>
       </div>
 
+      <ActivityTimeline entityType="project" entityId={projectId} />
+      </>)}
+
       {/* Pengeluaran */}
+      {activeTab === "pengeluaran" && (
       <div className="space-y-4">
-        <h2 className="text-sm font-semibold text-gray-800">
-          Pengeluaran
-          <span className="ml-2 px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-xs font-medium">{expenses.length}</span>
-        </h2>
 
         {/* Summary chips */}
         {byKategori.length > 0 && (
@@ -621,11 +617,12 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
           </div>
         )}
       </div>
+      )}
 
       {/* Tagihan & Pembayaran */}
+      {activeTab === "tagihan" && (
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-800">Tagihan &amp; Pembayaran</h2>
+        <div className="flex items-center justify-end">
           <button
             onClick={() => setShowInvoiceModal(true)}
             className="flex items-center gap-1.5 px-4 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition"
@@ -826,160 +823,6 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
         </div>
       </div>
 
-      <ActivityTimeline entityType="project" entityId={projectId} />
-
-      {/* Modal RAB */}
-      {showRabModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setShowRabModal(false)}>
-          <div className="absolute inset-0 bg-black/40" />
-          <div
-            className="relative bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[85vh] flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header modal */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <div>
-                <h2 className="text-base font-semibold text-gray-900">RAB Project</h2>
-                <p className="text-xs text-gray-400 mt-0.5">{project.name}</p>
-              </div>
-              <button
-                onClick={() => setShowRabModal(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Body modal */}
-            <div className="overflow-y-auto flex-1 p-4 space-y-3">
-              {allRabs.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-10">Belum ada RAB untuk project ini.</p>
-              ) : (
-                allRabs.map((rab) => {
-                  const isExpanded = expandedRabIds.has(rab.id);
-                  const detail = isExpanded ? rabGroupsCache[rab.id] : null;
-                  const gross = detail?.groups.reduce((s, g) => s + (g.items ?? []).reduce((ss, it) => ss + it.qty * it.harga, 0), 0) ?? 0;
-                  const total = gross - (rab.diskon_nilai ?? 0);
-                  return (
-                    <div key={rab.id} className="border border-gray-100 rounded-xl overflow-hidden">
-                      {/* RAB header row */}
-                      <button
-                        className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition text-left"
-                        onClick={() => {
-                          const isExpanded = expandedRabIds.has(rab.id);
-                          setExpandedRabIds((prev) => {
-                            const next = new Set(prev);
-                            if (isExpanded) next.delete(rab.id); else next.add(rab.id);
-                            return next;
-                          });
-                          if (!isExpanded && !rabGroupsCache[rab.id]) loadRabGroups(rab.id);
-                        }}
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${RAB_STATUS_COLORS[rab.status]}`}>
-                            {RAB_STATUS_LABELS[rab.status]}
-                          </span>
-                          <span className="text-sm font-semibold text-gray-800">{rab.nama}</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          {rabTotals[rab.id] != null && (
-                            <span className="text-sm font-bold text-gray-900">{formatCurrency(rabTotals[rab.id])}</span>
-                          )}
-                          <svg
-                            className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""}`}
-                            fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </div>
-                      </button>
-
-                      {/* RAB detail */}
-                      {detail && (
-                        <div className="px-4 pb-3 pt-2">
-                          {detail.loading ? (
-                            <p className="text-xs text-gray-400 py-4 text-center">Memuat detail RAB…</p>
-                          ) : detail.groups.length === 0 ? (
-                            <p className="text-xs text-gray-400 py-4 text-center">Belum ada item pada RAB ini.</p>
-                          ) : (
-                            <div className="space-y-3">
-                              {detail.groups.map((group) => {
-                                const groupTotal = (group.items ?? []).reduce((s, it) => s + it.qty * it.harga, 0);
-                                return (
-                                  <div key={group.id}>
-                                    <div className="flex items-center justify-between py-1.5">
-                                      <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                                        {group.no}. {group.deskripsi}
-                                      </span>
-                                      <span className="text-xs font-semibold text-gray-700">{formatCurrency(groupTotal)}</span>
-                                    </div>
-                                    <table className="w-full text-xs">
-                                      <thead>
-                                        <tr className="border-b border-gray-100">
-                                          <th className="text-left py-1.5 text-gray-400 font-medium pr-3">Spesifikasi</th>
-                                          <th className="text-right py-1.5 text-gray-400 font-medium w-16">Qty</th>
-                                          <th className="text-left py-1.5 text-gray-400 font-medium w-14 pl-1">Sat</th>
-                                          <th className="text-right py-1.5 text-gray-400 font-medium w-28">Harga</th>
-                                          <th className="text-right py-1.5 text-gray-400 font-medium w-28">Total</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody className="divide-y divide-gray-50">
-                                        {(group.items ?? []).map((item) => (
-                                          <tr key={item.id}>
-                                            <td className="py-1.5 text-gray-700 pr-3">{item.spesifikasi}</td>
-                                            <td className="py-1.5 text-right text-gray-600">{item.qty}</td>
-                                            <td className="py-1.5 text-gray-500 pl-1">{item.unit}</td>
-                                            <td className="py-1.5 text-right text-gray-600">{formatCurrency(item.harga)}</td>
-                                            <td className="py-1.5 text-right font-medium text-gray-800">{formatCurrency(item.qty * item.harga)}</td>
-                                          </tr>
-                                        ))}
-                                      </tbody>
-                                    </table>
-                                  </div>
-                                );
-                              })}
-                              {/* Summary */}
-                              <div className="border-t border-gray-100 pt-2 space-y-1 text-xs">
-                                <div className="flex justify-between text-gray-600">
-                                  <span>Subtotal</span>
-                                  <span>{formatCurrency(gross)}</span>
-                                </div>
-                                {(rab.diskon_nilai ?? 0) > 0 && (
-                                  <div className="flex justify-between text-red-500">
-                                    <span>Diskon{rab.diskon_persen ? ` (${rab.diskon_persen}%)` : ""}</span>
-                                    <span>- {formatCurrency(rab.diskon_nilai ?? 0)}</span>
-                                  </div>
-                                )}
-                                <div className="flex justify-between font-bold text-gray-900 text-sm pt-1">
-                                  <span>Total</span>
-                                  <span>{formatCurrency(total)}</span>
-                                </div>
-                                {project.lead_id && (
-                                  <div className="pt-2">
-                                    <Link
-                                      href={`/leads/${project.lead_id}/rab/${rab.id}`}
-                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition w-full justify-center"
-                                      onClick={() => setShowRabModal(false)}
-                                    >
-                                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                      </svg>
-                                      Lihat / Edit RAB
-                                    </Link>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        </div>
       )}
 
       {/* Modal Tambah Invoice */}

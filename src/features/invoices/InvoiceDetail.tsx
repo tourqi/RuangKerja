@@ -7,7 +7,7 @@ import { useClients } from "@/hooks/useClients";
 import { useProjects } from "@/hooks/useProjects";
 import { useAllRabs, useApprovedRabTotals } from "@/hooks/useRab";
 import { useLeads } from "@/hooks/useLeads";
-import { formatRupiah } from "@/utils/format";
+import { formatRupiah, formatIDR } from "@/utils/format";
 import { getProjectValue as computeProjectValue } from "@/utils/projectValue";
 import { useToast } from "@/components/Toast";
 import type { InvoiceStatus, PaymentMethod } from "@/types/db";
@@ -20,11 +20,7 @@ import { NumberInput } from "@/components/NumberInput";
 const formatCurrency = (v?: number) =>
   v == null
     ? "—"
-    : new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-        minimumFractionDigits: 0,
-      }).format(v);
+    : formatIDR(v);
 
 const STATUS_COLORS: Record<InvoiceStatus, string> = {
   draft: "bg-gray-100 text-gray-600",

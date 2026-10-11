@@ -47,7 +47,9 @@ type LocalGroup = Omit<RabGroup, "created_at" | "items"> & {
 let tempCounter = 0;
 const tempId = () => `temp_${++tempCounter}`;
 
-export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: string }) {
+export default function RabEditor({ leadId, rabId, projectId }: { leadId: string; rabId: string; projectId?: string }) {
+  // Dibuka dari halaman project (?project=) -> navigasi balik ke tab RAB project itu
+  const backHref = projectId ? `/projects/${projectId}?tab=rab` : `/leads/${leadId}?tab=rab`;
   const toast = useToast();
   const { invoices } = useInvoices();
   const [rab, setRab] = useState<Rab | null>(null);
@@ -489,7 +491,7 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
   if (!rab) {
     return (
       <div className="p-6">
-        <Link href={`/leads/${leadId}`} className="text-sm text-gray-500 hover:text-gray-800">← Kembali</Link>
+        <Link href={backHref} className="text-sm text-gray-500 hover:text-gray-800">← Kembali</Link>
         <div className="mt-6 bg-white rounded-xl border border-gray-100 p-12 text-center">
           <p className="text-gray-400 text-sm">RAB tidak ditemukan.</p>
         </div>
@@ -519,9 +521,9 @@ export default function RabEditor({ leadId, rabId }: { leadId: string; rabId: st
       <div className="p-6 space-y-6 print:hidden">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-gray-400">
-          <Link href="/leads" className="hover:text-gray-700">Leads</Link>
+          <Link href={projectId ? "/projects" : "/leads"} className="hover:text-gray-700">{projectId ? "Projects" : "Leads"}</Link>
           <span>/</span>
-          <Link href={`/leads/${leadId}`} className="hover:text-gray-700">Detail Lead</Link>
+          <Link href={backHref} className="hover:text-gray-700">{projectId ? "Detail Project" : "Detail Lead"}</Link>
           <span>/</span>
           <span className="text-gray-700">{rab.nama}</span>
         </div>

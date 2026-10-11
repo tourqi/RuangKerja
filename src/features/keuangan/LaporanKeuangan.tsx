@@ -2,6 +2,7 @@
 import { useState, useMemo } from "react";
 import type { Payment, ProjectExpense, GeneralExpense, Invoice, Project, Client } from "@/types/db";
 import { isDateInRange, sumAmounts, sortCashFlowEntries, withRunningBalance } from "@/utils/reportCalculations";
+import { formatIDR } from "@/utils/format";
 
 function currentMonthRange() {
   const now = new Date();
@@ -14,7 +15,7 @@ function currentMonthRange() {
 }
 
 const fmt = (v: number) =>
-  new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(v);
+  formatIDR(v);
 
 const fmtDate = (d: string) =>
   new Date(d).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });

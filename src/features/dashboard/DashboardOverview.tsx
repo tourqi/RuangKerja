@@ -22,6 +22,7 @@ import {
   CoinsIcon, CheckCircleIcon, ClockIcon, HomeIcon, CameraIcon, MusicNoteIcon, GlobeIcon, LinkIcon,
   MapPinIcon, ShoppingBagIcon, MegaphoneIcon,
 } from "@/components/icons/AppIcons";
+import { formatIDR } from "@/utils/format";
 
 type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
 
@@ -64,7 +65,7 @@ const SOURCE_ICONS: Record<string, { icon: IconComponent; tint: string }> = {
 };
 
 const fmt = (v?: number) =>
-  v == null ? "-" : new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(v);
+  v == null ? "-" : formatIDR(v);
 
 const fmtShort = (v: number) => {
   if (v >= 1_000_000_000) return `${(v / 1_000_000_000).toFixed(1)}M`;

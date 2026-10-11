@@ -14,11 +14,12 @@ import { LaporanArusKas } from "./LaporanArusKas";
 import { computeProjectProfitLoss } from "@/utils/profitLossCalculations";
 import { groupSumByKey } from "@/utils/reportCalculations";
 import { getProjectValue as computeProjectValue } from "@/utils/projectValue";
+import { formatIDR } from "@/utils/format";
 
 const formatCurrency = (v?: number) =>
   v == null
     ? "Rp 0"
-    : new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(v);
+    : formatIDR(v);
 
 const pct = (part: number, total: number) =>
   total === 0 ? 0 : Math.round((part / total) * 100);

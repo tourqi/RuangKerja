@@ -16,12 +16,14 @@ import { Rab, LeadContactChannel } from "@/types/db";
 import { LEAD_CONTACT_CHANNELS, LEAD_CONTACT_CHANNEL_LABELS } from "@/constants/options";
 import { LeadFormModal } from "./LeadFormModal";
 import { ActionDropdown } from "@/components/ActionDropdown";
+import { DetailTabs, useTabParam } from "@/components/DetailTabs";
+import { formatIDR } from "@/utils/format";
 
 const formatDate = (s?: string) =>
   s ? new Date(s).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "-";
 
 const formatCurrency = (n?: number) =>
-  n == null ? "-" : new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
+  n == null ? "-" : formatIDR(n);
 
 const statusColors: Record<string, string> = {
   "New Lead": "bg-blue-100 text-blue-800",
@@ -38,6 +40,8 @@ const priorityColors: Record<string, string> = {
   high: "bg-orange-100 text-orange-700",
   urgent: "bg-red-100 text-red-700",
 };
+
+const TAB_KEYS = ["ringkasan", "kontak", "rab"] as const;
 
 const rabStatusColors: Record<string, string> = {
   draft: "bg-gray-100 text-gray-600",
@@ -63,6 +67,7 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
   const { invoices } = useInvoices();
   const { contacts, refetch: refetchContacts } = useLeadContacts(leadId);
 
+  const [activeTab, setActiveTab] = useTabParam(TAB_KEYS, "ringkasan");
   const [editOpen, setEditOpen] = useState(false);
   const [showAddRab, setShowAddRab] = useState(false);
   const [newRabNama, setNewRabNama] = useState("");
@@ -264,6 +269,17 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
         />
       )}
 
+      <DetailTabs
+        tabs={[
+          { key: "ringkasan", label: "Ringkasan" },
+          { key: "kontak", label: "Log Kontak", count: contacts.length },
+          { key: "rab", label: "RAB", count: rabList.length },
+        ]}
+        active={activeTab}
+        onChange={setActiveTab}
+      />
+
+      {activeTab === "ringkasan" && (<>
       {/* Informasi Lead */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 space-y-5">
         <div className="flex items-center justify-between">
@@ -318,12 +334,12 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
         )}
       </div>
 
+      <ActivityTimeline entityType="lead" entityId={leadId} />
+      </>)}
+
       {/* Log Kontak — syarat New Lead → Contacted: minimal 1 record */}
+      {activeTab === "kontak" && (
       <div className="space-y-4">
-        <h2 className="text-sm font-semibold text-gray-800">
-          Log Kontak
-          <span className="ml-2 px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-xs font-medium">{contacts.length}</span>
-        </h2>
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-3">
           <div className="flex flex-col sm:flex-row gap-2">
             <select
@@ -369,16 +385,11 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
           )}
         </div>
       </div>
+      )}
 
       {/* RAB */}
+      {activeTab === "rab" && (
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-800">
-            RAB
-            <span className="ml-2 px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-xs font-medium">{rabList.length}</span>
-          </h2>
-        </div>
-
         {/* Add RAB */}
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
           {showAddRab ? (
@@ -511,8 +522,7 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
           </div>
         )}
       </div>
-
-      <ActivityTimeline entityType="lead" entityId={leadId} />
+      )}
     </div>
   );
 }
