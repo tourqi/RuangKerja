@@ -18,13 +18,12 @@ import { LeadFormModal } from "./LeadFormModal";
 import { ActionDropdown } from "@/components/ActionDropdown";
 import { DetailTabs, useTabParam } from "@/components/DetailTabs";
 import { StatusDot, LEAD_STATUS_TONE } from "@/components/ui/StatusDot";
-import { formatIDR } from "@/utils/format";
+import { formatIDR, formatDate } from "@/utils/format";
+import { useConfirm } from "@/components/ConfirmProvider";
 
-const formatDate = (s?: string) =>
-  s ? new Date(s).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "-";
 
 const formatCurrency = (n?: number) =>
-  n == null ? "-" : formatIDR(n);
+  n == null ? "—" : formatIDR(n);
 
 const TAB_KEYS = ["ringkasan", "kontak", "rab"] as const;
 const LEAD_STAGES = ["New Lead", "Contacted", "Survey", "Deal", "Deal Won"] as const;
@@ -39,7 +38,7 @@ function InfoRow({ label, value }: { label: string; value?: string | null }) {
   return (
     <div>
       <p className="text-xs font-medium text-faint mb-0.5">{label}</p>
-      <p className="text-sm text-ink">{value || "-"}</p>
+      <p className="text-sm text-ink">{value || "—"}</p>
     </div>
   );
 }
@@ -47,7 +46,8 @@ function InfoRow({ label, value }: { label: string; value?: string | null }) {
 export default function LeadDetail({ leadId }: { leadId: string }) {
   const router = useRouter();
   const toast = useToast();
-  const { leads, loading: ll, refetch: refetchLeads } = useLeads();
+  const confirm = useConfirm();
+  const { leads, loading: ll, error: leadsError, refetch: refetchLeads } = useLeads();
   const { clients, loading: lc } = useClients();
   const { rabList, loading: lr, refetch: refetchRab } = useRabList(leadId);
   const { invoices } = useInvoices();
@@ -83,7 +83,7 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
           <span>←</span> Kembali
         </button>
         <div className="bg-white rounded-md border border-line p-12 text-center">
-          <p className="text-faint text-sm">Lead tidak ditemukan.</p>
+          <p className="text-faint text-sm">{leadsError ? 'Data gagal dimuat. Tekan "Coba lagi" di atas.' : "Lead tidak ditemukan."}</p>
         </div>
       </div>
     );
@@ -118,6 +118,7 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
       toast("RAB sudah lunas dan tidak dapat dihapus", "warning");
       return;
     }
+    if (!(await confirm({ title: "Hapus RAB?", description: "RAB beserta semua pekerjaan dan itemnya akan dihapus permanen." }))) return;
     setDeletingId(id);
     try {
       await deleteRab(id);
@@ -287,7 +288,7 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
           </button>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
-          <InfoRow label="Client" value={client?.name} />
+          <InfoRow label="Klien" value={client?.name} />
           <InfoRow label="No. HP" value={client?.phone} />
           <InfoRow label="Sumber" value={lead.source} />
           <InfoRow label="Status" value={lead.status} />
@@ -311,7 +312,7 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
           </div>
           <InfoRow label="Ditugaskan ke" value={lead.assigned_to} />
           <InfoRow label="Follow-up" value={formatDate(lead.follow_up_date)} />
-          <InfoRow label="Last Contact" value={formatDate(lead.last_contacted_at)} />
+          <InfoRow label="Kontak terakhir" value={formatDate(lead.last_contacted_at)} />
           <InfoRow label="Ditutup" value={formatDate(lead.closed_at)} />
           <InfoRow label="Lokasi Survey" value={lead.lokasi_survey} />
           <InfoRow label="Budget" value={formatCurrency(lead.budget)} />

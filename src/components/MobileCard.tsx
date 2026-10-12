@@ -23,6 +23,9 @@ export function MobileCard({
   return (
     <div
       onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onClick(); } } : undefined}
       className={`bg-white rounded-lg border border-line p-4 ${onClick ? "cursor-pointer active:bg-surface" : ""}`}
     >
       {children}

@@ -7,7 +7,8 @@ import { ActionDropdown } from "@/components/ActionDropdown";
 import Pagination from "@/components/Pagination";
 import { usePagination } from "@/hooks/usePagination";
 import { MobileCardList, MobileCard, MobileCardHeader, MobileCardRow, MobileCardIconButton, PencilIcon, TrashIcon } from "@/components/MobileCard";
-import { formatIDR } from "@/utils/format";
+import { formatIDR, formatDate } from "@/utils/format";
+import { useConfirm } from "@/components/ConfirmProvider";
 
 const fmt = (v: number) =>
   formatIDR(v);
@@ -35,6 +36,7 @@ interface Props {
 }
 
 export function PengeluaranUmumTable({ expenses, loading, onRefresh }: Props) {
+  const confirm = useConfirm();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<GeneralExpense | null>(null);
   const [filterKategori, setFilterKategori] = useState<GeneralExpenseKategori | "">("");
@@ -59,7 +61,7 @@ export function PengeluaranUmumTable({ expenses, loading, onRefresh }: Props) {
   const { paged, page, goTo, pageSize, changePageSize, totalPages, from, to, total: totalCount } = usePagination(filtered);
 
   async function handleDelete(id: string) {
-    if (!confirm("Hapus pengeluaran ini?")) return;
+    if (!(await confirm({ title: "Hapus pengeluaran?", description: "Pengeluaran ini akan dihapus permanen dan laporan keuangan ikut berubah." }))) return;
     setDeleting(id);
     try {
       await deleteGeneralExpense(id);
@@ -183,11 +185,7 @@ export function PengeluaranUmumTable({ expenses, loading, onRefresh }: Props) {
                     </td>
                     <td className="py-3 px-4 text-xs text-faint">{from + idx}</td>
                     <td className="py-3 px-4 text-xs text-ink whitespace-nowrap">
-                      {new Date(expense.tanggal).toLocaleDateString("id-ID", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })}
+                      {formatDate(expense.tanggal)}
                     </td>
                     <td className="py-3 px-4 max-w-[200px]">
                       <p className="text-xs text-ink font-medium truncate">{expense.deskripsi}</p>
@@ -262,7 +260,7 @@ export function PengeluaranUmumTable({ expenses, loading, onRefresh }: Props) {
                     }
                   />
                   <MobileCardRow label="Tanggal">
-                    {new Date(expense.tanggal).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                    {formatDate(expense.tanggal)}
                   </MobileCardRow>
                   <MobileCardRow label="Kategori">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${KATEGORI_BADGE[expense.kategori]}`}>

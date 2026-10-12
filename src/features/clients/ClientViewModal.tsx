@@ -1,6 +1,7 @@
 "use client";
 import { Client } from "@/types/db";
 import { CLIENT_LEAD_STATUS_COLORS, PRIORITY_COLORS } from "@/constants/options";
+import { DialogA11y } from "@/components/DialogA11y";
 
 type Props = {
   client: Client;
@@ -12,6 +13,7 @@ export function ClientViewModal({ client, onClose, onEdit }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogA11y onClose={onClose} />
         <div className="flex items-center justify-between px-6 py-5 border-b border-line">
           <h2 className="text-lg font-semibold text-ink">Detail Client</h2>
           <button
@@ -32,7 +34,7 @@ export function ClientViewModal({ client, onClose, onEdit }: Props) {
             ].map(({ label, value }) => (
               <div key={label}>
                 <p className="text-xs font-medium text-faint mb-0.5">{label}</p>
-                <p className="text-sm text-ink">{value || "-"}</p>
+                <p className="text-sm text-ink">{value || "—"}</p>
               </div>
             ))}
             <div>
@@ -41,7 +43,7 @@ export function ClientViewModal({ client, onClose, onEdit }: Props) {
                 <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${PRIORITY_COLORS[client.priority] || "tone-neutral"}`}>
                   {client.priority}
                 </span>
-              ) : <p className="text-sm text-ink">-</p>}
+              ) : <p className="text-sm text-ink">—</p>}
             </div>
             <div className="col-span-2">
               <p className="text-xs font-medium text-faint mb-0.5">Status Lead</p>
@@ -49,11 +51,11 @@ export function ClientViewModal({ client, onClose, onEdit }: Props) {
                 <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${CLIENT_LEAD_STATUS_COLORS[client.lead_status] || "tone-neutral"}`}>
                   {client.lead_status}
                 </span>
-              ) : <p className="text-sm text-ink">-</p>}
+              ) : <p className="text-sm text-ink">—</p>}
             </div>
             <div className="col-span-2">
               <p className="text-xs font-medium text-faint mb-0.5">Catatan</p>
-              <p className="text-sm text-ink whitespace-pre-wrap">{client.notes || "-"}</p>
+              <p className="text-sm text-ink whitespace-pre-wrap">{client.notes || "—"}</p>
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2 border-t border-line">

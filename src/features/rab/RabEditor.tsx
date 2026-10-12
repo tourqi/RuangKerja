@@ -30,6 +30,8 @@ import {
   diskonNilaiFromPersen,
   diskonPersenFromNilai,
 } from "@/utils/rabCalculations";
+import { useConfirm } from "@/components/ConfirmProvider";
+import { DialogA11y } from "@/components/DialogA11y";
 
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat("id-ID", { minimumFractionDigits: 0 }).format(v);
@@ -54,6 +56,7 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
   // Dibuka dari halaman project (?project=) -> navigasi balik ke tab RAB project itu
   const backHref = projectId ? `/projects/${projectId}?tab=rab` : `/leads/${leadId}?tab=rab`;
   const toast = useToast();
+  const confirm = useConfirm();
   const { invoices } = useInvoices();
   const [rab, setRab] = useState<Rab | null>(null);
   const [groups, setGroups] = useState<LocalGroup[]>([]);
@@ -246,7 +249,7 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
   }
 
   async function handleDeleteGroup(groupId: string) {
-    if (!confirm("Hapus group beserta semua item di dalamnya?")) return;
+    if (!(await confirm({ title: "Hapus pekerjaan?", description: "Pekerjaan ini beserta semua item di dalamnya akan dihapus permanen." }))) return;
     try {
       await deleteRabGroup(groupId);
       setGroups((prev) => {
@@ -307,6 +310,7 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
   }
 
   async function handleDeleteItem(groupId: string, itemId: string) {
+    if (!(await confirm({ title: "Hapus item?", description: "Item ini akan dihapus dari RAB." }))) return;
     try {
       await deleteRabItem(itemId);
       setGroups((prev) =>
@@ -1016,10 +1020,11 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
             className="bg-white rounded-t-2xl sm:rounded-md shadow-xl p-5 w-full sm:max-w-md"
             onClick={(e) => e.stopPropagation()}
           >
+            <DialogA11y onClose={() => setShowAddSectionModal(false)} />
             <h2 className="text-base font-semibold text-ink mb-4">Tambah Section</h2>
             <div>
-              <label className="block text-xs text-muted mb-1">Nama Pekerjaan</label>
-              <input
+              <label htmlFor="rab-editor-nama-pekerjaan" className="block text-xs text-muted mb-1">Nama Pekerjaan</label>
+              <input id="rab-editor-nama-pekerjaan"
                 type="text"
                 autoFocus
                 value={newSectionName}
@@ -1058,10 +1063,11 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
             className="bg-white rounded-t-2xl sm:rounded-md shadow-xl p-5 w-full sm:max-w-md space-y-3"
             onClick={(e) => e.stopPropagation()}
           >
+            <DialogA11y onClose={() => setAddItemGroupId(null)} />
             <h2 className="text-base font-semibold text-ink mb-1">Tambah Item</h2>
             <div>
-              <label className="block text-xs text-muted mb-1">Deskripsi</label>
-              <input
+              <label htmlFor="rab-editor-deskripsi" className="block text-xs text-muted mb-1">Deskripsi</label>
+              <input id="rab-editor-deskripsi"
                 type="text"
                 autoFocus
                 value={newItemForm.spesifikasi}
@@ -1072,8 +1078,8 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-muted mb-1">Qty</label>
-                <input
+                <label htmlFor="rab-editor-qty" className="block text-xs text-muted mb-1">Qty</label>
+                <input id="rab-editor-qty"
                   type="number"
                   step="0.01"
                   value={newItemForm.qty}
@@ -1083,8 +1089,8 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
                 />
               </div>
               <div>
-                <label className="block text-xs text-muted mb-1">Unit</label>
-                <input
+                <label htmlFor="rab-editor-unit" className="block text-xs text-muted mb-1">Unit</label>
+                <input id="rab-editor-unit"
                   type="text"
                   value={newItemForm.unit}
                   onChange={(e) => setNewItemForm((f) => ({ ...f, unit: e.target.value }))}
@@ -1094,8 +1100,8 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
               </div>
             </div>
             <div>
-              <label className="block text-xs text-muted mb-1">Harga Satuan</label>
-              <input
+              <label htmlFor="rab-editor-harga-satuan" className="block text-xs text-muted mb-1">Harga Satuan</label>
+              <input id="rab-editor-harga-satuan"
                 type="text"
                 inputMode="numeric"
                 value={newItemForm.harga ? formatCurrency(parseCurrency(newItemForm.harga)) : ""}
@@ -1134,6 +1140,7 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
       {showSphDialog && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 print:hidden">
           <div className="bg-white rounded-md shadow-xl p-6 w-full max-w-md mx-4">
+            <DialogA11y onClose={() => setShowSphDialog(false)} />
             <h2 className="text-lg font-semibold text-ink mb-4">Konfigurasi SPH</h2>
             <div className="space-y-3">
               {[
@@ -1144,8 +1151,8 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
                 { label: "Penandatangan", key: "penandatangan", placeholder: "M. Tourqi" },
               ].map(({ label, key, placeholder }) => (
                 <div key={key}>
-                  <label className="block text-xs text-muted mb-1">{label}</label>
-                  <input
+                  <label htmlFor={`sph-${key}`} className="block text-xs text-muted mb-1">{label}</label>
+                  <input id={`sph-${key}`}
                     type="text"
                     value={sphConfig[key as keyof SphConfig]}
                     onChange={(e) => setSphConfig((prev) => ({ ...prev, [key]: e.target.value }))}
@@ -1155,8 +1162,8 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
                 </div>
               ))}
               <div>
-                <label className="block text-xs text-muted mb-1">Sapaan</label>
-                <select
+                <label htmlFor="rab-editor-sapaan" className="block text-xs text-muted mb-1">Sapaan</label>
+                <select id="rab-editor-sapaan"
                   value={sphConfig.greeting}
                   onChange={(e) => setSphConfig((prev) => ({ ...prev, greeting: e.target.value }))}
                   className="w-full border border-line-strong rounded-md px-3 py-2 text-sm text-ink outline-none focus:border-accent"

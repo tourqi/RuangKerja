@@ -4,6 +4,7 @@ import { useActivityLog } from "@/hooks/useActivityLog";
 import { logActivity, deleteActivityLog, type ActivityLog } from "@/services/activityLog";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/components/Toast";
+import { formatDate } from "@/utils/format";
 
 const ACTION_ICONS: Record<string, string> = {
   created: "●",
@@ -33,7 +34,7 @@ function timeAgo(dateStr?: string) {
   if (hrs < 24) return `${hrs} jam lalu`;
   const days = Math.floor(hrs / 24);
   if (days < 7) return `${days} hari lalu`;
-  return new Date(dateStr).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+  return formatDate(dateStr);
 }
 
 interface Props {

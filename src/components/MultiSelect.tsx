@@ -9,9 +9,10 @@ type Props = {
   onChange: (values: string[]) => void;
   placeholder: string;
   className?: string;
+  id?: string;
 };
 
-export function MultiSelect({ options, value, onChange, placeholder, className = "" }: Props) {
+export function MultiSelect({ options, value, onChange, placeholder, className = "", id }: Props) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -37,6 +38,7 @@ export function MultiSelect({ options, value, onChange, placeholder, className =
   return (
     <div ref={ref} className={`relative ${className}`}>
       <button
+        id={id}
         type="button"
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center justify-between gap-2 px-2.5 py-1.5 border border-line rounded-md text-[13px] bg-white outline-none hover:border-faint transition"

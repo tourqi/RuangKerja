@@ -15,12 +15,14 @@ type Props = {
   disabled?: boolean;
   /** Whether the dropdown offers a "clear back to unselected" row. Set false for required fields that always hold a real value. */
   includeEmptyOption?: boolean;
+  /** id tombol pemicu, untuk dihubungkan dengan <label htmlFor>. */
+  id?: string;
 };
 
 const DEFAULT_TRIGGER_CLASS =
   "w-full flex items-center justify-between gap-2 px-2.5 py-1.5 border border-line rounded-md text-[13px] bg-white outline-none hover:border-faint transition focus:ring-2 focus:ring-accent/25 disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-surface";
 
-export function Select({ value, onChange, options, placeholder = "Pilih...", className, disabled, includeEmptyOption = true }: Props) {
+export function Select({ value, onChange, options, placeholder = "Pilih...", className, disabled, includeEmptyOption = true, id }: Props) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<Position | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -81,6 +83,7 @@ export function Select({ value, onChange, options, placeholder = "Pilih...", cla
   return (
     <>
       <button
+        id={id}
         type="button"
         ref={btnRef}
         onClick={toggle}

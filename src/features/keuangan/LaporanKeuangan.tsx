@@ -3,7 +3,7 @@ import { useState, useMemo } from "react";
 import { DetailTabs } from "@/components/DetailTabs";
 import type { Payment, ProjectExpense, GeneralExpense, Invoice, Project, Client } from "@/types/db";
 import { isDateInRange, sumAmounts, sortCashFlowEntries, withRunningBalance } from "@/utils/reportCalculations";
-import { formatIDR } from "@/utils/format";
+import { formatIDR, formatDate } from "@/utils/format";
 
 function currentMonthRange() {
   const now = new Date();
@@ -18,8 +18,7 @@ function currentMonthRange() {
 const fmt = (v: number) =>
   formatIDR(v);
 
-const fmtDate = (d: string) =>
-  new Date(d).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+const fmtDate = (d: string) => formatDate(d);
 
 const methodLabels: Record<string, string> = {
   transfer: "Transfer",
@@ -155,8 +154,8 @@ export function LaporanKeuangan({
       <div className="flex flex-wrap items-center gap-3">
         <span className="text-xs font-semibold text-muted">Periode:</span>
         <div className="flex items-center gap-2">
-          <label className="text-xs text-muted">Dari</label>
-          <input
+          <label htmlFor="laporan-keuangan-dari" className="text-xs text-muted">Dari</label>
+          <input id="laporan-keuangan-dari"
             type="date"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
@@ -164,8 +163,8 @@ export function LaporanKeuangan({
           />
         </div>
         <div className="flex items-center gap-2">
-          <label className="text-xs text-muted">Sampai</label>
-          <input
+          <label htmlFor="laporan-keuangan-sampai" className="text-xs text-muted">Sampai</label>
+          <input id="laporan-keuangan-sampai"
             type="date"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}

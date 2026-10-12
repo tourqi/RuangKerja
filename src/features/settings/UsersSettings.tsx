@@ -4,6 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/services/supabase";
 import type { Profile, UserRole } from "@/types/db";
 import { useToast } from "@/components/Toast";
+import { DialogA11y } from "@/components/DialogA11y";
 
 const ROLES: { value: UserRole; label: string }[] = [
   { value: "owner", label: "Owner" },
@@ -155,6 +156,7 @@ export default function UsersSettings() {
           onClick={() => setShowInvite(false)}
         >
           <div className="bg-white rounded-lg shadow-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+            <DialogA11y onClose={() => setShowInvite(false)} />
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-base font-semibold text-ink">Undang Pengguna Baru</h2>
               <button onClick={() => setShowInvite(false)} className="text-faint hover:text-muted transition-colors">
@@ -165,8 +167,8 @@ export default function UsersSettings() {
             </div>
             <form onSubmit={handleInvite} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-ink mb-1.5">Email</label>
-                <input
+                <label htmlFor="users-settings-email" className="block text-xs font-medium text-ink mb-1.5">Email</label>
+                <input id="users-settings-email"
                   type="email"
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
@@ -176,8 +178,8 @@ export default function UsersSettings() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-ink mb-1.5">Nama</label>
-                <input
+                <label htmlFor="users-settings-nama" className="block text-xs font-medium text-ink mb-1.5">Nama</label>
+                <input id="users-settings-nama"
                   type="text"
                   value={inviteName}
                   onChange={(e) => setInviteName(e.target.value)}
@@ -186,8 +188,8 @@ export default function UsersSettings() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-ink mb-1.5">Role</label>
-                <select
+                <label htmlFor="users-settings-role" className="block text-xs font-medium text-ink mb-1.5">Peran</label>
+                <select id="users-settings-role"
                   value={inviteRole}
                   onChange={(e) => setInviteRole(e.target.value as UserRole)}
                   className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25"

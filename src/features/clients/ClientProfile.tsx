@@ -13,15 +13,13 @@ import { DetailTabs, useTabParam } from "@/components/DetailTabs";
 import { StatusDot, LEAD_STATUS_TONE } from "@/components/ui/StatusDot";
 
 const TAB_KEYS = ["ringkasan", "lead", "proyek", "invoice"] as const;
-import { formatIDR } from "@/utils/format";
+import { formatIDR, formatDate } from "@/utils/format";
 
 const formatCurrency = (v?: number) =>
   v == null
-    ? "-"
+    ? "—"
     : formatIDR(v);
 
-const formatDate = (s?: string) =>
-  s ? new Date(s).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "-";
 
 const leadStatusColors: Record<string, string> = {
   "New Lead": "tone-active",
@@ -64,7 +62,7 @@ function InfoRow({ label, value }: { label: string; value?: string | null }) {
   return (
     <div>
       <p className="text-xs font-medium text-faint mb-0.5">{label}</p>
-      <p className="text-sm text-ink">{value || "-"}</p>
+      <p className="text-sm text-ink">{value || "—"}</p>
     </div>
   );
 }
@@ -78,7 +76,7 @@ const invoiceStatusColors: Record<string, string> = {
 };
 
 export default function ClientProfile({ clientId }: { clientId: string }) {
-  const { clients, loading: lc, refetch: refetchClients } = useClients();
+  const { clients, loading: lc, error: clientsError, refetch: refetchClients } = useClients();
   const { leads, loading: ll } = useLeads();
   const { projects, loading: lp } = useProjects();
   const { invoices, loading: li } = useInvoices();
@@ -108,7 +106,7 @@ export default function ClientProfile({ clientId }: { clientId: string }) {
           <span>←</span> Kembali
         </button>
         <div className="bg-white rounded-md border border-line p-12 text-center">
-          <p className="text-faint text-sm">Client tidak ditemukan.</p>
+          <p className="text-faint text-sm">{clientsError ? 'Data gagal dimuat. Tekan "Coba lagi" di atas.' : "Client tidak ditemukan."}</p>
         </div>
       </div>
     );
@@ -205,7 +203,7 @@ export default function ClientProfile({ clientId }: { clientId: string }) {
         <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
           <InfoRow label="No. HP" value={client.phone} />
           <InfoRow label="Sumber" value={client.source} />
-          <InfoRow label="Nama Project" value={client.project_name} />
+          <InfoRow label="Nama Proyek" value={client.project_name} />
           <InfoRow label="Alamat" value={client.address} />
           <InfoRow label="Tipe Properti" value={client.property_type} />
           <InfoRow label="Budget" value={client.budget_range} />
@@ -303,12 +301,12 @@ export default function ClientProfile({ clientId }: { clientId: string }) {
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${priorityColors[lead.priority] || "tone-neutral"}`}>
                           {lead.priority}
                         </span>
-                      ) : "-"}
+                      ) : "—"}
                     </td>
-                    <td className="px-4 py-3 text-xs text-muted">{lead.source || "-"}</td>
+                    <td className="px-4 py-3 text-xs text-muted">{lead.source || "—"}</td>
                     <td className="px-4 py-3 text-xs text-muted whitespace-nowrap">{formatDate(lead.follow_up_date)}</td>
                     <td className="px-4 py-3 text-xs text-muted whitespace-nowrap">{formatDate(lead.last_contacted_at)}</td>
-                    <td className="px-4 py-3 text-xs text-muted max-w-[200px] truncate">{lead.notes || "-"}</td>
+                    <td className="px-4 py-3 text-xs text-muted max-w-[200px] truncate">{lead.notes || "—"}</td>
                     <td className="px-4 py-3">
                       <Link href={`/leads/${lead.id}`} className="text-xs text-accent hover:underline whitespace-nowrap">Lihat →</Link>
                     </td>
@@ -383,7 +381,7 @@ export default function ClientProfile({ clientId }: { clientId: string }) {
                         {formatDate(project.deadline)}
                         {isOverdue && <span className="ml-1 text-danger">(overdue)</span>}
                       </td>
-                      <td className="px-4 py-3 text-xs text-muted">{project.assigned_to || "-"}</td>
+                      <td className="px-4 py-3 text-xs text-muted">{project.assigned_to || "—"}</td>
                       <td className="px-4 py-3">
                         <Link href={`/projects/${project.id}`} className="text-xs text-accent hover:underline whitespace-nowrap">Lihat →</Link>
                       </td>
@@ -424,7 +422,7 @@ export default function ClientProfile({ clientId }: { clientId: string }) {
               <tbody className="divide-y divide-line">
                 {clientInvoices.map((inv) => (
                   <tr key={inv.id} className="hover:bg-hover transition-colors">
-                    <td className="px-4 py-3 text-xs font-medium text-ink whitespace-nowrap">{inv.invoice_number || "-"}</td>
+                    <td className="px-4 py-3 text-xs font-medium text-ink whitespace-nowrap">{inv.invoice_number || "—"}</td>
                     <td className="px-4 py-3 text-xs text-muted whitespace-nowrap">{formatDate(inv.invoice_date)}</td>
                     <td className="px-4 py-3 text-xs text-muted whitespace-nowrap">{formatDate(inv.due_date)}</td>
                     <td className="px-4 py-3 text-xs text-ink whitespace-nowrap">{formatCurrency(inv.total_amount)}</td>

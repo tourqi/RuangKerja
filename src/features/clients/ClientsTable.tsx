@@ -255,7 +255,7 @@ export default function ClientsTable() {
                   <SortableHeader label="Nama" col="name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <SortableHeader label="No. HP" col="phone" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted whitespace-nowrap">Alamat</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-muted whitespace-nowrap">Nama Project</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted whitespace-nowrap">Nama Proyek</th>
                   <SortableHeader label="Tipe" col="property_type" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <SortableHeader label="Budget" col="budget_range" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <SortableHeader label="Status" col="lead_status" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
@@ -305,22 +305,22 @@ export default function ClientsTable() {
                         {client.name}
                       </Link>
                     </td>
-                    <td className="px-3 py-2 text-muted whitespace-nowrap">{client.phone || "-"}</td>
-                    <td className="px-3 py-2 text-muted max-w-[160px] truncate">{client.address || "-"}</td>
-                    <td className="px-3 py-2 text-muted max-w-[150px] truncate">{client.project_name || "-"}</td>
-                    <td className="px-3 py-2 text-muted whitespace-nowrap">{client.property_type || "-"}</td>
-                    <td className="px-3 py-2 text-muted whitespace-nowrap">{client.budget_range || "-"}</td>
+                    <td className="px-3 py-2 text-muted whitespace-nowrap">{client.phone || "—"}</td>
+                    <td className="px-3 py-2 text-muted max-w-[160px] truncate">{client.address || "—"}</td>
+                    <td className="px-3 py-2 text-muted max-w-[150px] truncate">{client.project_name || "—"}</td>
+                    <td className="px-3 py-2 text-muted whitespace-nowrap">{client.property_type || "—"}</td>
+                    <td className="px-3 py-2 text-muted whitespace-nowrap">{client.budget_range || "—"}</td>
                     <td className="px-3 py-2 whitespace-nowrap">
                       {client.lead_status ? (
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${CLIENT_LEAD_STATUS_COLORS[client.lead_status] || "tone-neutral"}`}>
                           {client.lead_status}
                         </span>
-                      ) : "-"}
+                      ) : "—"}
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap">
                       {(() => {
                         const latestLead = getLatestLead(client.id);
-                        if (!latestLead) return <span className="text-faint">-</span>;
+                        if (!latestLead) return <span className="text-faint">—</span>;
                         const overdue = !!latestLead.follow_up_date
                           && latestLead.follow_up_date < new Date().toISOString().slice(0, 10)
                           && latestLead.status !== "Deal Won" && latestLead.status !== "Deal Lost";
@@ -338,15 +338,15 @@ export default function ClientsTable() {
                         );
                       })()}
                     </td>
-                    <td className="px-3 py-2 text-muted whitespace-nowrap">{client.source || "-"}</td>
+                    <td className="px-3 py-2 text-muted whitespace-nowrap">{client.source || "—"}</td>
                     <td className="px-3 py-2 whitespace-nowrap">
                       {client.priority ? (
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${PRIORITY_COLORS[client.priority] || "tone-neutral"}`}>
                           {client.priority}
                         </span>
-                      ) : "-"}
+                      ) : "—"}
                     </td>
-                    <td className="px-3 py-2 text-muted max-w-[180px] truncate">{client.notes || "-"}</td>
+                    <td className="px-3 py-2 text-muted max-w-[180px] truncate">{client.notes || "—"}</td>
                   </tr>
                 ))}
                 {filteredClients.length === 0 && (
@@ -398,21 +398,21 @@ export default function ClientsTable() {
                       </>
                     }
                   />
-                  <MobileCardRow label="Alamat">{client.address || "-"}</MobileCardRow>
-                  <MobileCardRow label="Nama Project">{client.project_name || "-"}</MobileCardRow>
-                  <MobileCardRow label="Tipe Properti">{client.property_type || "-"}</MobileCardRow>
-                  <MobileCardRow label="Budget">{client.budget_range || "-"}</MobileCardRow>
+                  <MobileCardRow label="Alamat">{client.address || "—"}</MobileCardRow>
+                  <MobileCardRow label="Nama Proyek">{client.project_name || "—"}</MobileCardRow>
+                  <MobileCardRow label="Tipe Properti">{client.property_type || "—"}</MobileCardRow>
+                  <MobileCardRow label="Budget">{client.budget_range || "—"}</MobileCardRow>
                   <MobileCardRow label="Status">
                     {client.lead_status ? (
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${CLIENT_LEAD_STATUS_COLORS[client.lead_status] || "tone-neutral"}`}>
                         {client.lead_status}
                       </span>
-                    ) : "-"}
+                    ) : "—"}
                   </MobileCardRow>
                   <MobileCardRow label="Follow-up">
                     {(() => {
                       const latestLead = getLatestLead(client.id);
-                      if (!latestLead) return "-";
+                      if (!latestLead) return "—";
                       const overdue = !!latestLead.follow_up_date
                         && latestLead.follow_up_date < new Date().toISOString().slice(0, 10)
                         && latestLead.status !== "Deal Won" && latestLead.status !== "Deal Lost";
@@ -426,13 +426,13 @@ export default function ClientsTable() {
                       );
                     })()}
                   </MobileCardRow>
-                  <MobileCardRow label="Sumber">{client.source || "-"}</MobileCardRow>
+                  <MobileCardRow label="Sumber">{client.source || "—"}</MobileCardRow>
                   <MobileCardRow label="Prioritas">
                     {client.priority ? (
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${PRIORITY_COLORS[client.priority] || "tone-neutral"}`}>
                         {client.priority}
                       </span>
-                    ) : "-"}
+                    ) : "—"}
                   </MobileCardRow>
                   {client.notes && <MobileCardRow label="Catatan">{client.notes}</MobileCardRow>}
                 </MobileCard>

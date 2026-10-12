@@ -23,7 +23,7 @@ import {
   PROJECT_STATUS_COLORS,
   toOptions,
 } from "@/constants/options";
-import { formatRupiah, formatDate } from "@/utils/format";
+import { formatRupiah, formatDate, formatDateISO } from "@/utils/format";
 import { getProjectValue as computeProjectValue } from "@/utils/projectValue";
 import { ProjectFormModal } from "./ProjectFormModal";
 import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
@@ -124,11 +124,11 @@ export default function ProjectsTable() {
         Klien: p.client_name,
         Nilai: getProjectValue(p),
         Status: PROJECT_STATUS_LABELS[p.status] ?? p.status,
-        "Start Date": formatDate(p.start_date),
-        Deadline: formatDate(p.deadline),
+        "Start Date": formatDateISO(p.start_date),
+        Deadline: formatDateISO(p.deadline),
         "Assigned To": p.assigned_to ?? "",
         "Progress (%)": p.progress ?? 0,
-        Dibuat: formatDate(p.created_at),
+        Dibuat: formatDateISO(p.created_at),
       })),
       "projects"
     );
@@ -241,31 +241,31 @@ export default function ProjectsTable() {
             type="text"
             value={filterAssigned}
             onChange={e => setFilterAssigned(e.target.value)}
-            placeholder="Assigned to..."
+            placeholder="PIC..."
             className="px-2.5 py-1.5 border border-line rounded-md text-[13px] text-ink placeholder:text-faint focus:ring-2 focus:ring-accent/25 outline-none"
           />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
-            <label className="block text-xs font-medium text-muted mb-1">Start Date</label>
+            <label htmlFor="projects-table-mulai" className="block text-xs font-medium text-muted mb-1">Mulai</label>
             <div className="flex items-center gap-2">
-              <input type="date" value={filterStartFrom} onChange={e => setFilterStartFrom(e.target.value)} className="flex-1 min-w-0 px-2.5 py-1.5 border border-line rounded-md text-[13px] text-ink focus:ring-2 focus:ring-accent/25 outline-none" />
+              <input id="projects-table-mulai" type="date" value={filterStartFrom} onChange={e => setFilterStartFrom(e.target.value)} className="flex-1 min-w-0 px-2.5 py-1.5 border border-line rounded-md text-[13px] text-ink focus:ring-2 focus:ring-accent/25 outline-none" />
               <span className="text-faint shrink-0">—</span>
               <input type="date" value={filterStartTo} onChange={e => setFilterStartTo(e.target.value)} className="flex-1 min-w-0 px-2.5 py-1.5 border border-line rounded-md text-[13px] text-ink focus:ring-2 focus:ring-accent/25 outline-none" />
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-muted mb-1">Deadline</label>
+            <label htmlFor="projects-table-tenggat" className="block text-xs font-medium text-muted mb-1">Tenggat</label>
             <div className="flex items-center gap-2">
-              <input type="date" value={filterDeadlineFrom} onChange={e => setFilterDeadlineFrom(e.target.value)} className="flex-1 min-w-0 px-2.5 py-1.5 border border-line rounded-md text-[13px] text-ink focus:ring-2 focus:ring-accent/25 outline-none" />
+              <input id="projects-table-tenggat" type="date" value={filterDeadlineFrom} onChange={e => setFilterDeadlineFrom(e.target.value)} className="flex-1 min-w-0 px-2.5 py-1.5 border border-line rounded-md text-[13px] text-ink focus:ring-2 focus:ring-accent/25 outline-none" />
               <span className="text-faint shrink-0">—</span>
               <input type="date" value={filterDeadlineTo} onChange={e => setFilterDeadlineTo(e.target.value)} className="flex-1 min-w-0 px-2.5 py-1.5 border border-line rounded-md text-[13px] text-ink focus:ring-2 focus:ring-accent/25 outline-none" />
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-muted mb-1">Progress (%)</label>
+            <label htmlFor="projects-table-progres" className="block text-xs font-medium text-muted mb-1">Progres (%)</label>
             <div className="flex items-center gap-2">
-              <input type="number" min={0} max={100} value={filterProgressMin} onChange={e => setFilterProgressMin(e.target.value)} placeholder="Min" className="flex-1 min-w-0 px-2.5 py-1.5 border border-line rounded-md text-[13px] text-ink focus:ring-2 focus:ring-accent/25 outline-none" />
+              <input id="projects-table-progres" type="number" min={0} max={100} value={filterProgressMin} onChange={e => setFilterProgressMin(e.target.value)} placeholder="Min" className="flex-1 min-w-0 px-2.5 py-1.5 border border-line rounded-md text-[13px] text-ink focus:ring-2 focus:ring-accent/25 outline-none" />
               <span className="text-faint shrink-0">—</span>
               <input type="number" min={0} max={100} value={filterProgressMax} onChange={e => setFilterProgressMax(e.target.value)} placeholder="Max" className="flex-1 min-w-0 px-2.5 py-1.5 border border-line rounded-md text-[13px] text-ink focus:ring-2 focus:ring-accent/25 outline-none" />
             </div>
@@ -285,14 +285,14 @@ export default function ProjectsTable() {
             <thead className="bg-surface border-b border-line">
               <tr>
                 <th className="px-3 py-2 text-left text-xs font-medium text-muted whitespace-nowrap w-10"><span className="sr-only">Aksi</span></th>
-                <SortableHeader label="Nama Project" col="name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                <SortableHeader label="Client" col="client_name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableHeader label="Nama Proyek" col="name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableHeader label="Klien" col="client_name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Nilai Project" col="value" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Status" col="status" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                <SortableHeader label="Start Date" col="start_date" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                <SortableHeader label="Deadline" col="deadline" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                <SortableHeader label="Assigned To" col="assigned_to" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                <SortableHeader label="Progress" col="progress" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableHeader label="Mulai" col="start_date" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableHeader label="Tenggat" col="deadline" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableHeader label="PIC" col="assigned_to" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableHeader label="Progres" col="progress" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <th className="px-3 py-2 text-left text-xs font-medium text-muted whitespace-nowrap">Status Pembayaran</th>
               </tr>
             </thead>
@@ -335,7 +335,7 @@ export default function ProjectsTable() {
                       />
                     </td>
                     <td className="px-3 py-2 font-medium text-ink whitespace-nowrap">{project.name}</td>
-                    <td className="px-3 py-2 text-muted whitespace-nowrap">{client?.name || "-"}</td>
+                    <td className="px-3 py-2 text-muted whitespace-nowrap">{client?.name || "—"}</td>
                     <td className="px-3 py-2 text-ink font-medium whitespace-nowrap">{formatRupiah(getProjectValue(project))}</td>
                     <td className="px-3 py-2 whitespace-nowrap">
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${PROJECT_STATUS_COLORS[project.status]}`}>
@@ -344,7 +344,7 @@ export default function ProjectsTable() {
                     </td>
                     <td className="px-3 py-2 text-muted whitespace-nowrap">{formatDate(project.start_date)}</td>
                     <td className="px-3 py-2 text-muted whitespace-nowrap">{formatDate(project.deadline)}</td>
-                    <td className="px-3 py-2 text-muted whitespace-nowrap">{project.assigned_to || "-"}</td>
+                    <td className="px-3 py-2 text-muted whitespace-nowrap">{project.assigned_to || "—"}</td>
                     <td className="px-3 py-2 whitespace-nowrap min-w-[120px]">
                       <div className="flex items-center gap-2">
                         <div className="flex-1 bg-line rounded-full h-1.5">
@@ -400,7 +400,7 @@ export default function ProjectsTable() {
               <MobileCard key={project.id} onClick={() => router.push(`/projects/${project.id}`)}>
                 <MobileCardHeader
                   title={project.name}
-                  subtitle={<span className="text-xs text-faint">{client?.name || "-"}</span>}
+                  subtitle={<span className="text-xs text-faint">{client?.name || "—"}</span>}
                   actions={
                     <>
                       <MobileCardIconButton title="Lihat Detail" onClick={() => router.push(`/projects/${project.id}`)}><EyeIcon /></MobileCardIconButton>
@@ -415,10 +415,10 @@ export default function ProjectsTable() {
                     {PROJECT_STATUS_LABELS[project.status]}
                   </span>
                 </MobileCardRow>
-                <MobileCardRow label="Start Date">{formatDate(project.start_date)}</MobileCardRow>
-                <MobileCardRow label="Deadline">{formatDate(project.deadline)}</MobileCardRow>
-                <MobileCardRow label="Assigned To">{project.assigned_to || "-"}</MobileCardRow>
-                <MobileCardRow label="Progress">
+                <MobileCardRow label="Mulai">{formatDate(project.start_date)}</MobileCardRow>
+                <MobileCardRow label="Tenggat">{formatDate(project.deadline)}</MobileCardRow>
+                <MobileCardRow label="PIC">{project.assigned_to || "—"}</MobileCardRow>
+                <MobileCardRow label="Progres">
                   <span className="inline-flex items-center gap-2">
                     <span className="w-16 bg-line rounded-full h-1.5 overflow-hidden">
                       <span className="block bg-success h-1.5 rounded-full" style={{ width: `${progress}%` }} />

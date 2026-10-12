@@ -6,6 +6,7 @@ import { getRabByLead, getRabWithGroups } from "@/services/rab";
 import { useToast } from "@/components/Toast";
 import { formatRupiah } from "@/utils/format";
 import { NumberInput } from "@/components/NumberInput";
+import { DialogA11y } from "@/components/DialogA11y";
 
 type Termin = {
   id: string;
@@ -228,6 +229,7 @@ export function InvoiceFormModal({
         className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
+        <DialogA11y onClose={onClose} />
         <div className="flex items-center justify-between px-6 py-5 border-b border-line">
           <h2 className="text-base font-semibold text-ink">Buat Invoice</h2>
           <button onClick={onClose} className="text-faint hover:text-muted transition-colors">
@@ -239,7 +241,7 @@ export function InvoiceFormModal({
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-5">
           {/* Project */}
           <div>
-            <label className="block text-xs font-medium text-ink mb-1.5">Project *</label>
+            <label htmlFor="invoice-form-modal-project" className="block text-xs font-medium text-ink mb-1.5">Proyek *</label>
             {preselectedProjectId ? (
               (() => {
                 const project = projects.find((p) => p.id === preselectedProjectId);
@@ -251,7 +253,7 @@ export function InvoiceFormModal({
                 );
               })()
             ) : (
-              <select
+              <select id="invoice-form-modal-project"
                 value={form.project_id}
                 onChange={(e) => handleProjectChange(e.target.value)}
                 className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25"
@@ -273,7 +275,7 @@ export function InvoiceFormModal({
           {/* RAB */}
           {form.project_id && (
             <div>
-              <label className="block text-xs font-medium text-ink mb-1.5">
+              <label htmlFor="invoice-form-modal-rab" className="block text-xs font-medium text-ink mb-1.5">
                 RAB <span className="text-danger">*</span>
                 {loadingRabs && <span className="ml-2 text-faint">Memuat…</span>}
               </label>
@@ -283,7 +285,7 @@ export function InvoiceFormModal({
                 </p>
               ) : (
                 <>
-                  <select
+                  <select id="invoice-form-modal-rab"
                     value={selectedRabId}
                     onChange={(e) => handleRabChange(e.target.value)}
                     className={`w-full px-3 py-2 border rounded-md text-sm text-ink outline-none focus:ring-2 ${
@@ -389,8 +391,8 @@ export function InvoiceFormModal({
 
           {/* Tanggal Invoice */}
           <div>
-            <label className="block text-xs font-medium text-ink mb-1.5">Tanggal Invoice *</label>
-            <input
+            <label htmlFor="invoice-form-modal-tanggal-invoice" className="block text-xs font-medium text-ink mb-1.5">Tanggal Invoice *</label>
+            <input id="invoice-form-modal-tanggal-invoice"
               type="date" value={form.invoice_date}
               onChange={(e) => setForm((f) => ({ ...f, invoice_date: e.target.value }))}
               disabled={isRabLunas}
@@ -524,8 +526,8 @@ export function InvoiceFormModal({
 
           {/* Catatan */}
           <div>
-            <label className="block text-xs font-medium text-ink mb-1.5">Catatan</label>
-            <textarea
+            <label htmlFor="invoice-form-modal-catatan" className="block text-xs font-medium text-ink mb-1.5">Catatan</label>
+            <textarea id="invoice-form-modal-catatan"
               value={form.notes}
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
               disabled={isRabLunas}

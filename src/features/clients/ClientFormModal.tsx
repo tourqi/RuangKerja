@@ -13,6 +13,7 @@ import {
   SOURCES,
   toOptions,
 } from "@/constants/options";
+import { DialogA11y } from "@/components/DialogA11y";
 
 type Props = {
   client?: Client | null;
@@ -86,6 +87,7 @@ export function ClientFormModal({ client, onSaved, onClose, onSavedAndAddLead }:
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
         <div className="bg-white rounded-lg shadow-2xl w-full max-w-sm p-8 text-center">
+          <DialogA11y onClose={onClose} />
           <div className="w-14 h-14 bg-success-soft rounded-full flex items-center justify-center mx-auto mb-4">
             <svg className="w-7 h-7 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -117,6 +119,7 @@ export function ClientFormModal({ client, onSaved, onClose, onSavedAndAddLead }:
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogA11y onClose={onClose} />
         <div className="flex items-center justify-between px-6 py-5 border-b border-line">
           <h2 className="text-lg font-semibold text-ink">
             {isEditing ? "Edit Client" : "Tambah Client Baru"}
@@ -131,12 +134,12 @@ export function ClientFormModal({ client, onSaved, onClose, onSavedAndAddLead }:
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">Nama <span className="text-danger">*</span></label>
-              <input name="name" value={form.name || ""} onChange={handleChange} required className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink focus:ring-2 focus:ring-accent/25 focus:border-accent outline-none" />
+              <label htmlFor="client-form-modal-nama" className="block text-sm font-medium text-ink mb-1">Nama <span className="text-danger">*</span></label>
+              <input id="client-form-modal-nama" name="name" value={form.name || ""} onChange={handleChange} required className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink focus:ring-2 focus:ring-accent/25 focus:border-accent outline-none" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">No. HP <span className="text-danger">*</span></label>
-              <input
+              <label htmlFor="client-form-modal-no-hp" className="block text-sm font-medium text-ink mb-1">No. HP <span className="text-danger">*</span></label>
+              <input id="client-form-modal-no-hp"
                 name="phone"
                 value={form.phone || ""}
                 onChange={handleChange}
@@ -158,16 +161,16 @@ export function ClientFormModal({ client, onSaved, onClose, onSavedAndAddLead }:
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">Alamat</label>
-              <input name="address" value={form.address || ""} onChange={handleChange} className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink focus:ring-2 focus:ring-accent/25 focus:border-accent outline-none" />
+              <label htmlFor="client-form-modal-alamat" className="block text-sm font-medium text-ink mb-1">Alamat</label>
+              <input id="client-form-modal-alamat" name="address" value={form.address || ""} onChange={handleChange} className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink focus:ring-2 focus:ring-accent/25 focus:border-accent outline-none" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">Nama Project</label>
-              <input name="project_name" value={form.project_name || ""} onChange={handleChange} className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink focus:ring-2 focus:ring-accent/25 focus:border-accent outline-none" />
+              <label htmlFor="client-form-modal-nama-proyek" className="block text-sm font-medium text-ink mb-1">Nama Proyek</label>
+              <input id="client-form-modal-nama-proyek" name="project_name" value={form.project_name || ""} onChange={handleChange} className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink focus:ring-2 focus:ring-accent/25 focus:border-accent outline-none" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">Tipe Properti</label>
-              <Select
+              <label htmlFor="client-form-modal-tipe-properti" className="block text-sm font-medium text-ink mb-1">Tipe Properti</label>
+              <Select id="client-form-modal-tipe-properti"
                 value={form.property_type || ""}
                 onChange={(v) => setForm((prev) => ({ ...prev, property_type: v }))}
                 options={toOptions(PROPERTY_TYPES)}
@@ -175,8 +178,8 @@ export function ClientFormModal({ client, onSaved, onClose, onSavedAndAddLead }:
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">Budget</label>
-              <Select
+              <label htmlFor="client-form-modal-budget" className="block text-sm font-medium text-ink mb-1">Budget</label>
+              <Select id="client-form-modal-budget"
                 value={form.budget_range || ""}
                 onChange={(v) => setForm((prev) => ({ ...prev, budget_range: v }))}
                 options={toOptions(BUDGET_RANGES)}
@@ -197,8 +200,8 @@ export function ClientFormModal({ client, onSaved, onClose, onSavedAndAddLead }:
               <p className="text-xs text-faint mt-1">Otomatis mengikuti status Lead terbaru, tidak bisa diedit manual.</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">Sumber</label>
-              <Select
+              <label htmlFor="client-form-modal-sumber" className="block text-sm font-medium text-ink mb-1">Sumber</label>
+              <Select id="client-form-modal-sumber"
                 value={form.source || ""}
                 onChange={(v) => setForm((prev) => ({ ...prev, source: v }))}
                 options={toOptions(SOURCES)}
@@ -220,8 +223,8 @@ export function ClientFormModal({ client, onSaved, onClose, onSavedAndAddLead }:
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-ink mb-1">Catatan</label>
-            <textarea name="notes" value={form.notes || ""} onChange={handleChange} rows={3} placeholder="Catatan tambahan..." className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink focus:ring-2 focus:ring-accent/25 focus:border-accent outline-none resize-none" />
+            <label htmlFor="client-form-modal-catatan" className="block text-sm font-medium text-ink mb-1">Catatan</label>
+            <textarea id="client-form-modal-catatan" name="notes" value={form.notes || ""} onChange={handleChange} rows={3} placeholder="Catatan tambahan..." className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink focus:ring-2 focus:ring-accent/25 focus:border-accent outline-none resize-none" />
           </div>
           <div className="flex gap-2 pt-1">
             <button

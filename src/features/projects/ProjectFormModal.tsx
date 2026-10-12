@@ -13,6 +13,8 @@ import {
   PROJECT_STATUS_LABELS,
   toOptions,
 } from "@/constants/options";
+import { formatDate } from "@/utils/format";
+import { DialogA11y } from "@/components/DialogA11y";
 
 type Props = {
   project?: Project | null;
@@ -30,7 +32,7 @@ const PROJECT_COLUMNS: (keyof Project)[] = [
 
 /** Project name is derived from the lead — falls back to a dated label when the lead has none. */
 function leadDisplayName(l: Lead): string {
-  return l.project_name || `Lead ${l.created_at ? new Date(l.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : l.id.slice(0, 8)}`;
+  return l.project_name || `Lead ${l.created_at ? formatDate(l.created_at) : l.id.slice(0, 8)}`;
 }
 
 export function ProjectFormModal({
@@ -179,6 +181,7 @@ export function ProjectFormModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogA11y onClose={onClose} />
         <div className="flex items-center justify-between px-6 py-5 border-b border-line">
           <h2 className="text-lg font-semibold text-ink">
             {isEditing ? "Edit Project" : "Tambah Project Baru"}
@@ -191,9 +194,9 @@ export function ProjectFormModal({
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
           {/* Client autocomplete */}
           <div>
-            <label className="block text-sm font-medium text-ink mb-1">Client (Lead Deal Won)</label>
+            <label htmlFor="project-form-modal-client-lead-deal-won" className="block text-sm font-medium text-ink mb-1">Klien (lead Deal Won)</label>
             <div className="relative">
-              <input
+              <input id="project-form-modal-client-lead-deal-won"
                 type="text"
                 value={clientQuery}
                 onChange={(e) => {
@@ -239,11 +242,11 @@ export function ProjectFormModal({
           {/* Lead selector — menentukan Nama Project, muncul setelah client dipilih */}
           {form.client_id && (
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">Nama Project <span className="text-danger">*</span></label>
+              <label htmlFor="project-form-modal-nama-project" className="block text-sm font-medium text-ink mb-1">Nama Proyek <span className="text-danger">*</span></label>
               {leadsForClient.length === 0 ? (
                 <p className="text-xs text-faint mt-1">Tidak ada lead Deal Won untuk client ini</p>
               ) : (
-                <Select
+                <Select id="project-form-modal-nama-project"
                   value={form.lead_id || ""}
                   onChange={handleLeadSelect}
                   options={leadsForClient.map((l: Lead) => ({
@@ -264,8 +267,8 @@ export function ProjectFormModal({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Nilai Project */}
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">Nilai Project (Rp)</label>
-              <NumberInput
+              <label htmlFor="project-form-modal-nilai-project-rp" className="block text-sm font-medium text-ink mb-1">Nilai Project (Rp)</label>
+              <NumberInput id="project-form-modal-nilai-project-rp"
                 value={form.value ?? ""}
                 onValueChange={(v) => setForm((prev) => ({ ...prev, value: v === "" ? undefined : Number(v) }))}
                 placeholder="0"
@@ -274,8 +277,8 @@ export function ProjectFormModal({
             </div>
             {/* Status */}
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">Status <span className="text-danger">*</span></label>
-              <Select
+              <label htmlFor="project-form-modal-status" className="block text-sm font-medium text-ink mb-1">Status <span className="text-danger">*</span></label>
+              <Select id="project-form-modal-status"
                 value={form.status || "Planning"}
                 onChange={(v) => setForm((prev) => ({ ...prev, status: v as ProjectStatus }))}
                 options={toOptions(PROJECT_STATUSES, PROJECT_STATUS_LABELS)}
@@ -284,25 +287,25 @@ export function ProjectFormModal({
             </div>
             {/* Start Date */}
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">Start Date</label>
-              <input name="start_date" value={form.start_date || ""} onChange={handleChange} type="date" className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25" />
+              <label htmlFor="project-form-modal-mulai" className="block text-sm font-medium text-ink mb-1">Mulai</label>
+              <input id="project-form-modal-mulai" name="start_date" value={form.start_date || ""} onChange={handleChange} type="date" className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25" />
             </div>
             {/* Deadline */}
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">Deadline</label>
-              <input name="deadline" value={form.deadline || ""} onChange={handleChange} type="date" className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25" />
+              <label htmlFor="project-form-modal-tenggat" className="block text-sm font-medium text-ink mb-1">Tenggat</label>
+              <input id="project-form-modal-tenggat" name="deadline" value={form.deadline || ""} onChange={handleChange} type="date" className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25" />
             </div>
             {/* Assigned To */}
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">Assigned To</label>
-              <input name="assigned_to" value={form.assigned_to || ""} onChange={handleChange} placeholder="Nama tim / PIC" className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25" />
+              <label htmlFor="project-form-modal-pic" className="block text-sm font-medium text-ink mb-1">PIC</label>
+              <input id="project-form-modal-pic" name="assigned_to" value={form.assigned_to || ""} onChange={handleChange} placeholder="Nama tim / PIC" className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25" />
             </div>
             {/* Progress */}
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">
-                Progress <span className="text-faint font-normal">({form.progress ?? 0}%)</span>
+              <label htmlFor="project-form-modal-progress" className="block text-sm font-medium text-ink mb-1">
+                Progres <span className="text-faint font-normal">({form.progress ?? 0}%)</span>
               </label>
-              <input name="progress" value={form.progress ?? 0} onChange={handleChange} type="range" min={0} max={100} step={5} className="w-full accent-green-600" />
+              <input id="project-form-modal-progress" name="progress" value={form.progress ?? 0} onChange={handleChange} type="range" min={0} max={100} step={5} className="w-full accent-green-600" />
               <div className="flex justify-between text-xs text-faint mt-0.5">
                 <span>0%</span><span>50%</span><span>100%</span>
               </div>

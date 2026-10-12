@@ -14,6 +14,7 @@ import {
   type DashboardData, type Period, type PeriodKind,
 } from "@/utils/dashboardCalculations";
 import type { ExpenseCategory, GeneralExpenseKategori } from "@/types/db";
+import { formatDate } from "@/utils/format";
 
 /**
  * Dashboard versi 2 — laporan manajerial berbasis grafik. Tiap blok menjawab
@@ -24,7 +25,7 @@ import type { ExpenseCategory, GeneralExpenseKategori } from "@/types/db";
 // Warna grafik (palet tervalidasi CVD; sama dengan token di globals.css)
 const C = {
   s1: "#3247d1", s2: "#eb6834", s2b: "#f3b392", ink: "#0f1115", grid: "#eef0f2", base: "#e5e7eb",
-  faint: "#9097a1", danger: "#c4352b", warning: "#b7791f", success: "#2f8a4e", grey: "#c9cdd3",
+  faint: "#6b717a", danger: "#c4352b", warning: "#9a6312", success: "#2a7d46", grey: "#c9cdd3",
 };
 
 const PERIODS: { key: Exclude<PeriodKind, "custom">; label: string }[] = [
@@ -35,7 +36,7 @@ const todayISO = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
-const fmtDate = (s: string) => new Date(`${s}T00:00:00`).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+const fmtDate = (d: string) => formatDate(d);
 const pct = (v: number) => `${Math.round(v)}%`;
 
 /** Batas atas sumbu yang "bulat" dengan ±4 garis bantu. */

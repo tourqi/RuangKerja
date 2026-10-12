@@ -5,12 +5,11 @@ import { addRab, deleteRab, duplicateRab, updateRab } from "@/services/rab";
 import { useToast } from "@/components/Toast";
 import { ActionDropdown } from "@/components/ActionDropdown";
 import type { Invoice, Rab, RabGroup } from "@/types/db";
-import { formatIDR } from "@/utils/format";
+import { formatIDR, formatDate } from "@/utils/format";
 import { RAB_STATUS_TONE } from "@/components/ui/StatusDot";
+import { useConfirm } from "@/components/ConfirmProvider";
 
 
-const formatDate = (s?: string) =>
-  s ? new Date(s).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "-";
 
 export const rabGross = (groups: RabGroup[] = []) =>
   groups.reduce((s, g) => s + (g.items ?? []).reduce((ss, it) => ss + it.qty * it.harga, 0), 0);
@@ -33,6 +32,7 @@ export function ProjectRabSection({
   onChanged: () => Promise<void>;
 }) {
   const toast = useToast();
+  const confirm = useConfirm();
   const [showAdd, setShowAdd] = useState(false);
   const [newNama, setNewNama] = useState("");
   const [saving, setSaving] = useState(false);
@@ -111,6 +111,7 @@ export function ProjectRabSection({
       toast("RAB sudah lunas dan tidak dapat dihapus", "warning");
       return;
     }
+    if (!(await confirm({ title: "Hapus RAB?", description: "RAB beserta semua pekerjaan dan itemnya akan dihapus permanen. Nilai project ikut berubah." }))) return;
     setDeletingId(id);
     try {
       await deleteRab(id);

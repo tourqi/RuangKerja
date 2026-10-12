@@ -19,7 +19,7 @@ import {
   INVOICE_STATUSES,
   toOptions,
 } from "@/constants/options";
-import { formatRupiah } from "@/utils/format";
+import { formatRupiah, formatDate } from "@/utils/format";
 import { getProjectValue as computeProjectValue } from "@/utils/projectValue";
 import { InvoiceFormModal } from "./InvoiceFormModal";
 import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
@@ -139,16 +139,17 @@ export default function InvoicesTable() {
         </button>
       </div>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4">
+      {/* Ringkasan */}
+      <div className="flex flex-wrap gap-px bg-line border border-line rounded-md overflow-hidden mb-4">
         {[
-          { label: "Total Tagihan", value: totalTagihan, color: "text-ink" },
-          { label: "Total Lunas", value: totalLunas, color: "text-success" },
-          { label: "Outstanding", value: totalOutstanding, color: "text-danger" },
+          { label: "Total tagihan", value: totalTagihan, sub: `${filtered.length} invoice`, danger: false },
+          { label: "Sudah dibayar", value: totalLunas, sub: totalTagihan > 0 ? `${Math.round((totalLunas / totalTagihan) * 100)}% dari tagihan` : "—", danger: false },
+          { label: "Belum dibayar", value: totalOutstanding, sub: `${filtered.filter((i) => i.status !== "paid").length} invoice belum lunas`, danger: totalOutstanding > 0 },
         ].map((c) => (
-          <div key={c.label} className="bg-white rounded-md border border-line px-3 sm:px-4 py-2.5 sm:py-3 min-w-0">
-            <p className="text-[11px] sm:text-xs text-muted truncate">{c.label}</p>
-            <p className={`text-sm sm:text-base font-semibold mt-0.5 truncate ${c.color}`}>{formatRupiah(c.value)}</p>
+          <div key={c.label} className="bg-white px-4 py-3 flex-1 min-w-[150px]">
+            <p className="text-xs text-muted">{c.label}</p>
+            <p className={`font-mono text-lg font-medium mt-0.5 truncate ${c.danger ? "text-danger" : "text-ink"}`}>{formatRupiah(c.value)}</p>
+            <p className="text-[11.5px] text-faint mt-0.5">{c.sub}</p>
           </div>
         ))}
       </div>
@@ -288,11 +289,11 @@ export default function InvoicesTable() {
                         <span className="text-faint text-xs">—</span>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-muted hidden lg:table-cell">
-                      {inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString("id-ID") : "—"}
+                    <td className="px-3 py-2 text-muted whitespace-nowrap hidden lg:table-cell">
+                      {inv.invoice_date ? formatDate(inv.invoice_date) : "—"}
                     </td>
-                    <td className="px-3 py-2 text-muted hidden md:table-cell">
-                      {inv.due_date ? new Date(inv.due_date).toLocaleDateString("id-ID") : "—"}
+                    <td className="px-3 py-2 text-muted whitespace-nowrap hidden md:table-cell">
+                      {inv.due_date ? formatDate(inv.due_date) : "—"}
                     </td>
                     <td className="px-3 py-2 text-right font-medium text-ink">
                       {formatRupiah(inv.total_amount)}
@@ -373,10 +374,10 @@ export default function InvoicesTable() {
                       </MobileCardRow>
                     )}
                     <MobileCardRow label="Tgl Invoice">
-                      {inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString("id-ID") : "—"}
+                      {inv.invoice_date ? formatDate(inv.invoice_date) : "—"}
                     </MobileCardRow>
                     <MobileCardRow label="Jatuh Tempo">
-                      {inv.due_date ? new Date(inv.due_date).toLocaleDateString("id-ID") : "—"}
+                      {inv.due_date ? formatDate(inv.due_date) : "—"}
                     </MobileCardRow>
                     <MobileCardRow label="Total">{formatRupiah(inv.total_amount)}</MobileCardRow>
                     <MobileCardRow label="Terbayar">

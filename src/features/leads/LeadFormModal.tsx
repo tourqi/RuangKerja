@@ -14,6 +14,7 @@ import {
   SOURCES,
   toOptions,
 } from "@/constants/options";
+import { DialogA11y } from "@/components/DialogA11y";
 
 type Props = {
   lead?: Lead | null;
@@ -137,6 +138,7 @@ export function LeadFormModal({ lead, clients, preselectedClientId, onSaved, onC
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
         <div className="bg-white rounded-lg shadow-2xl w-full max-w-sm p-8 text-center">
+          <DialogA11y onClose={onClose} />
           <div className="w-14 h-14 bg-success-soft rounded-full flex items-center justify-center mx-auto mb-4">
             <svg className="w-7 h-7 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -168,6 +170,7 @@ export function LeadFormModal({ lead, clients, preselectedClientId, onSaved, onC
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogA11y onClose={onClose} />
         <div className="flex items-center justify-between px-6 py-5 border-b border-line">
           <h2 className="text-lg font-semibold text-ink">
             {isEditing ? "Edit Lead" : "Tambah Lead Baru"}
@@ -181,8 +184,8 @@ export function LeadFormModal({ lead, clients, preselectedClientId, onSaved, onC
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Client Autocomplete */}
             <div className="relative sm:col-span-2">
-              <label className="block text-sm font-medium text-ink mb-1">Client <span className="text-danger">*</span></label>
-              <input
+              <label htmlFor="lead-form-modal-client" className="block text-sm font-medium text-ink mb-1">Klien <span className="text-danger">*</span></label>
+              <input id="lead-form-modal-client"
                 type="text"
                 value={clientQuery}
                 onChange={(e) => {
@@ -200,9 +203,10 @@ export function LeadFormModal({ lead, clients, preselectedClientId, onSaved, onC
                     <div className="px-3 py-2 text-faint text-sm">Tidak ditemukan</div>
                   )}
                   {filteredClients.map((c) => (
-                    <div
+                    <button
+                      type="button"
                       key={c.id}
-                      className={`px-3 py-2 cursor-pointer hover:bg-accent-soft text-sm text-ink ${form.client_id === c.id ? "bg-accent-soft" : ""}`}
+                      className={`block w-full text-left px-3 py-2 cursor-pointer hover:bg-accent-soft focus-visible:bg-accent-soft text-sm text-ink ${form.client_id === c.id ? "bg-accent-soft" : ""}`}
                       onClick={() => {
                         setForm((prev) => ({ ...prev, client_id: c.id, source: c.source || prev.source }));
                         setClientQuery(c.name + (c.phone ? ` (${c.phone})` : ""));
@@ -210,15 +214,15 @@ export function LeadFormModal({ lead, clients, preselectedClientId, onSaved, onC
                       }}
                     >
                       {c.name} {c.phone && <span className="text-xs text-faint">({c.phone})</span>}
-                    </div>
+                    </button>
                   ))}
                 </div>
               )}
             </div>
             {/* Nama Project */}
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">Nama Project</label>
-              <input
+              <label htmlFor="lead-form-modal-nama-proyek" className="block text-sm font-medium text-ink mb-1">Nama Proyek</label>
+              <input id="lead-form-modal-nama-proyek"
                 type="text"
                 name="project_name"
                 value={form.project_name || ""}
@@ -230,8 +234,8 @@ export function LeadFormModal({ lead, clients, preselectedClientId, onSaved, onC
             </div>
             {/* Status */}
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">Status <span className="text-danger">*</span></label>
-              <Select
+              <label htmlFor="lead-form-modal-status" className="block text-sm font-medium text-ink mb-1">Status <span className="text-danger">*</span></label>
+              <Select id="lead-form-modal-status"
                 value={form.status || "New Lead"}
                 onChange={(v) => setForm((prev) => ({ ...prev, status: v as LeadStatus }))}
                 options={toOptions(LEAD_STATUSES)}
@@ -240,8 +244,8 @@ export function LeadFormModal({ lead, clients, preselectedClientId, onSaved, onC
             </div>
             {/* Lokasi Survey — syarat Contacted → Survey */}
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">Lokasi Survey</label>
-              <input
+              <label htmlFor="lead-form-modal-lokasi-survey" className="block text-sm font-medium text-ink mb-1">Lokasi Survey</label>
+              <input id="lead-form-modal-lokasi-survey"
                 type="text"
                 name="lokasi_survey"
                 value={form.lokasi_survey || ""}
@@ -253,8 +257,8 @@ export function LeadFormModal({ lead, clients, preselectedClientId, onSaved, onC
             </div>
             {/* Source (auto-filled from client) */}
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">Source</label>
-              <Select
+              <label htmlFor="lead-form-modal-sumber" className="block text-sm font-medium text-ink mb-1">Sumber</label>
+              <Select id="lead-form-modal-sumber"
                 value={form.source || ""}
                 onChange={() => {}}
                 options={toOptions(SOURCES)}
@@ -264,8 +268,8 @@ export function LeadFormModal({ lead, clients, preselectedClientId, onSaved, onC
             </div>
             {/* Budget */}
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">Budget</label>
-              <NumberInput
+              <label htmlFor="lead-form-modal-budget" className="block text-sm font-medium text-ink mb-1">Budget</label>
+              <NumberInput id="lead-form-modal-budget"
                 value={form.budget}
                 onValueChange={(digits) => setForm((prev) => ({ ...prev, budget: digits ? Number(digits) : undefined }))}
                 placeholder="Rp"
@@ -275,13 +279,13 @@ export function LeadFormModal({ lead, clients, preselectedClientId, onSaved, onC
             </div>
             {/* Nominal Deal — auto dari RAB approved kalau ada, manual kalau belum */}
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">Nominal Deal</label>
+              <label htmlFor="lead-form-modal-nominal-deal" className="block text-sm font-medium text-ink mb-1">Nominal Deal</label>
               {hasApprovedRab ? (
                 <div className="flex items-center h-[38px] text-sm text-ink font-medium">
                   {formatRupiah(form.nominal_deal)}
                 </div>
               ) : (
-                <NumberInput
+                <NumberInput id="lead-form-modal-nominal-deal"
                   value={form.nominal_deal}
                   onValueChange={(digits) => setForm((prev) => ({ ...prev, nominal_deal: digits ? Number(digits) : undefined }))}
                   placeholder="Rp"
@@ -296,7 +300,7 @@ export function LeadFormModal({ lead, clients, preselectedClientId, onSaved, onC
             </div>
             {/* Priority — read-only, dihitung otomatis dari budget/source/riwayat/no_response_count */}
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">Priority</label>
+              <label className="block text-sm font-medium text-ink mb-1">Prioritas</label>
               {form.priority ? (
                 <div className="flex items-center h-[38px]">
                   <span className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize ${PRIORITY_COLORS[form.priority] || "tone-neutral"}`}>
@@ -310,8 +314,8 @@ export function LeadFormModal({ lead, clients, preselectedClientId, onSaved, onC
             </div>
             {/* No Response Count — input formula priority (rule #2) */}
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">No Response Count</label>
-              <NumberInput
+              <label htmlFor="lead-form-modal-no-response-count" className="block text-sm font-medium text-ink mb-1">Jumlah tanpa respons</label>
+              <NumberInput id="lead-form-modal-no-response-count"
                 value={form.no_response_count ?? 0}
                 onValueChange={(digits) => setForm((prev) => ({ ...prev, no_response_count: digits ? Number(digits) : 0 }))}
                 className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25"
@@ -320,13 +324,13 @@ export function LeadFormModal({ lead, clients, preselectedClientId, onSaved, onC
             </div>
             {/* Date Fields */}
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">
+              <label htmlFor="lead-form-modal-follow-up-date" className="block text-sm font-medium text-ink mb-1">
                 Follow Up Date
                 {form.status && FOLLOW_UP_REQUIRED_STATUSES.includes(form.status as LeadStatus) && (
                   <span className="text-danger"> *</span>
                 )}
               </label>
-              <input type="date" name="follow_up_date" value={form.follow_up_date || ""} onChange={handleChange} className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25" />
+              <input id="lead-form-modal-follow-up-date" type="date" name="follow_up_date" value={form.follow_up_date || ""} onChange={handleChange} className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25" />
               {form.status && FOLLOW_UP_REQUIRED_STATUSES.includes(form.status as LeadStatus) ? (
                 <p className="text-xs text-faint mt-1">Wajib diisi untuk status {form.status}.</p>
               ) : form.status === "Deal Lost" ? (
@@ -334,17 +338,17 @@ export function LeadFormModal({ lead, clients, preselectedClientId, onSaved, onC
               ) : null}
             </div>
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">Last Contacted At</label>
-              <input type="date" name="last_contacted_at" value={form.last_contacted_at || ""} onChange={handleChange} className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25" />
+              <label htmlFor="lead-form-modal-last-contacted-at" className="block text-sm font-medium text-ink mb-1">Kontak terakhir</label>
+              <input id="lead-form-modal-last-contacted-at" type="date" name="last_contacted_at" value={form.last_contacted_at || ""} onChange={handleChange} className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">Closed At</label>
-              <input type="date" name="closed_at" value={form.closed_at || ""} onChange={handleChange} className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25" />
+              <label htmlFor="lead-form-modal-closed-at" className="block text-sm font-medium text-ink mb-1">Tanggal ditutup</label>
+              <input id="lead-form-modal-closed-at" type="date" name="closed_at" value={form.closed_at || ""} onChange={handleChange} className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25" />
             </div>
             {/* Alasan Lost — syarat Deal → Deal Lost */}
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-ink mb-1">Alasan Lost</label>
-              <textarea
+              <label htmlFor="lead-form-modal-alasan-lost" className="block text-sm font-medium text-ink mb-1">Alasan Lost</label>
+              <textarea id="lead-form-modal-alasan-lost"
                 name="alasan_lost"
                 value={form.alasan_lost || ""}
                 onChange={handleChange}
@@ -356,8 +360,8 @@ export function LeadFormModal({ lead, clients, preselectedClientId, onSaved, onC
             </div>
             {/* Notes */}
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-ink mb-1">Catatan</label>
-              <textarea name="notes" value={form.notes || ""} onChange={handleChange} rows={3} placeholder="Catatan tentang lead ini..." className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25 resize-none" />
+              <label htmlFor="lead-form-modal-catatan" className="block text-sm font-medium text-ink mb-1">Catatan</label>
+              <textarea id="lead-form-modal-catatan" name="notes" value={form.notes || ""} onChange={handleChange} rows={3} placeholder="Catatan tentang lead ini..." className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25 resize-none" />
             </div>
           </div>
           <div className="flex gap-2 pt-1">

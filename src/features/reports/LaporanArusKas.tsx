@@ -2,7 +2,7 @@
 import { useState, useMemo } from "react";
 import type { Payment, ProjectExpense, Invoice, Project, Client } from "@/types/db";
 import { isDateInRange, sumAmounts, sortCashFlowEntries, withRunningBalance } from "@/utils/reportCalculations";
-import { formatIDR } from "@/utils/format";
+import { formatIDR, formatDate } from "@/utils/format";
 
 function currentMonthRange() {
   const now = new Date();
@@ -111,8 +111,8 @@ export function LaporanArusKas({
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-xs font-semibold text-muted">Periode:</span>
           <div className="flex items-center gap-2">
-            <label className="text-xs text-muted">Dari</label>
-            <input
+            <label htmlFor="laporan-arus-kas-dari" className="text-xs text-muted">Dari</label>
+            <input id="laporan-arus-kas-dari"
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
@@ -120,8 +120,8 @@ export function LaporanArusKas({
             />
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-xs text-muted">Sampai</label>
-            <input
+            <label htmlFor="laporan-arus-kas-sampai" className="text-xs text-muted">Sampai</label>
+            <input id="laporan-arus-kas-sampai"
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
@@ -243,11 +243,7 @@ export function LaporanArusKas({
                       >
                         <td className="py-2.5 px-4 text-xs text-faint">{idx + 1}</td>
                         <td className="py-2.5 px-4 text-xs text-ink whitespace-nowrap">
-                          {new Date(row.date).toLocaleDateString("id-ID", {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                          })}
+                          {formatDate(row.date)}
                         </td>
                         <td className="py-2.5 px-4">
                           <span

@@ -4,6 +4,7 @@ import {
   UsersIcon, FunnelIcon, BuildingIcon, ClipboardListIcon, ReceiptIcon, BanknotesIcon,
   WalletIcon, CoinsIcon, GridIcon, LockIcon,
 } from "@/components/icons/AppIcons";
+import { DialogA11y } from "./DialogA11y";
 
 type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
 
@@ -159,6 +160,7 @@ export default function HelpGuideModal({ onClose }: { onClose: () => void }) {
         className="w-full max-w-2xl max-h-[85vh] bg-white rounded-lg shadow-2xl overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
+        <DialogA11y onClose={onClose} />
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-line shrink-0">
           <div>

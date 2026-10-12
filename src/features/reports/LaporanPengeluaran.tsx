@@ -2,7 +2,7 @@
 import { useState, useMemo } from "react";
 import type { ProjectExpense, Project, Client } from "@/types/db";
 import { isDateInRange, sumAmounts, groupSumByKey } from "@/utils/reportCalculations";
-import { formatIDR } from "@/utils/format";
+import { formatIDR, formatDate } from "@/utils/format";
 
 function currentMonthRange() {
   const now = new Date();
@@ -92,8 +92,8 @@ export function LaporanPengeluaran({
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-xs font-semibold text-muted">Filter:</span>
           <div className="flex items-center gap-2">
-            <label className="text-xs text-muted">Dari</label>
-            <input
+            <label htmlFor="laporan-pengeluaran-dari" className="text-xs text-muted">Dari</label>
+            <input id="laporan-pengeluaran-dari"
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
@@ -101,8 +101,8 @@ export function LaporanPengeluaran({
             />
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-xs text-muted">Sampai</label>
-            <input
+            <label htmlFor="laporan-pengeluaran-sampai" className="text-xs text-muted">Sampai</label>
+            <input id="laporan-pengeluaran-sampai"
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
@@ -200,11 +200,7 @@ export function LaporanPengeluaran({
                     <tr key={expense.id} className="hover:bg-hover">
                       <td className="py-2.5 px-4 text-xs text-faint">{idx + 1}</td>
                       <td className="py-2.5 px-4 text-xs text-ink whitespace-nowrap">
-                        {new Date(expense.tanggal).toLocaleDateString("id-ID", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })}
+                        {formatDate(expense.tanggal)}
                       </td>
                       <td className="py-2.5 px-4 text-xs font-medium text-ink">
                         {project?.name ?? "—"}

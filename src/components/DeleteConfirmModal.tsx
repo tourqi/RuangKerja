@@ -1,4 +1,5 @@
 "use client";
+import { DialogA11y } from "./DialogA11y";
 
 type Props = {
   title: string;
@@ -18,23 +19,32 @@ export function DeleteConfirmModal({
   confirmLabel = "Ya, Hapus",
 }: Props) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-lg shadow-2xl w-full max-w-sm p-6">
-        <h3 className="text-base font-semibold text-ink mb-2">{title}</h3>
-        <p className="text-sm text-muted mb-5">{description}</p>
-        <div className="flex gap-2">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={onClose}>
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="confirm-title"
+        aria-describedby="confirm-desc"
+        className="bg-white rounded-lg border border-line shadow-2xl w-full max-w-sm p-5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Fokus awal jatuh ke tombol pertama ("Batal") supaya Enter tidak langsung menghapus */}
+        <DialogA11y onClose={onClose} />
+        <h3 id="confirm-title" className="text-[15px] font-semibold text-ink mb-1.5">{title}</h3>
+        <p id="confirm-desc" className="text-[13px] text-muted mb-5">{description}</p>
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="px-3 py-1.5 border border-line bg-white text-ink text-[13px] font-medium rounded-md hover:bg-hover transition-colors"
+          >
+            Batal
+          </button>
           <button
             onClick={onConfirm}
             disabled={saving}
-            className="flex-1 px-4 py-2 bg-danger text-white text-sm font-medium rounded-md hover:bg-danger/90 transition disabled:opacity-50"
+            className="px-3 py-1.5 bg-danger text-white text-[13px] font-medium rounded-md hover:bg-danger/90 transition-colors disabled:opacity-50"
           >
             {saving ? "Menghapus..." : confirmLabel}
-          </button>
-          <button
-            onClick={onClose}
-            className="flex-1 px-4 py-2 bg-hover text-ink text-sm font-medium rounded-md hover:bg-hover transition"
-          >
-            Batal
           </button>
         </div>
       </div>

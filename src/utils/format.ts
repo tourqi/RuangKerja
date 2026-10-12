@@ -1,17 +1,22 @@
 // Fungsi format terpusat. Selalu import dari sini, bukan inline.
 
+const BULAN = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+
+/** Tanggal untuk tampilan: "5 Agu 2026". Dirakit manual (bukan toLocaleDateString) supaya server & browser identik. */
 export function formatDate(value?: string | null): string {
   if (!value) return "—";
-  return value.slice(0, 10);
+  const [y, m, d] = value.slice(0, 10).split("-").map(Number);
+  if (!y || !m || !d) return value;
+  return `${d} ${BULAN[m - 1]} ${y}`;
+}
+
+/** Tanggal untuk ekspor CSV / input: "2026-08-05". */
+export function formatDateISO(value?: string | null): string {
+  return value ? value.slice(0, 10) : "";
 }
 
 export function formatDateLocale(value?: string | null): string {
-  if (!value) return "—";
-  return new Date(value).toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return formatDate(value);
 }
 
 // Prefix "Rp" dirakit manual: output style "currency" dari Intl beda antar versi

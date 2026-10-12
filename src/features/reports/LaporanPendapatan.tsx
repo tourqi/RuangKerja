@@ -2,7 +2,7 @@
 import { useState, useMemo } from "react";
 import type { Payment, Invoice, Project, Client } from "@/types/db";
 import { isDateInRange, sumAmounts, groupSumByKey } from "@/utils/reportCalculations";
-import { formatIDR } from "@/utils/format";
+import { formatIDR, formatDate } from "@/utils/format";
 
 function currentMonthRange() {
   const now = new Date();
@@ -68,8 +68,8 @@ export function LaporanPendapatan({
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-xs font-semibold text-muted">Filter Tanggal:</span>
           <div className="flex items-center gap-2">
-            <label className="text-xs text-muted">Dari</label>
-            <input
+            <label htmlFor="laporan-pendapatan-dari" className="text-xs text-muted">Dari</label>
+            <input id="laporan-pendapatan-dari"
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
@@ -77,8 +77,8 @@ export function LaporanPendapatan({
             />
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-xs text-muted">Sampai</label>
-            <input
+            <label htmlFor="laporan-pendapatan-sampai" className="text-xs text-muted">Sampai</label>
+            <input id="laporan-pendapatan-sampai"
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
@@ -162,11 +162,7 @@ export function LaporanPendapatan({
                     <tr key={payment.id} className="hover:bg-hover">
                       <td className="py-2.5 px-4 text-xs text-faint">{idx + 1}</td>
                       <td className="py-2.5 px-4 text-xs text-ink whitespace-nowrap">
-                        {new Date(payment.payment_date).toLocaleDateString("id-ID", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })}
+                        {formatDate(payment.payment_date)}
                       </td>
                       <td className="py-2.5 px-4 text-xs text-ink">{client?.name ?? "—"}</td>
                       <td className="py-2.5 px-4 text-xs text-ink">{project?.name ?? "—"}</td>

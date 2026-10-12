@@ -15,7 +15,7 @@ import { LaporanArusKas } from "./LaporanArusKas";
 import { computeProjectProfitLoss } from "@/utils/profitLossCalculations";
 import { groupSumByKey } from "@/utils/reportCalculations";
 import { getProjectValue as computeProjectValue } from "@/utils/projectValue";
-import { formatIDR } from "@/utils/format";
+import { formatIDR, formatDate } from "@/utils/format";
 
 const formatCurrency = (v?: number) =>
   v == null
@@ -91,13 +91,24 @@ const invoiceStatusBarColors: Record<string, string> = {
   draft: "bg-faint", sent: "bg-accent", partial: "bg-warning", paid: "bg-success", overdue: "bg-danger",
 };
 
+/** Satu sel angka di dalam StatStrip. */
 function StatCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
-    <div className="bg-white rounded-md border border-line p-5">
-      <p className="text-xs font-semibold text-faint mb-1">{label}</p>
-      <p className="text-2xl font-semibold text-ink">{value}</p>
-      {sub && <p className="text-xs text-faint mt-1">{sub}</p>}
+    <div className="bg-white px-4 py-3 flex-1 min-w-[160px]">
+      <p className="text-xs text-muted">{label}</p>
+      <p className="font-mono text-lg font-medium text-ink mt-0.5 truncate">{value}</p>
+      {sub && <p className="text-[11.5px] text-faint mt-0.5">{sub}</p>}
     </div>
+  );
+}
+
+/** Deretan angka dalam satu strip bergaris tipis (pengganti grid kartu identik). */
+function StatStrip({ title, children }: { title?: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-1.5">
+      {title && <h3 className="text-xs font-medium text-muted">{title}</h3>}
+      <div className="flex flex-wrap gap-px bg-line border border-line rounded-md overflow-hidden">{children}</div>
+    </section>
   );
 }
 
@@ -290,26 +301,26 @@ export default function ReportsOverview() {
       {/* ── TAB: Ringkasan ── */}
       {tab === "ringkasan" && (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard label="Total Nilai Proyek" value={formatCurrency(totalProjectValue)} sub={`${projects.length} proyek`} />
-            <StatCard label="Pendapatan (Selesai)" value={formatCurrency(doneValue)} sub={`${projects.filter((p) => p.status === "Done").length} proyek selesai`} />
-            <StatCard label="Nilai Proyek Aktif" value={formatCurrency(activeValue)} sub={`${projects.filter((p) => p.status !== "Done").length} proyek berjalan`} />
-            <StatCard label="Konversi Lead → Deal" value={`${conversionRate}%`} sub={`${dealLeads} dari ${leads.length} lead`} />
-          </div>
+          <StatStrip title="Proyek">
+            <StatCard label="Total nilai proyek" value={formatCurrency(totalProjectValue)} sub={`${projects.length} proyek`} />
+            <StatCard label="Nilai proyek aktif" value={formatCurrency(activeValue)} sub={`${projects.filter((p) => p.status !== "Done").length} proyek berjalan`} />
+            <StatCard label="Pendapatan (selesai)" value={formatCurrency(doneValue)} sub={`${projects.filter((p) => p.status === "Done").length} proyek selesai`} />
+            <StatCard label="Rata-rata progres" value={`${avgProgress}%`} sub="semua proyek" />
+            <StatCard label="Lewat tenggat" value={overdueProjects.length} sub={`${nearDeadline.length} tenggat ≤ 7 hari`} />
+          </StatStrip>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard label="Total Klien" value={clients.length} sub={`${clients.filter((c) => c.lead_status === "Deal Won").length} deal won`} />
-            <StatCard label="Total Lead" value={leads.length} sub={`${leads.filter((l) => l.status === "Deal Lost").length} lost`} />
-            <StatCard label="Avg Progress Proyek" value={`${avgProgress}%`} sub="rata-rata semua proyek" />
-            <StatCard label="Proyek Overdue" value={overdueProjects.length} sub={`${nearDeadline.length} mepet deadline`} />
-          </div>
+          <StatStrip title="Penjualan">
+            <StatCard label="Total klien" value={clients.length} sub={`${clients.filter((c) => c.lead_status === "Deal Won").length} deal won`} />
+            <StatCard label="Total lead" value={leads.length} sub={`${leads.filter((l) => l.status === "Deal Lost").length} lost`} />
+            <StatCard label="Konversi lead → deal" value={`${conversionRate}%`} sub={`${dealLeads} dari ${leads.length} lead`} />
+          </StatStrip>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard label="Total Tagihan" value={formatCurrency(totalTagihan)} sub={`${invoices.length} invoice`} />
-            <StatCard label="Terkumpul" value={formatCurrency(totalTerkumpul)} sub={`${collectionRate}% collection rate`} />
+          <StatStrip title="Keuangan">
+            <StatCard label="Total tagihan" value={formatCurrency(totalTagihan)} sub={`${invoices.length} invoice`} />
+            <StatCard label="Terkumpul" value={formatCurrency(totalTerkumpul)} sub={`${collectionRate}% tingkat penagihan`} />
             <StatCard label="Piutang" value={formatCurrency(totalPiutang)} sub={`${overdueInvoices.length} invoice jatuh tempo`} />
-            <StatCard label="Invoice Lunas" value={invoices.filter((i) => i.status === "paid").length} sub={`dari ${invoices.length} total invoice`} />
-          </div>
+            <StatCard label="Invoice lunas" value={invoices.filter((i) => i.status === "paid").length} sub={`dari ${invoices.length} invoice`} />
+          </StatStrip>
 
           {/* Summary table */}
           <SectionCard title="Ringkasan Pipeline">
@@ -440,7 +451,7 @@ export default function ReportsOverview() {
                     const cnt = leads.filter((l) => l.status === s).length;
                     const nextStatus = arr[i + 1];
                     const nextCnt = nextStatus ? leads.filter((l) => l.status === nextStatus).length : null;
-                    const dropoff = nextCnt != null && cnt > 0 ? `${100 - pct(nextCnt, cnt)}%` : "-";
+                    const dropoff = nextCnt != null && cnt > 0 ? `${100 - pct(nextCnt, cnt)}%` : "—";
                     return (
                       <tr key={s} className="hover:bg-hover">
                         <td className="py-2.5 px-3">
@@ -462,10 +473,10 @@ export default function ReportsOverview() {
       {/* ── TAB: Proyek ── */}
       {tab === "proyek" && (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="flex flex-wrap gap-px bg-line border border-line rounded-md overflow-hidden">
             <StatCard label="Total Nilai Semua Proyek" value={formatCurrency(totalProjectValue)} sub={`${projects.length} proyek`} />
-            <StatCard label="Proyek Overdue" value={overdueProjects.length} sub="deadline terlewat, belum selesai" />
-            <StatCard label="Mepet Deadline (≤7 hari)" value={nearDeadline.length} sub="perlu perhatian segera" />
+            <StatCard label="Lewat tenggat" value={overdueProjects.length} sub="belum selesai" />
+            <StatCard label="Tenggat ≤ 7 hari" value={nearDeadline.length} sub="perlu perhatian segera" />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -521,9 +532,9 @@ export default function ReportsOverview() {
                     <tr className="border-b border-line">
                       <th className="text-left py-2 px-3 text-xs font-semibold text-muted">Nama Proyek</th>
                       <th className="text-left py-2 px-3 text-xs font-semibold text-muted">Status</th>
-                      <th className="text-left py-2 px-3 text-xs font-semibold text-muted">Deadline</th>
+                      <th className="text-left py-2 px-3 text-xs font-semibold text-muted">Tenggat</th>
                       <th className="text-right py-2 px-3 text-xs font-semibold text-muted">Nilai</th>
-                      <th className="text-right py-2 px-3 text-xs font-semibold text-muted">Progress</th>
+                      <th className="text-right py-2 px-3 text-xs font-semibold text-muted">Progres</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-line">
@@ -535,8 +546,8 @@ export default function ReportsOverview() {
                             {p.status}
                           </span>
                         </td>
-                        <td className="py-2.5 px-3 text-xs text-danger font-medium">
-                          {p.deadline ? new Date(p.deadline).toLocaleDateString("id-ID") : "-"}
+                        <td className="py-2.5 px-3 text-xs text-danger font-medium whitespace-nowrap">
+                          {p.deadline ? formatDate(p.deadline) : "—"}
                         </td>
                         <td className="py-2.5 px-3 text-right text-xs text-ink">{formatCurrency(p.value)}</td>
                         <td className="py-2.5 px-3 text-right text-xs text-ink">{p.progress ?? 0}%</td>
@@ -560,7 +571,7 @@ export default function ReportsOverview() {
                       <th className="text-left py-2 px-3 text-xs font-semibold text-muted">Nama Proyek</th>
                       <th className="text-left py-2 px-3 text-xs font-semibold text-muted">Status</th>
                       <th className="text-right py-2 px-3 text-xs font-semibold text-muted">Nilai</th>
-                      <th className="text-right py-2 px-3 text-xs font-semibold text-muted">Progress</th>
+                      <th className="text-right py-2 px-3 text-xs font-semibold text-muted">Progres</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-line">
@@ -600,18 +611,18 @@ export default function ReportsOverview() {
       {/* ── TAB: Klien ── */}
       {tab === "klien" && (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="flex flex-wrap gap-px bg-line border border-line rounded-md overflow-hidden">
             <StatCard label="Total Klien" value={clients.length} />
             <StatCard
               label="Jenis Properti Terbanyak"
               value={
-                Object.entries(clientByPropertyType).sort((a, b) => b[1] - a[1])[0]?.[0] || "-"
+                Object.entries(clientByPropertyType).sort((a, b) => b[1] - a[1])[0]?.[0] || "—"
               }
               sub="properti paling umum"
             />
             <StatCard
               label="Sumber Terbanyak"
-              value={Object.entries(clientBySource).sort((a, b) => b[1] - a[1])[0]?.[0] || "-"}
+              value={Object.entries(clientBySource).sort((a, b) => b[1] - a[1])[0]?.[0] || "—"}
               sub="saluran akuisisi utama"
             />
           </div>
@@ -714,9 +725,9 @@ export default function ReportsOverview() {
       {/* ── TAB: Finansial ── */}
       {tab === "finansial" && (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="flex flex-wrap gap-px bg-line border border-line rounded-md overflow-hidden">
             <StatCard label="Total Tagihan" value={formatCurrency(totalTagihan)} sub={`${invoices.length} invoice`} />
-            <StatCard label="Terkumpul" value={formatCurrency(totalTerkumpul)} sub={`${collectionRate}% collection rate`} />
+            <StatCard label="Terkumpul" value={formatCurrency(totalTerkumpul)} sub={`${collectionRate}% tingkat penagihan`} />
             <StatCard label="Piutang" value={formatCurrency(totalPiutang)} sub="belum terbayar" />
             <StatCard label="Invoice Jatuh Tempo" value={overdueInvoices.length} sub="perlu tindakan" />
           </div>
@@ -808,8 +819,8 @@ export default function ReportsOverview() {
                         <td className="py-2.5 px-3 text-xs text-muted hidden sm:table-cell">
                           {proj?.name ?? cl?.name ?? "—"}
                         </td>
-                        <td className="py-2.5 px-3 text-xs text-danger font-medium">
-                          {inv.due_date ? new Date(inv.due_date).toLocaleDateString("id-ID") : "-"}
+                        <td className="py-2.5 px-3 text-xs text-danger font-medium whitespace-nowrap">
+                          {inv.due_date ? formatDate(inv.due_date) : "—"}
                         </td>
                         <td className="py-2.5 px-3 text-right text-xs text-ink">{formatCurrency(inv.total_amount)}</td>
                         <td className="py-2.5 px-3 text-right text-xs font-semibold text-danger">
@@ -845,7 +856,7 @@ export default function ReportsOverview() {
         return (
           <div className="space-y-4">
             {/* Summary cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="flex flex-wrap gap-px bg-line border border-line rounded-md overflow-hidden">
               <StatCard label="Total Terkumpul" value={formatCurrency(totalTerkumpul)} sub={`dari ${formatCurrency(totalNilai)} nilai kontrak`} />
               <StatCard label="Total Pengeluaran" value={formatCurrency(totalPengeluaran)} sub={`${rows.length} project`} />
               <StatCard

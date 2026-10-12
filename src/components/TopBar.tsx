@@ -14,6 +14,7 @@ import { QuestionCircleIcon } from "@/components/icons/AppIcons";
 import HelpGuideModal from "@/components/HelpGuideModal";
 import type { NotificationType } from "@/types/db";
 import { formatIDR } from "@/utils/format";
+import { DialogA11y } from "./DialogA11y";
 
 /* ── Route config ── */
 const ROUTE_LABELS: Record<string, string> = {
@@ -274,6 +275,7 @@ function SearchModal({
         className="w-full max-w-xl bg-white rounded-lg shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
+        <DialogA11y onClose={onClose} />
         {/* Search input */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-line">
           <svg className="w-4 h-4 text-faint flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -364,7 +366,7 @@ function SearchModal({
                   >
                     <span className="w-7 h-7 rounded-full bg-surface text-muted text-xs font-semibold flex items-center justify-center flex-shrink-0">L</span>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-ink">{c?.name ?? "-"}</p>
+                      <p className="text-sm font-medium text-ink">{c?.name ?? "—"}</p>
                       <p className="text-xs text-faint">Lead · {l.status}</p>
                     </div>
                   </Link>

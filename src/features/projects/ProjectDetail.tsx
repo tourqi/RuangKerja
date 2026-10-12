@@ -15,18 +15,17 @@ import { NumberInput } from "@/components/NumberInput";
 import { InvoiceFormModal } from "@/features/invoices/InvoiceFormModal";
 import type { ExpenseCategory, Invoice, Payment, ProjectExpense, Rab, RabGroup } from "@/types/db";
 import { projectStatusLabel } from "@/types/db";
-import { formatIDR } from "@/utils/format";
+import { formatIDR, formatDate } from "@/utils/format";
 import { ProjectRabSection, rabGross } from "./ProjectRabSection";
 import { DetailTabs, useTabParam } from "@/components/DetailTabs";
 import { StatusDot, PROJECT_STATUS_TONE, INVOICE_STATUS_TONE } from "@/components/ui/StatusDot";
+import { useConfirm } from "@/components/ConfirmProvider";
 
 const TAB_KEYS = ["ringkasan", "rab", "pengeluaran", "tagihan"] as const;
 
 const formatCurrency = (v: number) =>
   formatIDR(v);
 
-const formatDate = (s?: string) =>
-  s ? new Date(s).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "-";
 
 const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   material: "Material",
@@ -57,7 +56,8 @@ const PAGE_SIZE = 20;
 export default function ProjectDetail({ projectId }: { projectId: string }) {
   const router = useRouter();
   const toast = useToast();
-  const { projects, loading: lp } = useProjects();
+  const confirm = useConfirm();
+  const { projects, loading: lp, error: projectsError } = useProjects();
   const { clients, loading: lc } = useClients();
   const { leads } = useLeads();
   const { user } = useAuth();
@@ -85,13 +85,19 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
   // Pagination
   const [page, setPage] = useState(1);
 
+  // Bagian yang gagal dimuat — ditampilkan sebagai banner, bukan dianggap "belum ada data"
+  const [loadErrors, setLoadErrors] = useState<string[]>([]);
+  const markLoad = useCallback((section: string, ok: boolean) => {
+    setLoadErrors((prev) => (ok ? prev.filter((s) => s !== section) : prev.includes(section) ? prev : [...prev, section]));
+  }, []);
+
   const loadExpenses = useCallback(() => {
     setLoadingExp(true);
     getExpenses(projectId)
-      .then((data) => setExpenses(data))
-      .catch(() => {})
+      .then((data) => { setExpenses(data); markLoad("pengeluaran", true); })
+      .catch(() => markLoad("pengeluaran", false))
       .finally(() => setLoadingExp(false));
-  }, [projectId]);
+  }, [projectId, markLoad]);
 
   useEffect(() => { loadExpenses(); }, [loadExpenses]);
 
@@ -109,10 +115,13 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
         })
       );
       setPaymentsByInvoice(Object.fromEntries(entries));
-    } catch { /* silent */ } finally {
+      markLoad("tagihan", true);
+    } catch {
+      markLoad("tagihan", false);
+    } finally {
       setLoadingInvoices(false);
     }
-  }, [projectId]);
+  }, [projectId, markLoad]);
 
   useEffect(() => { loadInvoicesData(); }, [loadInvoicesData]);
 
@@ -127,10 +136,13 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
       );
       setAllRabs(rabs);
       setRabGroups(Object.fromEntries(entries));
-    } catch { /* silent */ } finally {
+      markLoad("RAB", true);
+    } catch {
+      markLoad("RAB", false);
+    } finally {
       setLoadingRabs(false);
     }
-  }, [leadId]);
+  }, [leadId, markLoad]);
 
   useEffect(() => { loadRabs(); }, [loadRabs]);
 
@@ -153,7 +165,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
           <span>←</span> Kembali
         </button>
         <div className="bg-white rounded-md border border-line p-12 text-center">
-          <p className="text-faint text-sm">Project tidak ditemukan.</p>
+          <p className="text-faint text-sm">{projectsError ? 'Data gagal dimuat. Tekan "Coba lagi" di atas.' : "Project tidak ditemukan."}</p>
         </div>
       </div>
     );
@@ -224,6 +236,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
   }
 
   async function handleDelete(id: string) {
+    if (!(await confirm({ title: "Hapus pengeluaran?", description: "Baris pengeluaran ini akan dihapus permanen dan estimasi profit ikut berubah." }))) return;
     setExpenses((prev) => prev.filter((e) => e.id !== id));
     try {
       await deleteExpense(id);
@@ -264,6 +277,21 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
 
   return (
     <div className="space-y-5">
+      {loadErrors.length > 0 && (
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-md border border-danger-line bg-danger-soft text-[13px] text-ink">
+          <span className="inline-flex items-center gap-2">
+            <span className="w-[7px] h-[7px] rounded-full bg-danger shrink-0" />
+            Data {loadErrors.join(", ")} gagal dimuat. Angka di halaman ini belum lengkap.
+          </span>
+          <button
+            onClick={() => { loadExpenses(); loadInvoicesData(); loadRabs(); }}
+            className="px-2.5 py-1 text-xs font-medium rounded-md border border-line bg-white text-ink hover:bg-hover transition-colors"
+          >
+            Coba lagi
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -365,28 +393,28 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
         <h2 className="text-sm font-semibold text-ink mb-4">Informasi Project</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
           <div>
-            <p className="text-xs font-medium text-faint mb-0.5">Client</p>
-            <p className="text-sm text-ink">{client?.name ?? "-"}</p>
+            <p className="text-xs font-medium text-faint mb-0.5">Klien</p>
+            <p className="text-sm text-ink">{client?.name ?? "—"}</p>
           </div>
           <div>
             <p className="text-xs font-medium text-faint mb-0.5">Status</p>
             <p className="text-sm text-ink">{projectStatusLabel[project.status]}</p>
           </div>
           <div>
-            <p className="text-xs font-medium text-faint mb-0.5">Assigned To</p>
-            <p className="text-sm text-ink">{project.assigned_to ?? "-"}</p>
+            <p className="text-xs font-medium text-faint mb-0.5">PIC</p>
+            <p className="text-sm text-ink">{project.assigned_to ?? "—"}</p>
           </div>
           <div>
-            <p className="text-xs font-medium text-faint mb-0.5">Start Date</p>
+            <p className="text-xs font-medium text-faint mb-0.5">Mulai</p>
             <p className="text-sm text-ink">{formatDate(project.start_date)}</p>
           </div>
           <div>
-            <p className="text-xs font-medium text-faint mb-0.5">Deadline</p>
+            <p className="text-xs font-medium text-faint mb-0.5">Tenggat</p>
             <p className="text-sm text-ink">{formatDate(project.deadline)}</p>
           </div>
           <div>
             <p className="text-xs font-medium text-faint mb-0.5">Nilai Project</p>
-            <p className="text-sm font-semibold text-ink">{projectValue ? formatCurrency(projectValue) : "-"}</p>
+            <p className="text-sm font-semibold text-ink">{projectValue ? formatCurrency(projectValue) : "—"}</p>
           </div>
         </div>
       </div>
@@ -740,6 +768,9 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                       <tr
                         className={`border-t border-line hover:bg-hover transition-colors cursor-pointer ${isExpanded ? "bg-accent-soft/40" : ""}`}
                         onClick={() => setExpandedInvoice(isExpanded ? null : inv.id)}
+                        tabIndex={0}
+                        aria-expanded={isExpanded}
+                        onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); setExpandedInvoice(isExpanded ? null : inv.id); } }}
                       >
                         <td className="px-3 py-2">
                           <a
@@ -762,13 +793,13 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                         <td className="px-3 py-2 text-muted text-xs max-w-[180px] truncate">
                           {inv.notes ?? "—"}
                         </td>
-                        <td className="px-3 py-2 text-muted text-xs">
-                          {inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString("id-ID") : "—"}
+                        <td className="px-3 py-2 text-muted text-xs whitespace-nowrap">
+                          {inv.invoice_date ? formatDate(inv.invoice_date) : "—"}
                         </td>
                         <td className="px-3 py-2 text-xs">
                           {inv.due_date ? (
                             <span className={new Date(inv.due_date) < new Date() && inv.status !== "paid" ? "text-danger font-medium" : "text-muted"}>
-                              {new Date(inv.due_date).toLocaleDateString("id-ID")}
+                              {formatDate(inv.due_date)}
                             </span>
                           ) : "—"}
                         </td>
@@ -782,7 +813,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                             </span>
                             {lastPay && (
                               <p className="text-xs text-faint mt-0.5">
-                                {new Date(lastPay.payment_date).toLocaleDateString("id-ID")}
+                                {formatDate(lastPay.payment_date)}
                               </p>
                             )}
                           </div>
@@ -809,7 +840,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                                 {pays.map((p) => (
                                   <div key={p.id} className="flex items-center gap-4 text-xs bg-white rounded-md px-3 py-2 border border-accent/25">
                                     <span className="text-muted w-24 shrink-0">
-                                      {new Date(p.payment_date).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
+                                      {formatDate(p.payment_date)}
                                     </span>
                                     <span className="text-faint">{METHOD_LABELS[p.payment_method] ?? p.payment_method}</span>
                                     {p.notes && <span className="text-faint truncate flex-1">{p.notes}</span>}

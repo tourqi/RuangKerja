@@ -7,7 +7,7 @@ import { useClients } from "@/hooks/useClients";
 import { useProjects } from "@/hooks/useProjects";
 import { useAllRabs, useApprovedRabTotals } from "@/hooks/useRab";
 import { useLeads } from "@/hooks/useLeads";
-import { formatRupiah, formatIDR } from "@/utils/format";
+import { formatRupiah, formatIDR, formatDate } from "@/utils/format";
 import { getProjectValue as computeProjectValue } from "@/utils/projectValue";
 import { useToast } from "@/components/Toast";
 import type { InvoiceStatus, PaymentMethod } from "@/types/db";
@@ -16,6 +16,8 @@ import { addPayment, deletePayment, updateInvoice } from "@/services/invoices";
 import { getRabByLead, getRabWithGroups } from "@/services/rab";
 import type { Rab } from "@/types/db";
 import { NumberInput } from "@/components/NumberInput";
+import { useConfirm } from "@/components/ConfirmProvider";
+import { DialogA11y } from "@/components/DialogA11y";
 
 const formatCurrency = (v?: number) =>
   v == null
@@ -45,7 +47,7 @@ const METHOD_LABELS: Record<PaymentMethod, string> = {
 };
 
 export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
-  const { invoices, loading: loadingInvoices, refetch: refetchInvoices } = useInvoices();
+  const { invoices, loading: loadingInvoices, error: invoicesError, refetch: refetchInvoices } = useInvoices();
   const { payments, loading: loadingPayments, refetch: refetchPayments } = usePayments(invoiceId);
   const { clients } = useClients();
   const { projects } = useProjects();
@@ -53,13 +55,13 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
   const { leads } = useLeads();
   const { totals: rabTotals } = useApprovedRabTotals();
   const toast = useToast();
+  const confirm = useConfirm();
 
   const getProjectValue = (p: { lead_id?: string; value?: number }) => computeProjectValue(p, rabTotals);
 
   const [showAddPayment, setShowAddPayment] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null);
   const [paymentForm, setPaymentForm] = useState({
     amount: "",
     payment_date: new Date().toISOString().slice(0, 10),
@@ -253,14 +255,13 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
   }
 
   async function handleDeletePayment(id: string) {
+    if (!(await confirm({ title: "Hapus pembayaran?", description: "Pembayaran ini akan dihapus permanen. Status invoice dan laporan keuangan akan dihitung ulang." }))) return;
     try {
       await deletePayment(id, invoiceId);
       await Promise.all([refetchInvoices(), refetchPayments()]);
       toast("Pembayaran dihapus", "success");
     } catch (err: unknown) {
       toast(`Gagal: ${(err as Error).message}`, "error");
-    } finally {
-      setDeletingPaymentId(null);
     }
   }
 
@@ -288,7 +289,7 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
   if (!invoice) {
     return (
       <div className="text-center py-16 text-sm text-faint">
-        Invoice tidak ditemukan.{" "}
+        {invoicesError ? 'Data gagal dimuat. Tekan "Coba lagi" di atas.' : "Invoice tidak ditemukan."}{" "}
         <Link href="/invoices" className="text-ink underline">Kembali</Link>
       </div>
     );
@@ -357,7 +358,7 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
             <p className="text-sm font-semibold text-success">{formatCurrency(invoice.paid_amount)}</p>
           </div>
           <div>
-            <p className="text-xs text-muted mb-0.5">Outstanding</p>
+            <p className="text-xs text-muted mb-0.5">Belum dibayar</p>
             <p className={`text-sm font-semibold ${outstanding > 0 ? "text-danger" : "text-success"}`}>
               {formatCurrency(outstanding)}
             </p>
@@ -368,16 +369,16 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
             <p className="text-xs text-muted mb-0.5">Tanggal Invoice</p>
             <p className="text-sm font-medium text-ink">
               {invoice.invoice_date
-                ? new Date(invoice.invoice_date).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })
+                ? formatDate(invoice.invoice_date)
                 : invoice.created_at
-                ? new Date(invoice.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })
+                ? formatDate(invoice.created_at)
                 : "—"}
             </p>
           </div>
           <div>
             <p className="text-xs text-muted mb-0.5">Jatuh Tempo</p>
             <p className="text-sm font-medium text-ink">
-              {invoice.due_date ? new Date(invoice.due_date).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "—"}
+              {invoice.due_date ? formatDate(invoice.due_date) : "—"}
             </p>
           </div>
         </div>
@@ -480,7 +481,7 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
               {payments.map((p) => (
                 <tr key={p.id} className="hover:bg-hover transition-colors">
                   <td className="px-4 py-3 text-ink">
-                    {new Date(p.payment_date).toLocaleDateString("id-ID")}
+                    {formatDate(p.payment_date)}
                   </td>
                   <td className="px-4 py-3 text-right font-medium text-success">
                     {formatCurrency(p.amount)}
@@ -493,7 +494,7 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button
-                      onClick={() => setDeletingPaymentId(p.id)}
+                      onClick={() => handleDeletePayment(p.id)}
                       className="text-xs text-danger hover:text-danger transition-colors"
                     >
                       Hapus
@@ -518,6 +519,7 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
             className="bg-white rounded-lg shadow-2xl w-full max-w-md p-6"
             onClick={(e) => e.stopPropagation()}
           >
+            <DialogA11y onClose={() => setShowAddPayment(false)} />
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-base font-semibold text-ink">Tambah Pembayaran</h2>
               <button onClick={() => setShowAddPayment(false)} className="text-faint hover:text-muted transition-colors">
@@ -528,8 +530,8 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
             </div>
             <form onSubmit={handleAddPayment} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-ink mb-1.5">Jumlah (IDR) *</label>
-                <NumberInput
+                <label htmlFor="invoice-detail-jumlah-idr" className="block text-xs font-medium text-ink mb-1.5">Jumlah (IDR) *</label>
+                <NumberInput id="invoice-detail-jumlah-idr"
                   value={paymentForm.amount}
                   onValueChange={(v) => setPaymentForm((f) => ({ ...f, amount: v }))}
                   className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25"
@@ -538,8 +540,8 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-ink mb-1.5">Tanggal Pembayaran *</label>
-                <input
+                <label htmlFor="invoice-detail-tanggal-pembayaran" className="block text-xs font-medium text-ink mb-1.5">Tanggal Pembayaran *</label>
+                <input id="invoice-detail-tanggal-pembayaran"
                   type="date"
                   value={paymentForm.payment_date}
                   onChange={(e) => setPaymentForm((f) => ({ ...f, payment_date: e.target.value }))}
@@ -548,8 +550,8 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-ink mb-1.5">Metode Pembayaran</label>
-                <select
+                <label htmlFor="invoice-detail-metode-pembayaran" className="block text-xs font-medium text-ink mb-1.5">Metode Pembayaran</label>
+                <select id="invoice-detail-metode-pembayaran"
                   value={paymentForm.payment_method}
                   onChange={(e) => setPaymentForm((f) => ({ ...f, payment_method: e.target.value as PaymentMethod }))}
                   className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25"
@@ -560,8 +562,8 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-ink mb-1.5">Catatan</label>
-                <input
+                <label htmlFor="invoice-detail-catatan" className="block text-xs font-medium text-ink mb-1.5">Catatan</label>
+                <input id="invoice-detail-catatan"
                   type="text"
                   value={paymentForm.notes}
                   onChange={(e) => setPaymentForm((f) => ({ ...f, notes: e.target.value }))}
@@ -600,6 +602,7 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
             className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
+            <DialogA11y onClose={() => setShowEdit(false)} />
             <div className="flex items-center justify-between px-6 py-5 border-b border-line">
               <h2 className="text-base font-semibold text-ink">Edit Invoice</h2>
               <button onClick={() => setShowEdit(false)} className="text-faint hover:text-muted transition-colors">
@@ -611,8 +614,8 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
             <form onSubmit={handleEdit} className="px-6 py-5 space-y-5">
               {/* Project */}
               <div>
-                <label className="block text-xs font-medium text-ink mb-1.5">Project</label>
-                <select
+                <label htmlFor="invoice-detail-project" className="block text-xs font-medium text-ink mb-1.5">Proyek</label>
+                <select id="invoice-detail-project"
                   value={editForm.project_id}
                   onChange={(e) => handleEditProjectChange(e.target.value)}
                   className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25"
@@ -632,14 +635,14 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
               {/* RAB */}
               {editForm.project_id && (
                 <div>
-                  <label className="block text-xs font-medium text-ink mb-1.5">
+                  <label htmlFor="invoice-detail-rab-opsional" className="block text-xs font-medium text-ink mb-1.5">
                     RAB (opsional)
                     {loadingEditRabs && <span className="ml-2 text-faint">Memuat…</span>}
                   </label>
                   {editAvailableRabs.length === 0 && !loadingEditRabs ? (
                     <p className="text-xs text-faint py-1">Tidak ada RAB disetujui untuk project ini.</p>
                   ) : (
-                    <select
+                    <select id="invoice-detail-rab-opsional"
                       value={editForm.rab_id}
                       onChange={(e) => handleEditRabChange(e.target.value)}
                       className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25"
@@ -679,8 +682,8 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
 
               {/* Tanggal Invoice */}
               <div>
-                <label className="block text-xs font-medium text-ink mb-1.5">Tanggal Invoice</label>
-                <input
+                <label htmlFor="invoice-detail-tanggal-invoice" className="block text-xs font-medium text-ink mb-1.5">Tanggal Invoice</label>
+                <input id="invoice-detail-tanggal-invoice"
                   type="date"
                   value={editForm.invoice_date}
                   onChange={(e) => setEditForm((f) => ({ ...f, invoice_date: e.target.value }))}
@@ -690,12 +693,12 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
 
               {/* Termin: tagihan + jatuh tempo + riwayat pembayaran */}
               <div>
-                <label className="block text-xs font-medium text-ink mb-2">Termin Pembayaran</label>
+                <label htmlFor="invoice-detail-termin-pembayaran" className="block text-xs font-medium text-ink mb-2">Termin Pembayaran</label>
                 <div className="p-3 border border-line rounded-md bg-surface space-y-3">
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <p className="text-xs text-muted mb-1">Total Tagihan (Rp) *</p>
-                      <NumberInput
+                      <NumberInput id="invoice-detail-termin-pembayaran"
                         value={editForm.total_amount}
                         onValueChange={(v) => setEditForm((f) => ({ ...f, total_amount: v }))}
                         className="w-full px-2.5 py-1.5 border border-line-strong rounded-md text-xs text-ink outline-none focus:ring-1 focus:ring-accent/25"
@@ -720,7 +723,7 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
                       <div className="space-y-1">
                         {payments.map((p) => (
                           <div key={p.id} className="flex items-center justify-between text-xs bg-white rounded px-2.5 py-1.5 border border-line">
-                            <span className="text-muted">{new Date(p.payment_date).toLocaleDateString("id-ID")}</span>
+                            <span className="text-muted">{formatDate(p.payment_date)}</span>
                             <span className="text-faint hidden sm:block">{METHOD_LABELS[p.payment_method]}</span>
                             <span className="font-medium text-success">{formatRupiah(p.amount)}</span>
                           </div>
@@ -737,8 +740,8 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
 
               {/* Status */}
               <div>
-                <label className="block text-xs font-medium text-ink mb-1.5">Status</label>
-                <select
+                <label htmlFor="invoice-detail-status" className="block text-xs font-medium text-ink mb-1.5">Status</label>
+                <select id="invoice-detail-status"
                   value={editForm.status}
                   onChange={(e) => setEditForm((f) => ({ ...f, status: e.target.value as InvoiceStatus }))}
                   className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25"
@@ -751,8 +754,8 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
 
               {/* Catatan */}
               <div>
-                <label className="block text-xs font-medium text-ink mb-1.5">Catatan</label>
-                <textarea
+                <label htmlFor="invoice-detail-catatan-2" className="block text-xs font-medium text-ink mb-1.5">Catatan</label>
+                <textarea id="invoice-detail-catatan-2"
                   value={editForm.notes}
                   onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))}
                   rows={2}
@@ -782,32 +785,6 @@ export default function InvoiceDetail({ invoiceId }: { invoiceId: string }) {
         </div>
       )}
 
-      {/* Delete payment confirm */}
-      {deletingPaymentId && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
-          onClick={() => setDeletingPaymentId(null)}
-        >
-          <div className="bg-white rounded-lg shadow-2xl p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-sm font-semibold text-ink mb-2">Hapus Pembayaran?</h3>
-            <p className="text-xs text-muted mb-5">Status invoice akan dihitung ulang secara otomatis.</p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setDeletingPaymentId(null)}
-                className="flex-1 px-4 py-2 text-sm font-medium text-muted bg-hover rounded-md hover:bg-hover transition-colors"
-              >
-                Batal
-              </button>
-              <button
-                onClick={() => handleDeletePayment(deletingPaymentId)}
-                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-danger rounded-md hover:bg-danger/90 transition-colors"
-              >
-                Hapus
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import type { GeneralExpense, GeneralExpenseKategori } from "@/types/db";
 import { addGeneralExpense, updateGeneralExpense } from "@/services/generalExpenses";
 import { Select } from "@/components/Select";
 import { NumberInput } from "@/components/NumberInput";
+import { DialogA11y } from "@/components/DialogA11y";
 
 const KATEGORI_OPTIONS: { value: GeneralExpenseKategori; label: string }[] = [
   { value: "operasional", label: "Operasional Kantor" },
@@ -103,6 +104,7 @@ export function GeneralExpenseFormModal({ open, onClose, onSaved, expense }: Pro
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg">
+        <DialogA11y onClose={onClose} />
         <div className="flex items-center justify-between p-6 border-b border-line">
           <h2 className="text-base font-semibold text-ink">
             {isEdit ? "Edit Pengeluaran" : "Tambah Pengeluaran"}
@@ -120,8 +122,8 @@ export function GeneralExpenseFormModal({ open, onClose, onSaved, expense }: Pro
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-ink mb-1">Tanggal</label>
-              <input
+              <label htmlFor="general-expense-form-modal-tanggal" className="block text-xs font-medium text-ink mb-1">Tanggal</label>
+              <input id="general-expense-form-modal-tanggal"
                 type="date"
                 value={form.tanggal}
                 onChange={(e) => set("tanggal", e.target.value)}
@@ -130,8 +132,8 @@ export function GeneralExpenseFormModal({ open, onClose, onSaved, expense }: Pro
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-ink mb-1">Kategori</label>
-              <Select
+              <label htmlFor="general-expense-form-modal-kategori" className="block text-xs font-medium text-ink mb-1">Kategori</label>
+              <Select id="general-expense-form-modal-kategori"
                 value={form.kategori}
                 onChange={(v) => set("kategori", v)}
                 options={KATEGORI_OPTIONS}
@@ -141,8 +143,8 @@ export function GeneralExpenseFormModal({ open, onClose, onSaved, expense }: Pro
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-ink mb-1">Deskripsi</label>
-            <input
+            <label htmlFor="general-expense-form-modal-deskripsi" className="block text-xs font-medium text-ink mb-1">Deskripsi</label>
+            <input id="general-expense-form-modal-deskripsi"
               type="text"
               value={form.deskripsi}
               onChange={(e) => set("deskripsi", e.target.value)}
@@ -154,8 +156,8 @@ export function GeneralExpenseFormModal({ open, onClose, onSaved, expense }: Pro
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-ink mb-1">Sub-kategori <span className="text-faint">(opsional)</span></label>
-              <input
+              <label htmlFor="general-expense-form-modal-sub-kategori-opsional" className="block text-xs font-medium text-ink mb-1">Sub-kategori <span className="text-faint">(opsional)</span></label>
+              <input id="general-expense-form-modal-sub-kategori-opsional"
                 type="text"
                 value={form.sub_kategori}
                 onChange={(e) => set("sub_kategori", e.target.value)}
@@ -164,8 +166,8 @@ export function GeneralExpenseFormModal({ open, onClose, onSaved, expense }: Pro
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-ink mb-1">Jumlah (Rp)</label>
-              <NumberInput
+              <label htmlFor="general-expense-form-modal-jumlah-rp" className="block text-xs font-medium text-ink mb-1">Jumlah (Rp)</label>
+              <NumberInput id="general-expense-form-modal-jumlah-rp"
                 value={form.jumlah}
                 onValueChange={(v) => set("jumlah", v)}
                 placeholder="0"
@@ -176,8 +178,8 @@ export function GeneralExpenseFormModal({ open, onClose, onSaved, expense }: Pro
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-ink mb-1">Vendor / Penerima <span className="text-faint">(opsional)</span></label>
-            <input
+            <label htmlFor="general-expense-form-modal-vendor-penerima-opsional" className="block text-xs font-medium text-ink mb-1">Vendor / Penerima <span className="text-faint">(opsional)</span></label>
+            <input id="general-expense-form-modal-vendor-penerima-opsional"
               type="text"
               value={form.vendor}
               onChange={(e) => set("vendor", e.target.value)}
@@ -187,8 +189,8 @@ export function GeneralExpenseFormModal({ open, onClose, onSaved, expense }: Pro
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-ink mb-1">Catatan <span className="text-faint">(opsional)</span></label>
-            <textarea
+            <label htmlFor="general-expense-form-modal-catatan-opsional" className="block text-xs font-medium text-ink mb-1">Catatan <span className="text-faint">(opsional)</span></label>
+            <textarea id="general-expense-form-modal-catatan-opsional"
               value={form.notes}
               onChange={(e) => set("notes", e.target.value)}
               rows={2}

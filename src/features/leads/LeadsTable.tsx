@@ -23,7 +23,7 @@ import {
   SOURCES,
   toOptions,
 } from "@/constants/options";
-import { formatDate, formatRupiah } from "@/utils/format";
+import { formatDate, formatRupiah, formatDateISO } from "@/utils/format";
 import { LeadFormModal } from "./LeadFormModal";
 import { LeadViewModal } from "./LeadViewModal";
 import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
@@ -127,10 +127,10 @@ export default function LeadsTable() {
         Sumber: l.source ?? "",
         Budget: l.budget ?? "",
         "Nominal Deal": l.nominal_deal ?? "",
-        "Follow Up": formatDate(l.follow_up_date),
-        "Last Contact": formatDate(l.last_contacted_at),
-        "Ditutup": formatDate(l.closed_at),
-        "Updated": formatDate(l.updated_at),
+        "Follow Up": formatDateISO(l.follow_up_date),
+        "Last Contact": formatDateISO(l.last_contacted_at),
+        "Ditutup": formatDateISO(l.closed_at),
+        "Updated": formatDateISO(l.updated_at),
         Catatan: l.notes ?? "",
       })),
       "leads"
@@ -220,16 +220,17 @@ export default function LeadsTable() {
                   <div className="px-3 py-2 text-faint text-sm">Tidak ditemukan</div>
                 )}
                 {filteredClients.map((c: typeof clients[0]) => (
-                  <div
+                  <button
+                    type="button"
                     key={c.id}
-                    className={`px-3 py-2 cursor-pointer hover:bg-accent-soft text-sm text-ink ${selectedClient === c.id ? "bg-accent-soft" : ""}`}
+                    className={`block w-full text-left px-3 py-2 cursor-pointer hover:bg-accent-soft focus-visible:bg-accent-soft text-sm text-ink ${selectedClient === c.id ? "bg-accent-soft" : ""}`}
                     onClick={() => {
                       setSelectedClient(c.id);
                       setClientQuery(c.name + (c.phone ? ` (${c.phone})` : ""));
                     }}
                   >
                     {c.name} {c.phone && <span className="text-xs text-faint">({c.phone})</span>}
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
@@ -259,9 +260,9 @@ export default function LeadsTable() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Follow Up Date Range */}
           <div>
-            <label className="block text-xs font-medium text-muted mb-1">Follow Up Date</label>
+            <label htmlFor="leads-table-follow-up" className="block text-xs font-medium text-muted mb-1">Follow-up</label>
             <div className="flex items-center gap-2">
-              <input
+              <input id="leads-table-follow-up"
                 type="date"
                 value={followUpStart}
                 onChange={e => setFollowUpStart(e.target.value)}
@@ -278,9 +279,9 @@ export default function LeadsTable() {
           </div>
           {/* Updated At Date Range */}
           <div>
-            <label className="block text-xs font-medium text-muted mb-1">Updated At</label>
+            <label htmlFor="leads-table-diperbarui" className="block text-xs font-medium text-muted mb-1">Diperbarui</label>
             <div className="flex items-center gap-2">
-              <input
+              <input id="leads-table-diperbarui"
                 type="date"
                 value={updatedStart}
                 onChange={e => setUpdatedStart(e.target.value)}
@@ -305,17 +306,17 @@ export default function LeadsTable() {
             <thead className="bg-surface border-b border-line">
               <tr>
                 <th className="px-3 py-2 text-left text-xs font-medium text-muted whitespace-nowrap w-10"><span className="sr-only">Aksi</span></th>
-                <SortableHeader label="Client" col="client_name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                <SortableHeader label="Nama Project" col="project_name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableHeader label="Klien" col="client_name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableHeader label="Nama Proyek" col="project_name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Status" col="status" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                <SortableHeader label="Priority" col="priority" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableHeader label="Prioritas" col="priority" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <th className="px-3 py-2 text-right text-xs font-medium text-muted whitespace-nowrap">Nilai</th>
-                <th className="px-3 py-2 text-center text-xs font-medium text-muted whitespace-nowrap">No Response</th>
-                <SortableHeader label="Source" col="source" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                <SortableHeader label="Follow Up" col="follow_up_date" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                <SortableHeader label="Last Contact" col="last_contacted_at" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <th className="px-3 py-2 text-center text-xs font-medium text-muted whitespace-nowrap">Tanpa respons</th>
+                <SortableHeader label="Sumber" col="source" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableHeader label="Follow-up" col="follow_up_date" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableHeader label="Kontak terakhir" col="last_contacted_at" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <SortableHeader label="Closed At" col="closed_at" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                <SortableHeader label="Updated At" col="updated_at" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableHeader label="Diperbarui" col="updated_at" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <th className="px-3 py-2 text-left text-xs font-medium text-muted whitespace-nowrap">Catatan</th>
               </tr>
             </thead>
@@ -365,10 +366,10 @@ export default function LeadsTable() {
                       />
                     </td>
                     <td className="px-3 py-2 font-medium text-ink whitespace-nowrap">
-                      <div>{client?.name || "-"}</div>
+                      <div>{client?.name || "—"}</div>
                       {client?.phone && <div className="text-xs text-faint">{client.phone}</div>}
                     </td>
-                    <td className="px-3 py-2 text-ink whitespace-nowrap">{lead.project_name || "-"}</td>
+                    <td className="px-3 py-2 text-ink whitespace-nowrap">{lead.project_name || "—"}</td>
                     <td className="px-3 py-2 whitespace-nowrap">
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${LEAD_STATUS_COLORS[lead.status] || "tone-neutral"}`}>
                         {lead.status}
@@ -384,7 +385,7 @@ export default function LeadsTable() {
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${PRIORITY_COLORS[lead.priority] || "tone-neutral"}`}>
                           {lead.priority}
                         </span>
-                      ) : <span className="text-faint">-</span>}
+                      ) : <span className="text-faint">—</span>}
                     </td>
                     <td className="px-3 py-2 text-right whitespace-nowrap">
                       {lead.nominal_deal != null ? (
@@ -392,7 +393,7 @@ export default function LeadsTable() {
                       ) : lead.budget != null ? (
                         <span className="text-faint italic" title="Estimasi budget, belum final">{formatRupiah(lead.budget)}</span>
                       ) : (
-                        <span className="text-faint">-</span>
+                        <span className="text-faint">—</span>
                       )}
                     </td>
                     <td className="px-3 py-2 text-center whitespace-nowrap">
@@ -400,9 +401,9 @@ export default function LeadsTable() {
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${lead.no_response_count >= 2 ? "tone-danger" : "tone-neutral"}`}>
                           {lead.no_response_count}
                         </span>
-                      ) : <span className="text-faint">-</span>}
+                      ) : <span className="text-faint">—</span>}
                     </td>
-                    <td className="px-3 py-2 text-muted whitespace-nowrap">{lead.source || client?.source || "-"}</td>
+                    <td className="px-3 py-2 text-muted whitespace-nowrap">{lead.source || client?.source || "—"}</td>
                     <td className="px-3 py-2 whitespace-nowrap">
                       {(() => {
                         const overdue = !!lead.follow_up_date
@@ -418,7 +419,7 @@ export default function LeadsTable() {
                     <td className="px-3 py-2 text-muted whitespace-nowrap">{formatDate(lead.last_contacted_at)}</td>
                     <td className="px-3 py-2 text-muted whitespace-nowrap">{formatDate(lead.closed_at)}</td>
                     <td className="px-3 py-2 text-muted whitespace-nowrap">{formatDate(lead.updated_at)}</td>
-                    <td className="px-3 py-2 text-muted max-w-[160px] truncate">{lead.notes || "-"}</td>
+                    <td className="px-3 py-2 text-muted max-w-[160px] truncate">{lead.notes || "—"}</td>
                   </tr>
                 );
               })}
@@ -455,7 +456,7 @@ export default function LeadsTable() {
             return (
               <MobileCard key={lead.id} onClick={() => router.push(`/leads/${lead.id}`)}>
                 <MobileCardHeader
-                  title={client?.name || "-"}
+                  title={client?.name || "—"}
                   subtitle={client?.phone ? <span className="text-xs text-faint">{client.phone}</span> : undefined}
                   actions={
                     <>
@@ -465,7 +466,7 @@ export default function LeadsTable() {
                     </>
                   }
                 />
-                <MobileCardRow label="Nama Project">{lead.project_name || "-"}</MobileCardRow>
+                <MobileCardRow label="Nama Proyek">{lead.project_name || "—"}</MobileCardRow>
                 <MobileCardRow label="Status">
                   <span className="inline-flex items-center gap-1.5">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${LEAD_STATUS_COLORS[lead.status] || "tone-neutral"}`}>
@@ -476,31 +477,31 @@ export default function LeadsTable() {
                     )}
                   </span>
                 </MobileCardRow>
-                <MobileCardRow label="Priority">
+                <MobileCardRow label="Prioritas">
                   {lead.priority ? (
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${PRIORITY_COLORS[lead.priority] || "tone-neutral"}`}>
                       {lead.priority}
                     </span>
-                  ) : "-"}
+                  ) : "—"}
                 </MobileCardRow>
                 <MobileCardRow label="Nilai">
                   {lead.nominal_deal != null
                     ? formatRupiah(lead.nominal_deal)
-                    : lead.budget != null ? formatRupiah(lead.budget) : "-"}
+                    : lead.budget != null ? formatRupiah(lead.budget) : "—"}
                 </MobileCardRow>
-                <MobileCardRow label="No Response">
+                <MobileCardRow label="Tanpa respons">
                   {lead.no_response_count ? (
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${lead.no_response_count >= 2 ? "tone-danger" : "tone-neutral"}`}>
                       {lead.no_response_count}
                     </span>
-                  ) : "-"}
+                  ) : "—"}
                 </MobileCardRow>
-                <MobileCardRow label="Source">{lead.source || client?.source || "-"}</MobileCardRow>
-                <MobileCardRow label="Follow Up">
+                <MobileCardRow label="Sumber">{lead.source || client?.source || "—"}</MobileCardRow>
+                <MobileCardRow label="Follow-up">
                   <span className={overdue ? "text-danger font-medium" : ""}>{formatDate(lead.follow_up_date)}</span>
                 </MobileCardRow>
-                <MobileCardRow label="Last Contact">{formatDate(lead.last_contacted_at)}</MobileCardRow>
-                <MobileCardRow label="Updated At">{formatDate(lead.updated_at)}</MobileCardRow>
+                <MobileCardRow label="Kontak terakhir">{formatDate(lead.last_contacted_at)}</MobileCardRow>
+                <MobileCardRow label="Diperbarui">{formatDate(lead.updated_at)}</MobileCardRow>
                 {lead.notes && <MobileCardRow label="Catatan">{lead.notes}</MobileCardRow>}
               </MobileCard>
             );
