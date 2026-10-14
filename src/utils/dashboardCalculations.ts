@@ -138,19 +138,25 @@ export function buildDashboard(input: DashboardInput, period: Period, today: str
 
   // ── Perlu tindakan (posisi hari ini, diurutkan menurut dampak uang) ──
   const actions: ActionItem[] = [];
+  const debtorMap = new Map<string, { client: string; amount: number; count: number }>();
   for (const inv of openInvoices) {
     if (!inv.due_date) continue;
     const late = daysBetween(day(inv.due_date), today);
     if (late <= 0) continue;
     const sisa = inv.total_amount - inv.paid_amount;
     const proj = projects.find((p) => p.id === inv.project_id);
+    const client = clientNames[inv.client_id ?? proj?.client_id ?? ""] ?? "";
     actions.push({
       tone: "danger", weight: sisa,
-      title: `Tagih ${inv.paid_amount > 0 ? "sisa " : ""}${shortIDR(sisa)}${clientNames[inv.client_id ?? proj?.client_id ?? ""] ? `, ${clientNames[inv.client_id ?? proj?.client_id ?? ""]}` : ""}`,
+      title: `Tagih ${inv.paid_amount > 0 ? "sisa " : ""}${shortIDR(sisa)}${client ? `, ${client}` : ""}`,
       detail: `${inv.invoice_number} · lewat ${late} hari${proj ? ` · ${proj.name}` : ""}`,
       href: `/invoices/${inv.id}`,
     });
+    const debtor = debtorMap.get(client) ?? { client: client || "Tanpa klien", amount: 0, count: 0 };
+    debtor.amount += sisa; debtor.count++;
+    debtorMap.set(client, debtor);
   }
+  const debtors = [...debtorMap.values()].sort((a, b) => b.amount - a.amount);
   for (const h of health) {
     if (h.cost > 0 && h.costPct - h.progress >= 30) {
       actions.push({ tone: "danger", weight: h.cost, title: `${h.name}: biaya ${Math.round(h.costPct)}% kontrak, progres ${h.progress}%`, detail: "Biaya berjalan lebih cepat dari pekerjaan", href: `/projects/${h.id}` });
@@ -172,9 +178,9 @@ export function buildDashboard(input: DashboardInput, period: Period, today: str
 
   return {
     period, kasMasuk, pengeluaran, biayaProyek, biayaUmum, labaKotor, labaBersih,
-    projCost, genCost, months, aging, piutang, piutangLewat,
+    projCost, genCost, months, aging, piutang, piutangLewat, debtors,
     health, kontrakBerjalan, belumDitagih, lateProjects: lateProjects.length,
-    funnel, winRate, avgCloseDays, nilaiDeal, wonCount: won.length, sources, marketing,
+    funnel, winRate, avgCloseDays, nilaiDeal, wonCount: won.length, closedCount: closed.length, sources, marketing,
     actions,
   };
 }

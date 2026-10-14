@@ -14,6 +14,7 @@ import {
   type DashboardData, type Period, type PeriodKind,
 } from "@/utils/dashboardCalculations";
 import type { ExpenseCategory, GeneralExpenseKategori } from "@/types/db";
+import { buildInsights, isBehind, isOverCost, type Insight } from "@/utils/dashboardInsights";
 import { formatDate } from "@/utils/format";
 
 /**
@@ -60,7 +61,9 @@ const barLabel = (v: number) => shortIDR(v).replace("Rp", "");
 
 /* ───────────────────────── building blocks ───────────────────────── */
 
-function Card({ title, sub, children, className = "" }: { title: string; sub?: ReactNode; children: ReactNode; className?: string }) {
+const INSIGHT_DOT: Record<Insight["tone"], string> = { info: "bg-accent", success: "bg-success", warning: "bg-warning", danger: "bg-danger" };
+
+function Card({ title, sub, insights, children, className = "" }: { title: string; sub?: ReactNode; insights?: Insight[]; children: ReactNode; className?: string }) {
   return (
     <section className={`bg-white rounded-md border border-line flex flex-col min-w-0 ${className}`}>
       <header className="px-4 pt-3 space-y-0.5">
@@ -68,6 +71,16 @@ function Card({ title, sub, children, className = "" }: { title: string; sub?: R
         {sub && <p className="text-xs text-muted">{sub}</p>}
       </header>
       <div className="px-4 pt-2.5 pb-4 flex-1">{children}</div>
+      {insights && insights.length > 0 && (
+        <ul className="mx-4 mb-3.5 pt-3 border-t border-line grid gap-1.5" aria-label="Penjelasan">
+          {insights.map((s, i) => (
+            <li key={i} className="grid grid-cols-[10px_1fr] gap-2 items-baseline text-xs text-muted leading-relaxed">
+              <span className={`w-[7px] h-[7px] rounded-full ${INSIGHT_DOT[s.tone]}`} aria-hidden="true" />
+              <span>{s.text}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
@@ -300,6 +313,7 @@ export default function DashboardV2() {
     leads, projects, invoices, payments, projectExpenses, generalExpenses, rabTotals,
     clientNames: Object.fromEntries(clients.map((c) => [c.id, c.name])),
   }, period, today), [leads, projects, invoices, payments, projectExpenses, generalExpenses, rabTotals, clients, period.from, period.to, today]); // eslint-disable-line react-hooks/exhaustive-deps
+  const insights = useMemo(() => buildInsights(d), [d]);
 
   if (lc || ll || lp || li || lpay || lpe || lge || lr) {
     return (
@@ -417,6 +431,7 @@ export default function DashboardV2() {
             ? `Saldo kas ${d.labaBersih >= 0 ? "naik" : "turun"} ${shortIDR(Math.abs(d.labaBersih))} dalam periode ini${bestMonth.masuk > 0 ? `, pemasukan terbesar di ${bestMonth.label}` : ""}`
             : "Belum ada kas masuk atau keluar di periode ini"}
           sub={`Masuk vs keluar per bulan, dan saldo kumulatif sejak ${d.months[0].label} · juta rupiah`}
+          insights={insights.cashflow}
         >
           <Keys items={[{ label: "Kas masuk", color: C.s1 }, { label: "Pengeluaran", color: C.s2 }, { label: "Saldo kumulatif", color: C.ink, kind: "line" }]} />
           <CashFlowChart months={d.months} />
@@ -428,6 +443,7 @@ export default function DashboardV2() {
         <Card
           title={d.kasMasuk > 0 ? `Dari setiap Rp100 yang masuk, Rp${Math.round((d.labaBersih / d.kasMasuk) * 100)} jadi laba bersih` : "Belum ada kas masuk di periode ini"}
           sub={biggestCost.length > 0 ? `Biaya terbesar: ${biggestCost.map(([k, v]) => `${(EXPENSE_LABELS as Record<string, string>)[k] ?? (GENERAL_LABELS as Record<string, string>)[k]} ${barLabel(v)}`).join(" dan ")} · juta rupiah` : "Belum ada biaya tercatat"}
+          insights={insights.profit}
         >
           {hasMoney ? (
             <>
@@ -439,6 +455,7 @@ export default function DashboardV2() {
         <Card
           title={d.piutang === 0 ? "Tidak ada piutang" : d.piutangLewat === d.piutang ? "Semua piutang sudah lewat jatuh tempo" : `${pct((d.piutangLewat / d.piutang) * 100)} piutang sudah lewat jatuh tempo`}
           sub={`Umur piutang · total ${shortIDR(d.piutang)} · juta rupiah`}
+          insights={insights.aging}
         >
           {d.piutang > 0 ? <AgingChart aging={d.aging} /> : <Empty>Semua invoice sudah lunas.</Empty>}
         </Card>
@@ -449,14 +466,15 @@ export default function DashboardV2() {
         <Card
           title={d.health.length === 0 ? "Belum ada proyek berjalan" : lateHealth > 0 ? `${lateHealth} dari ${d.health.length} proyek berjalan sudah lewat tenggat` : "Semua proyek berjalan masih dalam tenggat"}
           sub="Progres, biaya terpakai (% kontrak), dan waktu yang sudah berjalan"
+          insights={insights.health}
         >
           {d.health.length > 0 && (
             <>
               <Keys items={[{ label: "Progres", color: C.ink }, { label: "Biaya / kontrak", color: C.s2 }, { label: "Waktu berjalan", color: C.danger, kind: "mark" }]} />
               <div className="grid gap-3">
                 {d.health.slice(0, 6).map((h) => {
-                  const behind = h.timePct != null && h.daysLate === 0 && h.timePct - h.progress >= 25;
-                  const overCost = h.cost > 0 && h.costPct - h.progress >= 30;
+                  const behind = isBehind(h);
+                  const overCost = isOverCost(h);
                   const note = [h.daysLate > 0 ? `Lewat ${h.daysLate} hari` : behind ? "Tertinggal jadwal" : "", overCost ? "biaya > progres" : ""].filter(Boolean).join(" · ");
                   return (
                     <Link key={h.id} href={`/projects/${h.id}`} className="block hover:bg-hover/60 -mx-1 px-1 rounded">
@@ -479,6 +497,7 @@ export default function DashboardV2() {
         <Card
           title={d.belumDitagih > 0 ? `${shortIDR(d.belumDitagih)} nilai kontrak belum ditagih${topUnbilled && d.belumDitagih > 0 ? `, ${pct((Math.max(0, topUnbilled.value - topUnbilled.billed) / d.belumDitagih) * 100)} dari ${topUnbilled.client || topUnbilled.name}` : ""}` : "Semua kontrak berjalan sudah ditagih"}
           sub="Komposisi nilai kontrak per proyek"
+          insights={insights.billing}
         >
           {d.health.length > 0 && (
             <>
@@ -506,6 +525,7 @@ export default function DashboardV2() {
         <Card
           title={openLeads === 0 ? "Tidak ada lead terbuka" : `${openLeads} lead terbuka, ${d.funnel[3].count > 0 ? `${d.funnel[3].count} sudah di tahap Deal` : "belum ada yang sampai tahap Deal"}`}
           sub="Jumlah lead per tahap pipeline · posisi hari ini"
+          insights={insights.funnel}
         >
           <div className="grid gap-3">
             {d.funnel.map((f) => (
@@ -526,6 +546,7 @@ export default function DashboardV2() {
         <Card
           title={!topSource ? "Belum ada lead baru di periode ini" : topSource.won > 0 ? `Deal terbanyak datang dari ${topSource.source}` : "Belum ada lead baru yang jadi deal di periode ini"}
           sub={`Lead baru per sumber dan hasilnya${d.marketing > 0 ? ` · biaya marketing ${shortIDR(d.marketing)}${d.wonCount > 0 ? `, ${shortIDR(d.marketing / d.wonCount)} per deal` : ""}` : ""}`}
+          insights={insights.sources}
         >
           {d.sources.length === 0 ? <Empty>Tidak ada lead yang dibuat di periode ini.</Empty> : (
             <>
