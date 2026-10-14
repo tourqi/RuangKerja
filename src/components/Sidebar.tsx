@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import React, { useState, type ComponentType, type SVGProps } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { Logo } from "@/components/Logo";
 import {
   GridIcon, UsersIcon, FunnelIcon, BuildingIcon, DocumentIcon, ChartBarIcon, BanknotesIcon,
 } from "@/components/icons/AppIcons";
@@ -109,11 +110,9 @@ export default function Sidebar() {
 
   const navContent = (
     <>
-      <div className="p-4 border-b border-line flex flex-col items-center">
-        <div className="bg-white rounded-md px-3 py-2">
-          <img src="/logo.png" alt="RuangKerja" className="w-14 h-auto" />
-        </div>
-      </div>
+      <Link href="/dashboard" className="h-12 px-4 border-b border-line flex items-center shrink-0">
+        <Logo markClassName="w-6 h-6" />
+      </Link>
       <nav className="flex-1 px-2.5 py-3 overflow-y-auto">
         <ul className="space-y-px">
           {navItems.map((item) => (
@@ -149,9 +148,9 @@ export default function Sidebar() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
-        <div className="ml-3 bg-white rounded-md px-1.5 py-1 flex items-center">
-          <img src="/logo.png" alt="RuangKerja" className="h-6 w-auto" />
-        </div>
+        <Link href="/dashboard" className="ml-3 flex items-center">
+          <Logo markClassName="w-6 h-6" />
+        </Link>
       </div>
 
       {/* Mobile overlay */}
@@ -169,7 +168,7 @@ export default function Sidebar() {
         }`}
       >
         <div className="flex items-center justify-between p-4 border-b border-line">
-          <span className="text-ink font-semibold">Menu</span>
+          <Logo markClassName="w-6 h-6" />
           <button onClick={() => setOpen(false)} className="text-muted hover:text-ink transition p-1">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
