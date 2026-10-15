@@ -10,6 +10,7 @@ import { useToast } from "@/components/Toast";
 import { ClientFormModal } from "./ClientFormModal";
 import { ClientViewModal } from "./ClientViewModal";
 import { ClientImportModal } from "./ClientImportModal";
+import { WhatsAppLink } from "@/components/WhatsAppLink";
 import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
 import { LeadFormModal } from "@/features/leads/LeadFormModal";
 import { ProjectFormModal } from "@/features/projects/ProjectFormModal";
@@ -313,7 +314,12 @@ export default function ClientsTable() {
                         {client.name}
                       </Link>
                     </td>
-                    <td className="px-3 py-2 text-muted whitespace-nowrap">{client.phone || "—"}</td>
+                    <td className="px-3 py-1 text-muted whitespace-nowrap">
+                      <div className="flex items-center gap-1">
+                        <span>{client.phone || "—"}</span>
+                        <WhatsAppLink phone={client.phone} />
+                      </div>
+                    </td>
                     <td className="px-3 py-2 text-muted max-w-[160px] truncate">{client.address || "—"}</td>
                     <td className="px-3 py-2 text-muted max-w-[150px] truncate">{client.project_name || "—"}</td>
                     <td className="px-3 py-2 text-muted whitespace-nowrap">{client.property_type || "—"}</td>
@@ -400,6 +406,7 @@ export default function ClientsTable() {
                     subtitle={client.phone ? <span className="text-xs text-faint">{client.phone}</span> : undefined}
                     actions={
                       <>
+                        <WhatsAppLink phone={client.phone} />
                         <MobileCardIconButton title="Lihat Detail" onClick={() => setViewingClient(client)}><EyeIcon /></MobileCardIconButton>
                         <MobileCardIconButton title="Edit" onClick={() => handleEdit(client)}><PencilIcon /></MobileCardIconButton>
                         <MobileCardIconButton title="Hapus" danger onClick={() => confirmDelete(client.id)}><TrashIcon /></MobileCardIconButton>

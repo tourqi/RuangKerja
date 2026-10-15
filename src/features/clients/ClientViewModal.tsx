@@ -2,6 +2,8 @@
 import { Client } from "@/types/db";
 import { CLIENT_LEAD_STATUS_COLORS, PRIORITY_COLORS } from "@/constants/options";
 import { DialogA11y } from "@/components/DialogA11y";
+import { WhatsAppLink } from "@/components/WhatsAppLink";
+import { whatsappUrl } from "@/utils/whatsapp";
 
 type Props = {
   client: Client;
@@ -22,6 +24,11 @@ export function ClientViewModal({ client, onClose, onEdit }: Props) {
           >✕</button>
         </div>
         <div className="px-6 py-5 space-y-4">
+          {whatsappUrl(client.phone) && (
+            <div className="flex justify-end">
+              <WhatsAppLink phone={client.phone} variant="button" />
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-4">
             {[
               { label: "Nama", value: client.name },

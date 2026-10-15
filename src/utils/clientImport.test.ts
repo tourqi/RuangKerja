@@ -56,3 +56,13 @@ describe("buildClientImportRows", () => {
     expect(rows[3].errors).toEqual(["Nama wajib diisi"]);
   });
 });
+
+describe("whatsappUrl", () => {
+  it("builds wa.me links only for mobile numbers", async () => {
+    const { whatsappUrl } = await import("./whatsapp");
+    expect(whatsappUrl("0812-3456-7890")).toBe("https://wa.me/6281234567890");
+    expect(whatsappUrl("+62 812 3456 7890")).toBe("https://wa.me/6281234567890");
+    expect(whatsappUrl("021-5551234")).toBeNull();
+    expect(whatsappUrl("")).toBeNull();
+  });
+});

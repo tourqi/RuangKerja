@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DetailTabs, useTabParam } from "@/components/DetailTabs";
 import { StatusDot, LEAD_STATUS_TONE } from "@/components/ui/StatusDot";
+import { WhatsAppLink } from "@/components/WhatsAppLink";
 
 const TAB_KEYS = ["ringkasan", "lead", "proyek", "invoice"] as const;
 import { formatIDR, formatDate } from "@/utils/format";
@@ -128,12 +129,15 @@ export default function ClientProfile({ clientId }: { clientId: string }) {
             <h1 className="text-xl font-semibold tracking-tight text-ink truncate">{client.name}</h1>
             <p className="text-[13px] text-muted mt-0.5">Bergabung {formatDate(client.created_at)}</p>
           </div>
-          <button
-            onClick={() => setEditOpen(true)}
-            className="self-start px-2.5 py-1.5 text-[13px] font-medium rounded-md border border-line bg-white text-ink hover:bg-hover transition-colors shrink-0"
-          >
-            Edit
-          </button>
+          <div className="self-start flex gap-2 shrink-0">
+            <WhatsAppLink phone={client.phone} variant="button" />
+            <button
+              onClick={() => setEditOpen(true)}
+              className="px-2.5 py-1.5 text-[13px] font-medium rounded-md border border-line bg-white text-ink hover:bg-hover transition-colors shrink-0"
+            >
+              Edit
+            </button>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[13px] text-muted">
           {client.lead_status && <StatusDot tone={LEAD_STATUS_TONE[client.lead_status] ?? "neutral"}>{client.lead_status}</StatusDot>}
