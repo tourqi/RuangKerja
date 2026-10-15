@@ -9,6 +9,7 @@ import { Client } from "@/types/db";
 import { useToast } from "@/components/Toast";
 import { ClientFormModal } from "./ClientFormModal";
 import { ClientViewModal } from "./ClientViewModal";
+import { ClientImportModal } from "./ClientImportModal";
 import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
 import { LeadFormModal } from "@/features/leads/LeadFormModal";
 import { ProjectFormModal } from "@/features/projects/ProjectFormModal";
@@ -56,6 +57,7 @@ export default function ClientsTable() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [viewingClient, setViewingClient] = useState<Client | null>(null);
+  const [showImport, setShowImport] = useState(false);
 
   // cross-modal flow: client → lead → project
   const [leadFlowClientId, setLeadFlowClientId] = useState<string | null>(null);
@@ -167,6 +169,12 @@ export default function ClientsTable() {
               onClick={handleExport}
             >
               ↓ Export CSV
+            </button>
+            <button
+              className="px-2.5 py-1.5 border border-line bg-white text-ink text-[13px] rounded-md hover:bg-hover transition-colors font-medium"
+              onClick={() => setShowImport(true)}
+            >
+              ↑ Import
             </button>
             <button
               className="px-2.5 py-1.5 bg-accent text-white text-[13px] rounded-md hover:bg-accent-hover transition font-medium"
@@ -498,6 +506,14 @@ export default function ClientsTable() {
           autoLeadId={projectFlowLeadId}
           onSaved={() => { setShowProjectFlow(false); setProjectFlowClientId(null); setProjectFlowLeadId(null); }}
           onClose={() => { setShowProjectFlow(false); setProjectFlowClientId(null); setProjectFlowLeadId(null); }}
+        />
+      )}
+
+      {showImport && (
+        <ClientImportModal
+          existingClients={clients ?? []}
+          onImported={() => { setShowImport(false); refetch(); }}
+          onClose={() => setShowImport(false)}
         />
       )}
 

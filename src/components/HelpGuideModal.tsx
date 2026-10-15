@@ -28,7 +28,7 @@ const SECTIONS: GuideSection[] = [
       { name: "Nama", required: true, rule: "Wajib diisi." },
       { name: "No. HP", required: true, rule: "Wajib diisi. Hanya angka, otomatis dipotong maksimal 13 digit." },
       { name: "Alamat, Nama Project", rule: "Opsional, teks bebas." },
-      { name: "Tipe Properti", rule: "Pilih salah satu: Rumah, Ruko, Apartemen, Tanah." },
+      { name: "Tipe Properti", rule: "Pilih salah satu: Rumah, Apartemen, Cafe, Toko, Kantor." },
       { name: "Budget", rule: "Pilih salah satu: < 500jt, 500jt - 1M, > 1M." },
       { name: "Status Lead, Sumber, Prioritas, Catatan", rule: "Opsional." },
     ],

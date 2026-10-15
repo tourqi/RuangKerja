@@ -117,7 +117,7 @@ export type Source = (typeof SOURCES)[number];
 
 // ------------------------------------------------------------------
 
-export const PROPERTY_TYPES = ["Rumah", "Ruko", "Apartemen", "Tanah"] as const;
+export const PROPERTY_TYPES = ["Rumah", "Apartemen", "Cafe", "Toko", "Kantor"] as const;
 
 export type PropertyType = (typeof PROPERTY_TYPES)[number];
 
