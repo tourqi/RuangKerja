@@ -43,6 +43,25 @@ export const RAB_STATUS_TONE: Record<string, StatusTone> = {
   approved: "success",
 };
 
+export const PRODUCT_STATUS_TONE: Record<string, StatusTone> = {
+  Draft: "neutral",
+  "Perlu validasi": "warning",
+  Final: "success",
+  Ditunda: "neutral",
+};
+
+export const EXPERIMENT_STATUS_TONE: Record<string, StatusTone> = {
+  "Belum mulai": "neutral",
+  Berjalan: "active",
+  Selesai: "success",
+};
+
+export const WARRANTY_STATUS_TONE: Record<string, StatusTone> = {
+  pending: "neutral",
+  done: "success",
+  skipped: "neutral",
+};
+
 export const LEAD_STATUS_TONE: Record<string, StatusTone> = {
   "New Lead": "neutral",
   Contacted: "active",

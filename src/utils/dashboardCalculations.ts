@@ -3,8 +3,10 @@
 
 import type {
   ExpenseCategory, GeneralExpense, GeneralExpenseKategori, Invoice, Lead, Payment, Project, ProjectExpense,
+  WarrantyFollowup,
 } from "@/types/db";
 import { getProjectValue } from "@/utils/projectValue";
+import { groupWarrantyFollowups } from "@/utils/warranty";
 
 export type PeriodKind = "30d" | "quarter" | "year" | "custom";
 export interface Period { from: string; to: string } // YYYY-MM-DD, inklusif
@@ -52,6 +54,7 @@ export interface DashboardInput {
   generalExpenses: GeneralExpense[];
   rabTotals: Record<string, number>;
   clientNames: Record<string, string>;
+  warrantyFollowups?: WarrantyFollowup[];
 }
 
 export interface ProjectHealth {
@@ -173,6 +176,16 @@ export function buildDashboard(input: DashboardInput, period: Period, today: str
   if (lateFollowUps.length > 0) {
     const oldest = Math.max(...lateFollowUps.map((l) => daysBetween(day(l.follow_up_date), today)));
     actions.push({ tone: "active", weight: -1, title: `${lateFollowUps.length} lead terlewat jadwal follow-up`, detail: `Paling lama ${oldest} hari`, href: "/leads" });
+  }
+  const warranty = groupWarrantyFollowups(input.warrantyFollowups ?? [], projects, today);
+  if (warranty.late.length + warranty.thisMonth.length > 0) {
+    actions.push({
+      tone: warranty.late.length > 0 ? "warning" : "active",
+      weight: -2,
+      title: `${warranty.late.length + warranty.thisMonth.length} follow-up garansi perlu dikerjakan`,
+      detail: warranty.late.length > 0 ? `${warranty.late.length} sudah telat` : "Jatuh tempo bulan ini",
+      href: "/garansi",
+    });
   }
   actions.sort((a, b) => b.weight - a.weight);
 

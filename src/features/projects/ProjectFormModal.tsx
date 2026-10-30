@@ -14,6 +14,7 @@ import {
   toOptions,
 } from "@/constants/options";
 import { formatDate } from "@/utils/format";
+import { DEFAULT_GARANSI_BULAN, localToday } from "@/utils/warranty";
 import { DialogA11y } from "@/components/DialogA11y";
 
 type Props = {
@@ -28,6 +29,7 @@ type Props = {
 
 const PROJECT_COLUMNS: (keyof Project)[] = [
   "client_id", "lead_id", "name", "value", "status", "start_date", "deadline", "assigned_to", "progress",
+  "bast_date", "garansi_bulan",
 ];
 
 /** Project name is derived from the lead — falls back to a dated label when the lead has none. */
@@ -160,6 +162,10 @@ export function ProjectFormModal({
       toast(`Nama project "${form.name}" sudah dipakai, tidak boleh duplikat`, "warning");
       return;
     }
+    if (form.status === "Done" && project?.status !== "Done" && !form.bast_date) {
+      toast("Isi tanggal BAST untuk menandai project Selesai", "warning");
+      return;
+    }
     setSaving(true);
     try {
       if (isEditing) {
@@ -280,11 +286,35 @@ export function ProjectFormModal({
               <label htmlFor="project-form-modal-status" className="block text-sm font-medium text-ink mb-1">Status <span className="text-danger">*</span></label>
               <Select id="project-form-modal-status"
                 value={form.status || "Planning"}
-                onChange={(v) => setForm((prev) => ({ ...prev, status: v as ProjectStatus }))}
+                onChange={(v) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    status: v as ProjectStatus,
+                    bast_date: v === "Done" ? prev.bast_date || localToday() : prev.bast_date,
+                  }))
+                }
                 options={toOptions(PROJECT_STATUSES, PROJECT_STATUS_LABELS)}
                 includeEmptyOption={false}
               />
             </div>
+            {/* Tanggal BAST — dasar jadwal Masa Garansi */}
+            {form.status === "Done" && (
+              <>
+                <div>
+                  <label htmlFor="project-form-modal-bast" className="block text-sm font-medium text-ink mb-1">Tanggal BAST <span className="text-danger">*</span></label>
+                  <input id="project-form-modal-bast" name="bast_date" value={form.bast_date || ""} onChange={handleChange} type="date" className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25" />
+                  <p className="text-xs text-faint mt-1">Jadwal follow-up garansi dihitung dari tanggal ini.</p>
+                </div>
+                <div>
+                  <label htmlFor="project-form-modal-garansi" className="block text-sm font-medium text-ink mb-1">Masa Garansi (bulan)</label>
+                  <NumberInput id="project-form-modal-garansi"
+                    value={form.garansi_bulan ?? DEFAULT_GARANSI_BULAN}
+                    onValueChange={(v) => setForm((prev) => ({ ...prev, garansi_bulan: v === "" ? undefined : Number(v) }))}
+                    className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25"
+                  />
+                </div>
+              </>
+            )}
             {/* Start Date */}
             <div>
               <label htmlFor="project-form-modal-mulai" className="block text-sm font-medium text-ink mb-1">Mulai</label>

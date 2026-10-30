@@ -22,6 +22,9 @@ const ROUTE_LABELS: Record<string, string> = {
   clients: "Clients",
   leads: "Leads",
   projects: "Projects",
+  products: "Produk",
+  garansi: "Masa Garansi",
+  marketing: "Marketing",
   reports: "Laporan",
   invoices: "Invoice",
   settings: "Pengaturan",
@@ -100,6 +103,7 @@ const TYPE_CONFIG: Record<NotificationType, { color: string; dot: string; hover:
   lead_stale: { color: "text-muted", dot: "bg-faint", hover: "hover:bg-hover" },
   lead_survey_overdue: { color: "text-accent", dot: "bg-accent", hover: "hover:bg-accent-soft" },
   lead_auto_lost: { color: "text-danger", dot: "bg-danger", hover: "hover:bg-danger-soft" },
+  warranty_followup_due: { color: "text-warning", dot: "bg-warning", hover: "hover:bg-warning-soft" },
 };
 
 const TYPE_LABELS: Record<NotificationType, string> = {
@@ -109,6 +113,7 @@ const TYPE_LABELS: Record<NotificationType, string> = {
   lead_stale: "Lead Stale",
   lead_survey_overdue: "Survey Overdue",
   lead_auto_lost: "Lead Auto-Lost",
+  warranty_followup_due: "Follow-up Garansi",
 };
 
 /* ── Notification bell ── */

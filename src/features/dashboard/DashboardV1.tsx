@@ -58,13 +58,15 @@ const EXPENSE_CATEGORY_COLORS: Record<ExpenseCategory, string> = {
   material: SERIES.blue, jasa: SERIES.orange, transport: SERIES.aqua, lainnya: SERIES.grey,
 };
 const SOURCE_ICONS: Record<string, { icon: IconComponent; tint: string }> = {
-  Instagram: { icon: CameraIcon, tint: "bg-surface text-muted" },
-  TikTok: { icon: MusicNoteIcon, tint: "bg-surface text-muted" },
-  Website: { icon: GlobeIcon, tint: "bg-surface text-muted" },
   Referral: { icon: LinkIcon, tint: "bg-surface text-muted" },
-  "Walk-in": { icon: MapPinIcon, tint: "bg-surface text-muted" },
-  Marketplace: { icon: ShoppingBagIcon, tint: "bg-surface text-muted" },
-  "Ads (Google/Facebook)": { icon: MegaphoneIcon, tint: "bg-surface text-muted" },
+  "Google Maps": { icon: MapPinIcon, tint: "bg-surface text-muted" },
+  Instagram: { icon: CameraIcon, tint: "bg-surface text-muted" },
+  Threads: { icon: CameraIcon, tint: "bg-surface text-muted" },
+  TikTok: { icon: MusicNoteIcon, tint: "bg-surface text-muted" },
+  "Iklan Meta": { icon: MegaphoneIcon, tint: "bg-surface text-muted" },
+  Website: { icon: GlobeIcon, tint: "bg-surface text-muted" },
+  "Klien Lama": { icon: UsersIcon, tint: "bg-surface text-muted" },
+  Lainnya: { icon: ShoppingBagIcon, tint: "bg-surface text-muted" },
 };
 
 const fmt = (v?: number) =>

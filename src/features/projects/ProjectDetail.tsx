@@ -13,6 +13,7 @@ import { useToast } from "@/components/Toast";
 import ActivityTimeline from "@/components/ActivityTimeline";
 import { NumberInput } from "@/components/NumberInput";
 import { InvoiceFormModal } from "@/features/invoices/InvoiceFormModal";
+import { ProjectWarrantyTab } from "@/features/garansi/ProjectWarrantyTab";
 import type { ExpenseCategory, Invoice, Payment, ProjectExpense, Rab, RabGroup } from "@/types/db";
 import { projectStatusLabel } from "@/types/db";
 import { formatIDR, formatDate } from "@/utils/format";
@@ -21,7 +22,7 @@ import { DetailTabs, useTabParam } from "@/components/DetailTabs";
 import { StatusDot, PROJECT_STATUS_TONE, INVOICE_STATUS_TONE } from "@/components/ui/StatusDot";
 import { useConfirm } from "@/components/ConfirmProvider";
 
-const TAB_KEYS = ["ringkasan", "rab", "pengeluaran", "tagihan"] as const;
+const TAB_KEYS = ["ringkasan", "rab", "pengeluaran", "tagihan", "garansi"] as const;
 
 const formatCurrency = (v: number) =>
   formatIDR(v);
@@ -57,7 +58,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
   const router = useRouter();
   const toast = useToast();
   const confirm = useConfirm();
-  const { projects, loading: lp, error: projectsError } = useProjects();
+  const { projects, loading: lp, error: projectsError, refetch: refetchProjects } = useProjects();
   const { clients, loading: lc } = useClients();
   const { leads } = useLeads();
   const { user } = useAuth();
@@ -370,10 +371,15 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
           { key: "rab", label: "RAB", count: allRabs.length },
           { key: "pengeluaran", label: "Pengeluaran", count: expenses.length },
           { key: "tagihan", label: "Tagihan & Pembayaran", count: projectInvoices.length },
+          { key: "garansi", label: "Garansi" },
         ]}
         active={activeTab}
         onChange={setActiveTab}
       />
+
+      {activeTab === "garansi" && (
+        <ProjectWarrantyTab project={project} client={client} onChanged={refetchProjects} />
+      )}
 
       {activeTab === "rab" && (
         <ProjectRabSection
@@ -411,6 +417,10 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
           <div>
             <p className="text-xs font-medium text-faint mb-0.5">Tenggat</p>
             <p className="text-sm text-ink">{formatDate(project.deadline)}</p>
+          </div>
+          <div>
+            <p className="text-xs font-medium text-faint mb-0.5">Tanggal BAST</p>
+            <p className="text-sm text-ink">{formatDate(project.bast_date)}</p>
           </div>
           <div>
             <p className="text-xs font-medium text-faint mb-0.5">Nilai Project</p>

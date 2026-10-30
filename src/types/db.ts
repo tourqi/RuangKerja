@@ -54,6 +54,12 @@ export interface Lead {
   assigned_to?: string;
   created_by?: string;
   created_at?: string;
+  segmen?: string;
+  area?: string;
+  /** Perekomendasi saat source = Referral, mis. "PT ASK" atau nama teman. */
+  referred_by?: string;
+  /** Otomatis terisi saat masuk status Survey, bisa dikoreksi di form. */
+  survey_date?: string;
   /** Syarat transisi Contacted → Survey. */
   lokasi_survey?: string;
   /** Estimasi budget client, syarat transisi Survey → Deal & input formula priority. */
@@ -73,13 +79,58 @@ export interface Lead {
 export type LeadContactChannel = 'call' | 'whatsapp' | 'email' | 'meeting' | 'other';
 
 /** Log kontak (call/WA/dll) — syarat minimal 1 record sebelum lead boleh pindah ke Contacted. */
+export type LeadContactHasil = 'direspons' | 'tidak_direspons';
+
 export interface LeadContact {
   id: string;
   lead_id: string;
   channel: LeadContactChannel;
   notes?: string;
+  /** Kosong pada catatan lama. Trigger apply_lead_contact() memperbarui lead dari sini. */
+  hasil?: LeadContactHasil;
+  next_follow_up?: string;
   created_by?: string;
   created_at?: string;
+}
+
+export type ProductTangga = 'Entry' | 'Core' | 'Upsell' | 'Retensi';
+export type ProductStatus = 'Draft' | 'Perlu validasi' | 'Final' | 'Ditunda';
+export type ProductPrioritas = 'Utama' | 'Pendukung' | 'Ditunda';
+
+export interface Product {
+  id: string;
+  kode: string;
+  nama: string;
+  lini?: string;
+  kategori: string;
+  deskripsi?: string;
+  deliverable?: string;
+  sudah_termasuk?: string;
+  tidak_termasuk?: string;
+  satuan?: string;
+  harga_mulai?: number;
+  harga_sampai?: number;
+  estimasi_durasi?: string;
+  segmen?: string;
+  tangga?: ProductTangga;
+  status: ProductStatus;
+  catatan?: string;
+  prioritas?: ProductPrioritas;
+  aktif: boolean;
+  created_at?: string;
+}
+
+export interface LeadProduct {
+  lead_id: string;
+  product_id: string;
+  /** false = baru diminati. Otomatis true saat lead jadi Deal Won (trigger di create_products.sql). */
+  dibeli: boolean;
+  created_at?: string;
+}
+
+/** Baris lead_products plus status lead-nya, bahan hitung laporan produk. */
+export interface LeadProductUsage extends LeadProduct {
+  lead_status?: LeadStatus;
 }
 
 export type ProjectStatus = 'Planning' | 'Design' | 'Production' | 'Installation' | 'Done';
@@ -103,10 +154,56 @@ export interface Project {
   deadline?: string;
   assigned_to?: string;
   progress?: number;
+  /** Tanggal serah terima, wajib saat status Selesai. Jadwal garansi dihitung dari sini. */
+  bast_date?: string;
+  garansi_bulan?: number;
+  followup_dihentikan?: boolean;
+  created_at?: string;
+}
+
+export interface MarketingKpiMonthly {
+  /** Selalu tanggal 1 di bulan tersebut (YYYY-MM-01). */
+  bulan: string;
+  review_google_total?: number | null;
+  budget_iklan?: number | null;
+}
+
+export type ExperimentStatus = 'Belum mulai' | 'Berjalan' | 'Selesai';
+
+export interface MarketingExperiment {
+  id: string;
+  nama: string;
+  hipotesis?: string;
+  cara_uji?: string;
+  metrik?: string;
+  baseline?: string;
+  hasil?: string;
+  mulai?: string;
+  batas_evaluasi?: string;
+  status: ExperimentStatus;
+  keputusan?: string;
+  created_at?: string;
+}
+
+export type WarrantyFollowupStatus = 'pending' | 'done' | 'skipped';
+export type WarrantyKondisi = 'aman' | 'keluhan';
+
+export interface WarrantyFollowup {
+  id: string;
+  project_id: string;
+  bulan_ke: number;
+  due_date: string;
+  status: WarrantyFollowupStatus;
+  kondisi?: WarrantyKondisi;
+  tugas_selesai: boolean;
+  catatan?: string;
+  done_at?: string;
+  done_by?: string;
   created_at?: string;
 }
 
 export type RabStatus = 'draft' | 'sent' | 'approved';
+export type RabOpsi = 'Standar' | 'Hemat';
 
 export interface SkemaPembayaran {
   persen: number;
@@ -118,6 +215,9 @@ export interface Rab {
   lead_id: string;
   nama: string;
   status: RabStatus;
+  /** Tanggal SPH: otomatis terisi saat RAB pertama kali Terkirim/Disetujui. */
+  sent_at?: string;
+  opsi?: RabOpsi;
   diskon_persen?: number;
   diskon_nilai?: number;
   skema_pembayaran?: SkemaPembayaran[];
@@ -224,7 +324,8 @@ export type NotificationType =
   | 'invoice_overdue'
   | 'lead_stale'
   | 'lead_survey_overdue'
-  | 'lead_auto_lost';
+  | 'lead_auto_lost'
+  | 'warranty_followup_due';
 
 export interface Notification {
   id: string;

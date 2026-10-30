@@ -34,7 +34,7 @@ export async function getApprovedRabTotals(): Promise<Record<string, number>> {
 export async function getAllRabs(): Promise<Rab[]> {
   const { data, error } = await supabase
     .from('rab')
-    .select('id, lead_id, nama, status, created_at')
+    .select('id, lead_id, nama, status, sent_at, created_at')
     .order('created_at', { ascending: false });
   if (error) throw error;
   return data as Rab[];
@@ -79,7 +79,7 @@ export async function addRab(leadId: string, nama: string): Promise<Rab> {
   return data as Rab;
 }
 
-export async function updateRab(id: string, updates: Partial<Pick<Rab, 'nama' | 'status' | 'diskon_persen' | 'diskon_nilai' | 'skema_pembayaran'>>): Promise<Rab> {
+export async function updateRab(id: string, updates: Partial<Pick<Rab, 'nama' | 'status' | 'opsi' | 'diskon_persen' | 'diskon_nilai' | 'skema_pembayaran'>>): Promise<Rab> {
   const { data, error } = await supabase
     .from('rab')
     .update(updates)
