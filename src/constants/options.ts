@@ -103,17 +103,105 @@ export const PRIORITY_COLORS: Record<string, string> = {
 
 // ------------------------------------------------------------------
 
+// "Referral" dipakai compute_lead_priority() di DB, jangan diganti namanya.
 export const SOURCES = [
-  "Instagram",
-  "TikTok",
-  "Website",
   "Referral",
-  "Walk-in",
-  "Marketplace",
-  "Ads (Google/Facebook)",
+  "Google Maps",
+  "Instagram",
+  "Threads",
+  "TikTok",
+  "Iklan Meta",
+  "Website",
+  "Klien Lama",
+  "Lainnya",
 ] as const;
 
 export type Source = (typeof SOURCES)[number];
+
+/** Nilai leads.referred_by untuk lead dari PT ASK, dipakai KPI porsi omzet ASK. */
+export const REFERRAL_ASK = "PT ASK";
+
+export const LEAD_SEGMEN = ["Homeowners", "Partner B2B", "Kantor", "Cafe & Restoran"] as const;
+
+export const LEAD_AREAS = ["Bogor", "Jakarta", "Depok", "Bekasi", "Tangerang", "Lainnya"] as const;
+
+export const LOST_REASONS = [
+  "Harga",
+  "Pilih tukang harian",
+  "Pilih vendor lain",
+  "Ditunda",
+  "Tidak ada respons",
+  "Di luar area",
+  "Lainnya",
+] as const;
+
+export const RAB_OPSI = ["Standar", "Hemat"] as const;
+
+export const LEAD_CONTACT_HASIL_LABELS: Record<string, string> = {
+  direspons: "Direspons",
+  tidak_direspons: "Tidak direspons",
+};
+
+// ------------------------------------------------------------------
+
+/** Angka acuan dari KPI Bulanan di sheet tracking. */
+export const MARKETING_TARGETS = {
+  reviewAwal: 17,
+  reviewTarget: 30,
+  batasPorsiAsk: 0.5,
+};
+
+export const EXPERIMENT_STATUSES = ["Belum mulai", "Berjalan", "Selesai"] as const;
+
+// ------------------------------------------------------------------
+
+export const WARRANTY_STATUS_LABELS: Record<string, string> = {
+  pending: "Belum",
+  done: "Selesai",
+  skipped: "Dilewati",
+};
+
+export const WARRANTY_KONDISI_LABELS: Record<string, string> = {
+  aman: "Aman",
+  keluhan: "Ada keluhan",
+};
+
+/** Tugas tambahan follow-up, per bulan ke-. Bulan lain tidak punya tugas tambahan. */
+export const WARRANTY_TUGAS: Record<number, string> = {
+  1: "Minta review Google",
+  2: "Minta testimoni",
+  3: "Tawarkan referral",
+};
+
+// ------------------------------------------------------------------
+
+export const PRODUCT_LINI = ["Desain Studio", "Interior & Konstruksi", "Maintenance"] as const;
+
+export const PRODUCT_KATEGORI = [
+  "Desain",
+  "Custom Furniture",
+  "Finishing Interior",
+  "Sipil & Renovasi",
+  "Proyek Komersial",
+  "Perawatan",
+] as const;
+
+export const PRODUCT_SATUAN = ["per ruangan", "per m²", "per unit", "per set", "per proyek"] as const;
+
+export const PRODUCT_SEGMEN = ["Semua Segmen", "Homeowners", "Cafe & Restoran", "Perusahaan / Kantor"] as const;
+
+export const PRODUCT_TANGGA = ["Entry", "Core", "Upsell", "Retensi"] as const;
+
+export const PRODUCT_TANGGA_LABELS: Record<string, string> = {
+  Entry: "Entry (pintu masuk)",
+  Core: "Core (produk utama)",
+  Upsell: "Upsell (tambahan)",
+  Retensi: "Retensi (purna jual)",
+};
+
+export const PRODUCT_STATUSES = ["Draft", "Perlu validasi", "Final", "Ditunda"] as const;
+
+export const PRODUCT_PRIORITAS = ["Utama", "Pendukung", "Ditunda"] as const;
 
 // ------------------------------------------------------------------
 

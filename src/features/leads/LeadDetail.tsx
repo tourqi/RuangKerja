@@ -7,13 +7,15 @@ import { useClients } from "@/hooks/useClients";
 import { useRabList } from "@/hooks/useRab";
 import { useInvoices } from "@/hooks/useInvoices";
 import { useLeadContacts } from "@/hooks/useLeadContacts";
+import { useLeadProducts, useProducts } from "@/hooks/useProducts";
+import { setLeadProductDibeli } from "@/services/products";
 import { addRab, deleteRab, duplicateRab, updateRab } from "@/services/rab";
 import { addLeadContact } from "@/services/leadContacts";
 import { updateLead } from "@/services/leads";
 import { useToast } from "@/components/Toast";
 import { useState } from "react";
-import { Rab, LeadContactChannel } from "@/types/db";
-import { LEAD_CONTACT_CHANNELS, LEAD_CONTACT_CHANNEL_LABELS } from "@/constants/options";
+import { Rab, RabOpsi, LeadContactChannel, LeadContactHasil } from "@/types/db";
+import { LEAD_CONTACT_CHANNELS, LEAD_CONTACT_CHANNEL_LABELS, LEAD_CONTACT_HASIL_LABELS, RAB_OPSI } from "@/constants/options";
 import { LeadFormModal } from "./LeadFormModal";
 import { ActionDropdown } from "@/components/ActionDropdown";
 import { DetailTabs, useTabParam } from "@/components/DetailTabs";
@@ -52,6 +54,8 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
   const { rabList, loading: lr, refetch: refetchRab } = useRabList(leadId);
   const { invoices } = useInvoices();
   const { contacts, refetch: refetchContacts } = useLeadContacts(leadId);
+  const { products } = useProducts();
+  const { leadProducts, refetch: refetchLeadProducts } = useLeadProducts(leadId);
 
   const [activeTab, setActiveTab] = useTabParam(TAB_KEYS, "ringkasan");
   const [editOpen, setEditOpen] = useState(false);
@@ -61,6 +65,8 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [contactChannel, setContactChannel] = useState<LeadContactChannel>("call");
+  const [contactHasil, setContactHasil] = useState<LeadContactHasil>("direspons");
+  const [contactNextFollowUp, setContactNextFollowUp] = useState("");
   const [contactNotes, setContactNotes] = useState("");
   const [savingContact, setSavingContact] = useState(false);
 
@@ -145,6 +151,16 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
     }
   }
 
+  async function handleDibeliChange(productId: string, dibeli: boolean) {
+    try {
+      await setLeadProductDibeli(leadId, productId, dibeli);
+      await refetchLeadProducts();
+    } catch (err: unknown) {
+      const msg = (err as Error)?.message ?? String(err);
+      toast(`Gagal memperbarui produk: ${msg}`, "error");
+    }
+  }
+
   async function handleNoResponseChange(delta: 1 | -1) {
     if (!lead) return;
     const next = Math.max(0, (lead.no_response_count ?? 0) + delta);
@@ -160,13 +176,21 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
   async function handleAddContact() {
     setSavingContact(true);
     try {
-      await addLeadContact({ lead_id: leadId, channel: contactChannel, notes: contactNotes.trim() || undefined });
-      await refetchContacts();
+      await addLeadContact({
+        lead_id: leadId,
+        channel: contactChannel,
+        hasil: contactHasil,
+        next_follow_up: contactNextFollowUp || undefined,
+        notes: contactNotes.trim() || undefined,
+      });
+      await Promise.all([refetchContacts(), refetchLeads()]);
       setContactNotes("");
-      toast("Kontak dicatat", "success");
+      setContactNextFollowUp("");
+      setContactHasil("direspons");
+      toast("Interaksi dicatat", "success");
     } catch (err: unknown) {
       const msg = (err as Error)?.message ?? String(err);
-      toast(`Gagal mencatat kontak: ${msg}`, "error");
+      toast(`Gagal mencatat interaksi: ${msg}`, "error");
     } finally {
       setSavingContact(false);
     }
@@ -179,10 +203,19 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
     }
     try {
       await updateRab(rab.id, { status });
-      await refetchRab();
+      await Promise.all([refetchRab(), refetchLeads()]);
       toast("Status RAB diperbarui", "success");
     } catch {
       toast("Gagal memperbarui status", "error");
+    }
+  }
+
+  async function handleOpsiChange(rab: Rab, opsi: RabOpsi | null) {
+    try {
+      await updateRab(rab.id, { opsi: opsi as RabOpsi | undefined });
+      await refetchRab();
+    } catch {
+      toast("Gagal memperbarui opsi SPH", "error");
     }
   }
 
@@ -291,6 +324,9 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
           <InfoRow label="Klien" value={client?.name} />
           <InfoRow label="No. HP" value={client?.phone} />
           <InfoRow label="Sumber" value={lead.source} />
+          {lead.source === "Referral" && <InfoRow label="Direkomendasikan oleh" value={lead.referred_by} />}
+          <InfoRow label="Segmen" value={lead.segmen} />
+          <InfoRow label="Area" value={lead.area} />
           <InfoRow label="Status" value={lead.status} />
           <InfoRow label="Prioritas" value={lead.priority} />
           <div>
@@ -314,6 +350,7 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
           <InfoRow label="Follow-up" value={formatDate(lead.follow_up_date)} />
           <InfoRow label="Kontak terakhir" value={formatDate(lead.last_contacted_at)} />
           <InfoRow label="Ditutup" value={formatDate(lead.closed_at)} />
+          <InfoRow label="Tanggal Survey" value={formatDate(lead.survey_date)} />
           <InfoRow label="Lokasi Survey" value={lead.lokasi_survey} />
           <InfoRow label="Budget" value={formatCurrency(lead.budget)} />
           <InfoRow label="Nominal Deal" value={formatCurrency(lead.nominal_deal)} />
@@ -327,6 +364,41 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
         )}
       </div>
 
+      {/* Produk — "dibeli" baru relevan setelah Deal Won */}
+      <div className="bg-white rounded-md border border-line p-6 space-y-3">
+        <h2 className="text-sm font-semibold text-ink">Produk</h2>
+        {leadProducts.length === 0 ? (
+          <p className="text-sm text-faint">Belum ada produk dipilih. Tambahkan lewat tombol Edit.</p>
+        ) : (
+          <ul className="divide-y divide-line">
+            {leadProducts.map((row) => {
+              const product = products.find((p) => p.id === row.product_id);
+              return (
+                <li key={row.product_id} className="flex items-center justify-between gap-3 py-2 text-[13px]">
+                  <span className="min-w-0">
+                    <span className="text-ink font-medium">{product?.nama ?? "—"}</span>
+                    {product?.kategori && <span className="text-xs text-faint"> · {product.kategori}</span>}
+                  </span>
+                  {lead.status === "Deal Won" ? (
+                    <label className="flex items-center gap-2 text-xs text-muted cursor-pointer shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={row.dibeli}
+                        onChange={(e) => handleDibeliChange(row.product_id, e.target.checked)}
+                        className="accent-accent"
+                      />
+                      Dibeli
+                    </label>
+                  ) : (
+                    <span className="text-xs text-muted shrink-0">Diminati</span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+
       <ActivityTimeline entityType="lead" entityId={leadId} />
       </>)}
 
@@ -334,19 +406,49 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
       {activeTab === "kontak" && (
       <div className="space-y-4">
         <div className="bg-white rounded-md border border-line p-4 space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div>
+              <label htmlFor="lead-contact-channel" className="block text-xs font-medium text-muted mb-1">Kanal</label>
+              <select
+                id="lead-contact-channel"
+                value={contactChannel}
+                onChange={(e) => setContactChannel(e.target.value as LeadContactChannel)}
+                className="w-full border border-line rounded-md px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent/25"
+              >
+                {LEAD_CONTACT_CHANNELS.map((c) => (
+                  <option key={c} value={c}>{LEAD_CONTACT_CHANNEL_LABELS[c]}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="lead-contact-hasil" className="block text-xs font-medium text-muted mb-1">Hasil</label>
+              <select
+                id="lead-contact-hasil"
+                value={contactHasil}
+                onChange={(e) => setContactHasil(e.target.value as LeadContactHasil)}
+                className="w-full border border-line rounded-md px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent/25"
+              >
+                {Object.entries(LEAD_CONTACT_HASIL_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="lead-contact-next" className="block text-xs font-medium text-muted mb-1">Follow-up berikutnya</label>
+              <input
+                id="lead-contact-next"
+                type="date"
+                value={contactNextFollowUp}
+                onChange={(e) => setContactNextFollowUp(e.target.value)}
+                className="w-full border border-line rounded-md px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent/25"
+              />
+            </div>
+          </div>
           <div className="flex flex-col sm:flex-row gap-2">
-            <select
-              value={contactChannel}
-              onChange={(e) => setContactChannel(e.target.value as LeadContactChannel)}
-              className="border border-line rounded-md px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent/25"
-            >
-              {LEAD_CONTACT_CHANNELS.map((c) => (
-                <option key={c} value={c}>{LEAD_CONTACT_CHANNEL_LABELS[c]}</option>
-              ))}
-            </select>
             <input
               type="text"
-              placeholder="Catatan kontak (opsional)"
+              placeholder="Catatan interaksi (opsional)"
+              aria-label="Catatan interaksi"
               value={contactNotes}
               onChange={(e) => setContactNotes(e.target.value)}
               className="flex-1 border border-line rounded-md px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent/25"
@@ -356,9 +458,12 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
               disabled={savingContact}
               className="px-4 py-2 bg-accent text-white text-sm rounded-md hover:bg-accent-hover disabled:opacity-50 transition shrink-0"
             >
-              {savingContact ? "Menyimpan..." : "Catat Kontak"}
+              {savingContact ? "Menyimpan..." : "Catat Interaksi"}
             </button>
           </div>
+          {contactHasil === "tidak_direspons" && (lead.no_response_count ?? 0) >= 2 && lead.status !== "Deal Won" && lead.status !== "Deal Lost" && (
+            <p className="text-xs text-warning">Ini tanpa respons ke-3, lead otomatis jadi Deal Lost pada pengecekan harian berikutnya.</p>
+          )}
           {contacts.length === 0 ? (
             <p className="text-sm text-faint">Belum ada kontak tercatat. Wajib ada minimal 1 sebelum status bisa pindah ke Contacted.</p>
           ) : (
@@ -366,9 +471,13 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
               {contacts.map((c) => (
                 <div key={c.id} className="py-2 flex items-start justify-between gap-3">
                   <div>
-                    <span className="text-xs px-2 py-0.5 rounded-md border border-line text-muted">
-                      {LEAD_CONTACT_CHANNEL_LABELS[c.channel]}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span className="text-xs px-2 py-0.5 rounded-md border border-line text-muted">
+                        {LEAD_CONTACT_CHANNEL_LABELS[c.channel]}
+                      </span>
+                      {c.hasil && <span className="text-xs text-muted">{LEAD_CONTACT_HASIL_LABELS[c.hasil]}</span>}
+                      {c.next_follow_up && <span className="text-xs text-muted">Follow-up {formatDate(c.next_follow_up)}</span>}
+                    </div>
                     {c.notes && <p className="text-sm text-ink mt-1">{c.notes}</p>}
                   </div>
                   <p className="text-xs text-faint shrink-0">{formatDate(c.created_at)}</p>
@@ -440,9 +549,23 @@ export default function LeadDetail({ leadId }: { leadId: string }) {
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-faint mt-0.5">Dibuat {formatDate(rab.created_at)}</p>
+                  <p className="text-xs text-faint mt-0.5">
+                    Dibuat {formatDate(rab.created_at)}
+                    {rab.sent_at && ` · SPH dikirim ${formatDate(rab.sent_at)}`}
+                  </p>
                 </div>
                 <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                  <select
+                    aria-label={`Opsi SPH ${rab.nama}`}
+                    value={rab.opsi ?? ""}
+                    onChange={(e) => handleOpsiChange(rab, (e.target.value || null) as RabOpsi | null)}
+                    className="text-xs text-muted border border-line rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-accent/25"
+                  >
+                    <option value="">Tanpa opsi</option>
+                    {RAB_OPSI.map((opsi) => (
+                      <option key={opsi} value={opsi}>{opsi}</option>
+                    ))}
+                  </select>
                   <select
                     value={rab.status}
                     onChange={(e) => handleStatusChange(rab, e.target.value as Rab["status"])}

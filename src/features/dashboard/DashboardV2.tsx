@@ -4,6 +4,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { useClients } from "@/hooks/useClients";
 import { useLeads } from "@/hooks/useLeads";
 import { useProjects } from "@/hooks/useProjects";
+import { useWarrantyFollowups } from "@/hooks/useWarranty";
 import { useInvoices } from "@/hooks/useInvoices";
 import { useAllPayments } from "@/hooks/usePayments";
 import { useAllExpenses } from "@/hooks/useExpenses";
@@ -303,6 +304,7 @@ export default function DashboardV2() {
   const { expenses: projectExpenses, loading: lpe } = useAllExpenses();
   const { expenses: generalExpenses, loading: lge } = useGeneralExpenses();
   const { totals: rabTotals, loading: lr } = useApprovedRabTotals();
+  const { followups: warrantyFollowups } = useWarrantyFollowups();
 
   const today = todayISO();
   const [kind, setKind] = useState<PeriodKind>("year");
@@ -310,9 +312,9 @@ export default function DashboardV2() {
   const period = kind === "custom" ? custom : periodFor(kind, today);
 
   const d = useMemo(() => buildDashboard({
-    leads, projects, invoices, payments, projectExpenses, generalExpenses, rabTotals,
+    leads, projects, invoices, payments, projectExpenses, generalExpenses, rabTotals, warrantyFollowups,
     clientNames: Object.fromEntries(clients.map((c) => [c.id, c.name])),
-  }, period, today), [leads, projects, invoices, payments, projectExpenses, generalExpenses, rabTotals, clients, period.from, period.to, today]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, period, today), [leads, projects, invoices, payments, projectExpenses, generalExpenses, rabTotals, warrantyFollowups, clients, period.from, period.to, today]); // eslint-disable-line react-hooks/exhaustive-deps
   const insights = useMemo(() => buildInsights(d), [d]);
 
   if (lc || ll || lp || li || lpay || lpe || lge || lr) {

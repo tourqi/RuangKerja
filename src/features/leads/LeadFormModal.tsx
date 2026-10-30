@@ -6,11 +6,18 @@ import { useToast } from "@/components/Toast";
 import { Select } from "@/components/Select";
 import { NumberInput } from "@/components/NumberInput";
 import { useRabList } from "@/hooks/useRab";
+import { useLeadProducts, useProducts } from "@/hooks/useProducts";
+import { setLeadProducts } from "@/services/products";
+import { ProductPicker } from "@/features/products/ProductPicker";
 import { formatRupiah } from "@/utils/format";
 import { getStatusTransitionError, FOLLOW_UP_REQUIRED_STATUSES } from "@/utils/leadStatusGuard";
 import {
+  LEAD_AREAS,
+  LEAD_SEGMEN,
   LEAD_STATUSES,
+  LOST_REASONS,
   PRIORITY_COLORS,
+  REFERRAL_ASK,
   SOURCES,
   toOptions,
 } from "@/constants/options";
@@ -34,6 +41,7 @@ const LEAD_COLUMNS: (keyof Lead)[] = [
   "client_id", "status", "source", "project_name",
   "follow_up_date", "last_contacted_at", "closed_at", "notes",
   "lokasi_survey", "budget", "nominal_deal", "alasan_lost", "no_response_count",
+  "segmen", "area", "referred_by", "survey_date",
 ];
 
 export function LeadFormModal({ lead, clients, preselectedClientId, onSaved, onClose, onSavedAndAddProject }: Props) {
@@ -51,6 +59,10 @@ export function LeadFormModal({ lead, clients, preselectedClientId, onSaved, onC
   const [showDropdown, setShowDropdown] = useState(false);
   const { rabList } = useRabList(lead?.id ?? "");
   const hasApprovedRab = rabList.some((r) => r.status === "approved");
+  const { products } = useProducts();
+  const { leadProducts, refetch: refetchLeadProducts } = useLeadProducts(lead?.id ?? "");
+  // null = belum disentuh user, jadi data lead_products tidak ikut ditulis ulang.
+  const [pickedProductIds, setPickedProductIds] = useState<string[] | null>(null);
 
   useEffect(() => {
     if (!preselectedClientId || isEditing) return;
@@ -78,6 +90,19 @@ export function LeadFormModal({ lead, clients, preselectedClientId, onSaved, onC
 
   const handleClose = () => {
     onClose();
+  };
+
+  // Lead sudah tersimpan di titik ini, jadi kegagalan di sini tidak boleh
+  // terbaca sebagai gagal simpan lead (submit ulang akan membuat lead ganda).
+  const saveLeadProducts = async (leadId: string) => {
+    if (pickedProductIds === null) return;
+    try {
+      await setLeadProducts(leadId, pickedProductIds, form.status === "Deal Won");
+      await refetchLeadProducts();
+    } catch (err: unknown) {
+      const pg = err as { message?: string };
+      toast(`Lead tersimpan, tapi produk gagal disimpan: ${pg?.message || "periksa koneksi"}. Pilih ulang lewat Edit Lead.`, "error");
+    }
   };
 
   const handleSubmit = async (e: SyntheticEvent<HTMLFormElement>) => {
@@ -108,6 +133,7 @@ export function LeadFormModal({ lead, clients, preselectedClientId, onSaved, onC
         ) as Partial<Lead>;
         payload.status = (form.status || "New Lead") as LeadStatus;
         await updateLead(lead.id, payload);
+        await saveLeadProducts(lead.id);
         toast("Lead berhasil diperbarui", "success");
         onSaved();
       } else {
@@ -118,6 +144,7 @@ export function LeadFormModal({ lead, clients, preselectedClientId, onSaved, onC
         ) as Omit<Lead, "id" | "created_at">;
         payload.status = (form.status || "New Lead") as LeadStatus;
         const newLead = await addLead(payload);
+        await saveLeadProducts(newLead.id);
         toast("Lead berhasil ditambahkan", "success");
         if (onSavedAndAddProject) {
           setSavedLead(newLead);
@@ -242,6 +269,16 @@ export function LeadFormModal({ lead, clients, preselectedClientId, onSaved, onC
                 includeEmptyOption={false}
               />
             </div>
+            {/* Produk — boleh lebih dari satu */}
+            <div className="sm:col-span-2">
+              <label htmlFor="lead-form-modal-produk" className="block text-sm font-medium text-ink mb-1">Produk Diminati</label>
+              <ProductPicker
+                id="lead-form-modal-produk"
+                products={products}
+                value={pickedProductIds ?? leadProducts.map((row) => row.product_id)}
+                onChange={setPickedProductIds}
+              />
+            </div>
             {/* Lokasi Survey — syarat Contacted → Survey */}
             <div>
               <label htmlFor="lead-form-modal-lokasi-survey" className="block text-sm font-medium text-ink mb-1">Lokasi Survey</label>
@@ -255,15 +292,51 @@ export function LeadFormModal({ lead, clients, preselectedClientId, onSaved, onC
               />
               <p className="text-xs text-faint mt-1">Wajib diisi untuk pindah ke status Survey.</p>
             </div>
-            {/* Source (auto-filled from client) */}
+            {/* Source — default dari client, bisa beda per lead (mis. Klien Lama) */}
             <div>
               <label htmlFor="lead-form-modal-sumber" className="block text-sm font-medium text-ink mb-1">Sumber</label>
               <Select id="lead-form-modal-sumber"
                 value={form.source || ""}
-                onChange={() => {}}
+                onChange={(v) => setForm((prev) => ({ ...prev, source: v, referred_by: v === "Referral" ? prev.referred_by : "" }))}
                 options={toOptions(SOURCES)}
-                placeholder="Pilih Source"
-                disabled
+                placeholder="Pilih sumber"
+              />
+            </div>
+            {form.source === "Referral" && (
+              <div>
+                <label htmlFor="lead-form-modal-referred-by" className="block text-sm font-medium text-ink mb-1">Direkomendasikan oleh</label>
+                <input id="lead-form-modal-referred-by"
+                  type="text"
+                  name="referred_by"
+                  list="lead-form-modal-referred-by-options"
+                  value={form.referred_by || ""}
+                  onChange={handleChange}
+                  placeholder="Nama teman atau PT ASK"
+                  className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25"
+                />
+                <datalist id="lead-form-modal-referred-by-options">
+                  <option value={REFERRAL_ASK} />
+                </datalist>
+              </div>
+            )}
+            {/* Segmen */}
+            <div>
+              <label htmlFor="lead-form-modal-segmen" className="block text-sm font-medium text-ink mb-1">Segmen</label>
+              <Select id="lead-form-modal-segmen"
+                value={form.segmen || ""}
+                onChange={(v) => setForm((prev) => ({ ...prev, segmen: v }))}
+                options={toOptions(LEAD_SEGMEN)}
+                placeholder="Pilih segmen"
+              />
+            </div>
+            {/* Area */}
+            <div>
+              <label htmlFor="lead-form-modal-area" className="block text-sm font-medium text-ink mb-1">Area</label>
+              <Select id="lead-form-modal-area"
+                value={form.area || ""}
+                onChange={(v) => setForm((prev) => ({ ...prev, area: v }))}
+                options={toOptions(LEAD_AREAS)}
+                placeholder="Pilih area"
               />
             </div>
             {/* Budget */}
@@ -342,21 +415,28 @@ export function LeadFormModal({ lead, clients, preselectedClientId, onSaved, onC
               <input id="lead-form-modal-last-contacted-at" type="date" name="last_contacted_at" value={form.last_contacted_at || ""} onChange={handleChange} className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25" />
             </div>
             <div>
+              <label htmlFor="lead-form-modal-survey-date" className="block text-sm font-medium text-ink mb-1">Tanggal Survey</label>
+              <input id="lead-form-modal-survey-date" type="date" name="survey_date" value={form.survey_date || ""} onChange={handleChange} className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25" />
+              <p className="text-xs text-faint mt-1">Otomatis hari ini saat masuk status Survey kalau dikosongkan.</p>
+            </div>
+            <div>
               <label htmlFor="lead-form-modal-closed-at" className="block text-sm font-medium text-ink mb-1">Tanggal ditutup</label>
               <input id="lead-form-modal-closed-at" type="date" name="closed_at" value={form.closed_at || ""} onChange={handleChange} className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25" />
             </div>
             {/* Alasan Lost — syarat Deal → Deal Lost */}
             <div className="sm:col-span-2">
               <label htmlFor="lead-form-modal-alasan-lost" className="block text-sm font-medium text-ink mb-1">Alasan Lost</label>
-              <textarea id="lead-form-modal-alasan-lost"
-                name="alasan_lost"
+              <Select id="lead-form-modal-alasan-lost"
                 value={form.alasan_lost || ""}
-                onChange={handleChange}
-                rows={2}
-                placeholder="Alasan lead ini batal/lost..."
-                className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25 resize-none"
+                onChange={(v) => setForm((prev) => ({ ...prev, alasan_lost: v }))}
+                options={toOptions(
+                  form.alasan_lost && !(LOST_REASONS as readonly string[]).includes(form.alasan_lost)
+                    ? [form.alasan_lost, ...LOST_REASONS]
+                    : LOST_REASONS
+                )}
+                placeholder="Pilih alasan"
               />
-              <p className="text-xs text-faint mt-1">Wajib diisi untuk pindah ke status Deal Lost.</p>
+              <p className="text-xs text-faint mt-1">Wajib diisi untuk pindah ke status Deal Lost. Detailnya tulis di Catatan.</p>
             </div>
             {/* Notes */}
             <div className="sm:col-span-2">

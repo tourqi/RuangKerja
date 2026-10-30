@@ -45,7 +45,9 @@ const SECTIONS: GuideSection[] = [
       { name: "Client", required: true, rule: "Wajib pilih client yang sudah ada (cari lewat nama/telepon, tidak bisa mengetik nama client baru di sini)." },
       { name: "Status", required: true, rule: "Default \"New Lead\". Pilihan: New Lead, Contacted, Survey, Deal, Lost." },
       { name: "Priority", rule: "Opsional: Low, Medium, High, Urgent." },
-      { name: "Source", rule: "Otomatis terisi dari data Sumber client (tidak bisa diketik ulang di form ini — ubah dari data Client)." },
+      { name: "Sumber", rule: "Otomatis terisi dari data Sumber client, bisa diganti per lead. Untuk Referral, isi Direkomendasikan oleh, misalnya nama teman atau PT ASK." },
+      { name: "Segmen, Area", rule: "Opsional, dipakai untuk laporan Marketing." },
+      { name: "Produk Diminati", rule: "Opsional, boleh pilih lebih dari satu. Saat Deal Won semua otomatis ditandai dibeli, koreksi lewat detail lead." },
       { name: "Follow Up Date, Last Contacted, Closed At", rule: "Opsional, tanggal." },
     ],
     notes: [
