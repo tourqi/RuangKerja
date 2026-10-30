@@ -3,6 +3,7 @@ import {
   AlignmentType, BorderStyle, WidthType, PageOrientation,
   convertMillimetersToTwip, ShadingType, TableLayoutType,
   Header, Footer, ImageRun,
+  HorizontalPositionRelativeFrom, VerticalPositionRelativeFrom,
 } from "docx";
 import { saveAs } from "file-saver";
 import { Rab } from "@/types/db";
@@ -103,7 +104,7 @@ function tc(
 }
 
 /* ─── Fetch image + create ImageRun ─────────────── */
-async function fetchImageRun(url: string, widthMm: number): Promise<ImageRun> {
+async function fetchImageRun(url: string, widthMm: number, fullPageBackground = false): Promise<ImageRun> {
   const response = await fetch(url);
   const data = await response.arrayBuffer();
 
@@ -120,6 +121,14 @@ async function fetchImageRun(url: string, widthMm: number): Promise<ImageRun> {
     data,
     transformation: { width: widthPx, height: heightPx },
     type: "png",
+    floating: fullPageBackground
+      ? {
+          horizontalPosition: { relative: HorizontalPositionRelativeFrom.PAGE, offset: 0 },
+          verticalPosition:   { relative: VerticalPositionRelativeFrom.PAGE,   offset: 0 },
+          behindDocument: true,
+          allowOverlap:   true,
+        }
+      : undefined,
   });
 }
 
@@ -309,16 +318,27 @@ export async function generateSphDocx(
   const grandTotal = calcGrandTotal(groups);
   const netTotal   = grandTotal - (rab.diskon_nilai ?? 0);
 
-  // Fetch header & footer images
-  const [headerImgRun, footerImgRun] = await Promise.all([
-    fetchImageRun("/header.png", 174),
-    fetchImageRun("/footer.png", 174),
-  ]);
+  const masbig = config.kop === "masbig";
 
-  const margins = {
-    top: MM(15), bottom: MM(20),
-    left: MM(18), right: MM(18),
-  };
+  // Kop Pesha: gambar header + footer. Kop Mas BIG: satu gambar A4 penuh di belakang teks,
+  // ditaruh di header supaya muncul di setiap halaman.
+  let headers: { default: Header };
+  let footers: { default: Footer } | undefined;
+  if (masbig) {
+    const bgRun = await fetchImageRun("/kop-masbig.png", 210, true);
+    headers = { default: new Header({ children: [new Paragraph({ children: [bgRun] })] }) };
+  } else {
+    const [headerImgRun, footerImgRun] = await Promise.all([
+      fetchImageRun("/header.png", 174),
+      fetchImageRun("/footer.png", 174),
+    ]);
+    headers = { default: new Header({ children: [new Paragraph({ spacing: { before: 0, after: 0 }, children: [headerImgRun] })] }) };
+    footers = { default: new Footer({ children: [new Paragraph({ spacing: { before: 0, after: 0 }, children: [footerImgRun] })] }) };
+  }
+
+  const margins = masbig
+    ? { top: MM(36), bottom: MM(24), left: MM(18), right: MM(18) }
+    : { top: MM(15), bottom: MM(20), left: MM(18), right: MM(18) };
 
   /* ── Page 1 — Surat Penawaran Harga ── */
   const page1: Paragraph[] = [
@@ -418,26 +438,8 @@ export async function generateSphDocx(
             margin: margins,
           },
         },
-        headers: {
-          default: new Header({
-            children: [
-              new Paragraph({
-                spacing: { before: 0, after: 0 },
-                children: [headerImgRun],
-              }),
-            ],
-          }),
-        },
-        footers: {
-          default: new Footer({
-            children: [
-              new Paragraph({
-                spacing: { before: 0, after: 0 },
-                children: [footerImgRun],
-              }),
-            ],
-          }),
-        },
+        headers,
+        footers,
         children: [
           ...page1,
           new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0 }, children: [] }),

@@ -18,7 +18,7 @@ import { getRabByLead } from "@/services/rab";
 import { useInvoices } from "@/hooks/useInvoices";
 import { Rab, RabGroup, RabItem, SkemaPembayaran } from "@/types/db";
 import RabPrintView from "@/features/rab/RabPrintView";
-import SphPrintView, { SphConfig } from "@/features/rab/SphPrintView";
+import SphPrintView, { SphConfig, KOP_OPTIONS, KopSurat } from "@/features/rab/SphPrintView";
 import { generateSphDocx } from "@/features/rab/generateSph";
 import { generateRabExcel } from "@/features/rab/generateRabExcel";
 import { supabase } from "@/services/supabase";
@@ -76,6 +76,7 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
     greeting: "Bapak",
     clientName: "",
     penandatangan: "M. Tourqi",
+    kop: "pesha",
   });
   const [editingName, setEditingName] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -481,9 +482,9 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
     if (sphMode === "word") {
       await generateSphDocx(rab!, groups, sphConfig);
     } else {
+      // SphPrintView membuka dialog print sendiri dari iframe.
       setShowPrint(false);
       setShowSph(true);
-      setTimeout(() => window.print(), 300);
     }
   }
 
@@ -1143,6 +1144,18 @@ export default function RabEditor({ leadId, rabId, projectId }: { leadId: string
             <DialogA11y onClose={() => setShowSphDialog(false)} />
             <h2 className="text-lg font-semibold text-ink mb-4">Konfigurasi SPH</h2>
             <div className="space-y-3">
+              <div>
+                <label htmlFor="sph-kop" className="block text-xs text-muted mb-1">Kop Surat</label>
+                <select id="sph-kop"
+                  value={sphConfig.kop}
+                  onChange={(e) => setSphConfig((prev) => ({ ...prev, kop: e.target.value as KopSurat }))}
+                  className="w-full border border-line-strong rounded-md px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+                >
+                  {KOP_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
               {[
                 { label: "Nomor SPH", key: "nomorSph", placeholder: "001/SPH/XII/2025" },
                 { label: "Kota", key: "kota", placeholder: "Bogor" },

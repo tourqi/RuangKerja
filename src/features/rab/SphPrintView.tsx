@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { Rab } from "@/types/db";
 import { groupSubtotal as calcGroupSubtotal, grandTotal as calcGrandTotal } from "@/utils/rabCalculations";
 
@@ -15,7 +15,15 @@ export interface SphConfig {
   greeting: string;
   clientName: string;
   penandatangan: string;
+  kop: KopSurat;
 }
+
+export type KopSurat = "pesha" | "masbig";
+
+export const KOP_OPTIONS: { value: KopSurat; label: string }[] = [
+  { value: "pesha",  label: "PT Pesha Surya Construction" },
+  { value: "masbig", label: "Mas BIG" },
+];
 
 interface PrintItem {
   id: string;
@@ -71,6 +79,33 @@ function KopFooter() {
   );
 }
 
+/* ─── Kop Mas BIG: satu gambar A4 penuh di belakang isi ─ */
+/* position: fixed → saat print, gambar diulang di setiap lembar kertas dan selalu pas di tepi kertas */
+function KopBackground() {
+  return <img src="/kop-masbig.png" alt="" className="kop-masbig-bg" />;
+}
+
+/* Isi halaman. Untuk kop Mas BIG, isi dibungkus tabel yang thead/tfoot-nya jadi spacer:
+   browser mengulang thead/tfoot di setiap lembar, jadi isi tidak menimpa logo & kontak
+   walaupun tabel RAB berlanjut ke lembar berikutnya. */
+function PageBody({ masbig, children }: { masbig: boolean; children: React.ReactNode }) {
+  if (!masbig) {
+    return (
+      <div className="sph-body">
+        <Separator />
+        {children}
+      </div>
+    );
+  }
+  return (
+    <table className="kop-frame">
+      <thead><tr><td><div style={{ height: "38mm" }} /></td></tr></thead>
+      <tfoot><tr><td><div style={{ height: "24mm" }} /></td></tr></tfoot>
+      <tbody><tr><td className="sph-body" style={{ paddingTop: 0, paddingBottom: 0 }}>{children}</td></tr></tbody>
+    </table>
+  );
+}
+
 /* Thin separator line that appears between kop and body */
 function Separator() {
   return <div style={{ borderBottom: `1.5px solid ${NAVY}`, marginBottom: "6mm" }} />;
@@ -78,11 +113,46 @@ function Separator() {
 
 /* ─── Main component ─────────────────────────────────── */
 export default function SphPrintView({ rab, groups, config, onClose }: Props) {
+  const srcRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+
+  // Cetak dari iframe tersembunyi yang isinya hanya dokumen SPH, supaya posisi kop
+  // tidak terpengaruh layout/CSS aplikasi (sebelumnya kop bergeser ±6mm & terpotong).
   useEffect(() => {
-    const handleAfterPrint = () => onClose();
-    window.addEventListener("afterprint", handleAfterPrint);
-    return () => window.removeEventListener("afterprint", handleAfterPrint);
-  }, [onClose]);
+    const src = srcRef.current;
+    if (!src) return;
+    let cancelled = false;
+    const content = src.cloneNode(true) as HTMLElement;
+    content.hidden = false;
+
+    const iframe = document.createElement("iframe");
+    iframe.setAttribute("aria-hidden", "true");
+    iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;";
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentDocument!;
+    doc.open();
+    doc.write(
+      `<!doctype html><html><head><meta charset="utf-8"><base href="${window.location.origin}/">` +
+      `<title>SPH-${rab.nama.replace(/[<>&"]/g, "")}</title></head>` +
+      `<body style="margin:0">${content.outerHTML}</body></html>`,
+    );
+    doc.close();
+
+    const images = Array.from(doc.images);
+    Promise.all(images.map((img) =>
+      img.complete ? Promise.resolve() : new Promise<void>((resolve) => { img.onload = img.onerror = () => resolve(); }),
+    )).then(() => {
+      if (cancelled) return;
+      const win = iframe.contentWindow!;
+      win.addEventListener("afterprint", () => onCloseRef.current());
+      win.focus();
+      win.print();
+    });
+
+    return () => { cancelled = true; iframe.remove(); };
+  }, [rab.nama]);
 
   const groupSubtotal = (g: PrintGroup) => calcGroupSubtotal(g);
   const grandTotal = calcGrandTotal(groups);
@@ -92,12 +162,14 @@ export default function SphPrintView({ rab, groups, config, onClose }: Props) {
     ? rab.skema_pembayaran!.map((s) => ({ label: s.keterangan, pct: s.persen / 100 }))
     : DEFAULT_TERMIN;
 
+  const masbig = config.kop === "masbig";
+
   const now   = new Date();
   const nomorSph = config.nomorSph ||
     `001/SPH/${ROMAN_MONTHS[now.getMonth()]}/${now.getFullYear()}`;
 
   return (
-    <div className="hidden print:block sph-print">
+    <div ref={srcRef} hidden className={`sph-print${masbig ? " kop-masbig" : ""}`}>
       <style>{`
         @media print {
           @page { size: A4; margin: 0; }
@@ -121,20 +193,29 @@ export default function SphPrintView({ rab, groups, config, onClose }: Props) {
           .grand-total-row td { background: #f0f0f0; font-weight: bold; }
           .termin-table { border-collapse: collapse; width: 100%; font-size: 8pt; margin-top: 10px; }
           .termin-table td { border: 1px solid #000; padding: 3px 6px; }
+          .kop-masbig-bg { position: fixed; top: 0; left: 0; width: 210mm; height: 297mm; z-index: 0; }
+          .kop-masbig .sph-page { min-height: 0; overflow: visible; }
+          .kop-frame { position: relative; z-index: 1; width: 100%; border-collapse: collapse; }
+          .kop-frame > thead > tr > td, .kop-frame > tfoot > tr > td { padding: 0; border: 0; }
+          .kop-frame > thead { display: table-header-group; }
+          .kop-frame > tfoot { display: table-footer-group; }
         }
+        .kop-masbig-bg { display: none; }
+        @media print { .kop-masbig-bg { display: block; } }
         .sph-print { font-family: 'Cambria', 'Times New Roman', serif; font-size: 10pt; color: #000; }
         .sph-page { position: relative; width: 210mm; min-height: 297mm; box-sizing: border-box; overflow: hidden; }
         .sph-body { padding: 2mm 18mm 26mm; }
       `}</style>
 
+      {masbig && <KopBackground />}
+
       {/* ════════════════════════════════════════
           PAGE 1 — SURAT PENAWARAN HARGA
       ════════════════════════════════════════ */}
       <div className="sph-page">
-        <KopHeader />
+        {!masbig && <KopHeader />}
 
-        <div className="sph-body">
-          <Separator />
+        <PageBody masbig={masbig}>
 
           {/* Nomor / Lampiran / Hal */}
           <div style={{ marginBottom: "5mm", fontSize: "10pt", fontFamily: "'Cambria', 'Times New Roman', serif" }}>
@@ -188,19 +269,18 @@ export default function SphPrintView({ rab, groups, config, onClose }: Props) {
             <div style={{ height: "18mm" }} />
             <div style={{ fontWeight: "600" }}>{config.penandatangan}</div>
           </div>
-        </div>
+        </PageBody>
 
-        <KopFooter />
+        {!masbig && <KopFooter />}
       </div>
 
       {/* ════════════════════════════════════════
           PAGE 2 — LAMPIRAN I (RAB TABLE)
       ════════════════════════════════════════ */}
       <div className="sph-page">
-        <KopHeader />
+        {!masbig && <KopHeader />}
 
-        <div className="sph-body">
-          <Separator />
+        <PageBody masbig={masbig}>
 
           <div style={{ fontSize: "8.5pt", marginBottom: "3mm", fontFamily: "'Cambria', 'Times New Roman', serif" }}>
             Lampiran I
@@ -318,9 +398,9 @@ export default function SphPrintView({ rab, groups, config, onClose }: Props) {
               ))}
             </tbody>
           </table>
-        </div>
+        </PageBody>
 
-        <KopFooter />
+        {!masbig && <KopFooter />}
       </div>
     </div>
   );
