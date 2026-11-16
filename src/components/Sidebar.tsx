@@ -31,7 +31,6 @@ const navGroups: NavGroup[] = [
       { href: "/leads", label: "Leads", icon: FunnelIcon },
       { href: "/clients", label: "Clients", icon: UsersIcon },
       { href: "/products", label: "Produk", icon: ShoppingBagIcon },
-      { href: "/marketing", label: "Marketing", icon: MegaphoneIcon },
     ],
   },
   {
@@ -52,7 +51,10 @@ const navGroups: NavGroup[] = [
   },
   {
     label: "Laporan",
-    items: [{ href: "/reports", label: "Laporan Bisnis", icon: ChartBarIcon }],
+    items: [
+      { href: "/reports", label: "Laporan Bisnis", icon: ChartBarIcon },
+      { href: "/marketing", label: "Laporan Marketing", icon: MegaphoneIcon },
+    ],
   },
   {
     label: "Pengaturan",

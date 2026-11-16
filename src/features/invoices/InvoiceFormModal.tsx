@@ -65,12 +65,18 @@ export function InvoiceFormModal({
   const diskonNilaiNum = parseFloat(diskon.nilai) || 0;
   const effectiveRabTotal = rabTotal != null ? rabTotal - diskonNilaiNum : null;
   const totalTermin = termins.reduce((s, t) => s + (parseFloat(t.jumlah) || 0), 0);
-  const sisaTagihan = effectiveRabTotal != null ? effectiveRabTotal - totalTermin : null;
 
-  // RAB dianggap lunas jika sudah punya invoice dan semua invoice-nya berstatus "paid" —
-  // tidak perlu (dan tidak boleh) dibuatkan invoice tambahan.
   const selectedRabInvoices = selectedRabId ? existingInvoices.filter((inv) => inv.rab_id === selectedRabId) : [];
-  const isRabLunas = selectedRabInvoices.length > 0 && selectedRabInvoices.every((inv) => inv.status === "paid");
+  const totalSudahDitagih = selectedRabInvoices.reduce((s, inv) => s + inv.total_amount, 0);
+  // Sisa nilai RAB yang belum dibuatkan invoice (sebelum termin baru di form ini).
+  const sisaBelumDitagih = effectiveRabTotal != null ? effectiveRabTotal - totalSudahDitagih : null;
+  const sisaTagihan = sisaBelumDitagih != null ? sisaBelumDitagih - totalTermin : null;
+
+  // Seluruh nilai RAB sudah ditagih → tidak boleh dibuatkan invoice tambahan.
+  // Status "lunas" hanya jika nilainya sudah tertagih penuh DAN semua invoice-nya sudah dibayar —
+  // jumlah invoice saja tidak cukup, karena nilai RAB/diskon bisa berubah setelah invoice dibuat.
+  const isRabTertagihPenuh = selectedRabInvoices.length > 0 && sisaBelumDitagih != null && sisaBelumDitagih < 1;
+  const isRabLunas = isRabTertagihPenuh && selectedRabInvoices.every((inv) => inv.status === "paid");
 
   async function handleProjectChange(projectId: string) {
     setForm((f) => ({ ...f, project_id: projectId }));
@@ -133,10 +139,14 @@ export function InvoiceFormModal({
 
       // Suggest next termin from skema_pembayaran
       const skema = selectedRab?.skema_pembayaran ?? [];
-      const rabInvoiceCount = existingInvoices.filter((inv) => inv.rab_id === rabId).length;
+      const rabInvoices = existingInvoices.filter((inv) => inv.rab_id === rabId);
+      const rabInvoiceCount = rabInvoices.length;
       const netTotal = grossTotal - diskonNilai;
+      const sisa = netTotal - rabInvoices.reduce((s, inv) => s + inv.total_amount, 0);
 
-      if (skema.length > 0 && rabInvoiceCount < skema.length) {
+      if (sisa < 1) {
+        setTermins([newTermin(0)]);
+      } else if (skema.length > 0 && rabInvoiceCount < skema.length) {
         const suggested = skema[rabInvoiceCount];
         const suggestedAmount = Math.round(netTotal * suggested.persen / 100);
         const dueDate = new Date(); dueDate.setDate(dueDate.getDate() + 14);
@@ -145,6 +155,16 @@ export function InvoiceFormModal({
           nama: suggested.keterangan || `Termin ${rabInvoiceCount + 1}`,
           persen: String(suggested.persen),
           jumlah: String(suggestedAmount),
+          due_date: dueDate.toISOString().slice(0, 10),
+        }]);
+      } else if (rabInvoiceCount > 0) {
+        // Semua termin skema sudah diinvoice tapi nilainya belum menutup RAB — sarankan pelunasan sisa.
+        const dueDate = new Date(); dueDate.setDate(dueDate.getDate() + 14);
+        setTermins([{
+          id: crypto.randomUUID(),
+          nama: "Pelunasan sisa",
+          persen: netTotal > 0 ? ((sisa / netTotal) * 100).toFixed(1) : "",
+          jumlah: String(Math.round(sisa)),
           due_date: dueDate.toISOString().slice(0, 10),
         }]);
       } else {
@@ -179,7 +199,7 @@ export function InvoiceFormModal({
 
   function handleDiskonNilaiChange(value: string) {
     const nilai = parseFloat(value) || 0;
-    const persen = rabTotal && rabTotal > 0 ? ((nilai / rabTotal) * 100).toFixed(1) : "";
+    const persen = rabTotal && rabTotal > 0 ? ((nilai / rabTotal) * 100).toFixed(2) : "";
     setDiskon({ nilai: value, persen: persen });
   }
 
@@ -187,9 +207,10 @@ export function InvoiceFormModal({
     e.preventDefault();
     if (!form.project_id) { toast("Pilih project terlebih dahulu", "warning"); return; }
     if (!selectedRabId) { toast("Wajib pilih RAB terlebih dahulu", "warning"); return; }
-    if (isRabLunas) { toast("RAB ini sudah lunas, tidak bisa dibuatkan invoice tambahan", "warning"); return; }
+    if (isRabTertagihPenuh) { toast("Seluruh nilai RAB sudah ditagih, tidak bisa dibuatkan invoice tambahan", "warning"); return; }
     const validTermins = termins.filter((t) => t.nama && parseFloat(t.jumlah) > 0);
     if (validTermins.length === 0) { toast("Tambahkan minimal 1 termin dengan nama dan jumlah", "warning"); return; }
+    if (sisaTagihan != null && sisaTagihan <= -1) { toast(`Total termin melebihi sisa tagihan (${formatRupiah(sisaBelumDitagih ?? 0)})`, "warning"); return; }
 
     setSaving(true);
     try {
@@ -241,7 +262,7 @@ export function InvoiceFormModal({
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-5">
           {/* Project */}
           <div>
-            <label htmlFor="invoice-form-modal-project" className="block text-xs font-medium text-ink mb-1.5">Proyek *</label>
+            <label htmlFor="invoice-form-modal-project" className="block text-xs font-medium text-ink mb-1.5">Proyek <span className="text-danger">*</span></label>
             {preselectedProjectId ? (
               (() => {
                 const project = projects.find((p) => p.id === preselectedProjectId);
@@ -304,12 +325,15 @@ export function InvoiceFormModal({
               )}
               {rabTotal != null && (
                 <div className="mt-2 space-y-2">
-                  {isRabLunas && (
+                  {isRabTertagihPenuh && (
                     <div className="flex items-center gap-2 px-3 py-2 bg-success-soft border border-success/25 rounded-md text-xs text-success">
                       <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      <span><span className="font-semibold">RAB ini sudah lunas.</span> Tidak bisa dibuatkan invoice tambahan.</span>
+                      <span>
+                        <span className="font-semibold">{isRabLunas ? "RAB ini sudah lunas." : "Seluruh nilai RAB sudah ditagih."}</span>{" "}
+                        Tidak bisa dibuatkan invoice tambahan.
+                      </span>
                     </div>
                   )}
                   <div className="flex items-center justify-between bg-surface rounded-md px-3 py-2">
@@ -321,7 +345,7 @@ export function InvoiceFormModal({
                     <div className="relative w-24">
                       <input
                         type="number" value={diskon.persen} onChange={(e) => handleDiskonPersenChange(e.target.value)}
-                        disabled={isRabLunas}
+                        disabled={isRabTertagihPenuh}
                         placeholder="0" min="0" max="100" step="any"
                         className="w-full pl-2.5 pr-7 py-1.5 border border-line-strong rounded-md text-xs text-ink outline-none focus:ring-1 focus:ring-accent/25 disabled:opacity-60 disabled:cursor-not-allowed"
                       />
@@ -329,7 +353,7 @@ export function InvoiceFormModal({
                     </div>
                     <NumberInput
                       value={diskon.nilai} onValueChange={handleDiskonNilaiChange}
-                      disabled={isRabLunas}
+                      disabled={isRabTertagihPenuh}
                       placeholder="Rp"
                       className="flex-1 px-2.5 py-1.5 border border-line-strong rounded-md text-xs text-ink outline-none focus:ring-1 focus:ring-accent/25 disabled:opacity-60 disabled:cursor-not-allowed"
                     />
@@ -367,16 +391,22 @@ export function InvoiceFormModal({
                   </span>
                   <span className="text-xs text-muted">Total: {formatRupiah(totalTagih)}</span>
                 </div>
+                {selectedRabId && sisaBelumDitagih != null && sisaBelumDitagih >= 1 && (
+                  <div className="px-3 py-2 bg-warning-soft border-b border-line flex items-center justify-between">
+                    <span className="text-xs text-warning">Belum ditagih</span>
+                    <span className="text-xs font-semibold text-warning">{formatRupiah(sisaBelumDitagih)}</span>
+                  </div>
+                )}
                 <div className="divide-y divide-line">
                   {filtered.map((inv) => (
-                    <div key={inv.id} className="flex items-center justify-between px-3 py-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono text-ink">{inv.invoice_number}</span>
+                    <div key={inv.id} className="flex items-center justify-between gap-3 px-3 py-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-xs font-mono text-ink shrink-0">{inv.invoice_number}</span>
                         {inv.notes && (
-                          <span className="text-xs text-faint truncate max-w-[140px]">{inv.notes.split(" · ")[0]}</span>
+                          <span className="text-xs text-faint truncate" title={inv.notes}>{inv.notes.split(" · ")[0]}</span>
                         )}
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 shrink-0">
                         <span className={`text-xs font-medium ${statusColor[inv.status] ?? "text-muted"}`}>
                           {statusLabel[inv.status] ?? inv.status}
                         </span>
@@ -389,14 +419,15 @@ export function InvoiceFormModal({
             );
           })()}
 
+          {/* Field pembuatan invoice disembunyikan bila seluruh nilai RAB sudah ditagih */}
+          {!isRabTertagihPenuh && (<>
           {/* Tanggal Invoice */}
           <div>
-            <label htmlFor="invoice-form-modal-tanggal-invoice" className="block text-xs font-medium text-ink mb-1.5">Tanggal Invoice *</label>
+            <label htmlFor="invoice-form-modal-tanggal-invoice" className="block text-xs font-medium text-ink mb-1.5">Tanggal Invoice <span className="text-danger">*</span></label>
             <input id="invoice-form-modal-tanggal-invoice"
               type="date" value={form.invoice_date}
               onChange={(e) => setForm((f) => ({ ...f, invoice_date: e.target.value }))}
-              disabled={isRabLunas}
-              className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25"
               required
             />
           </div>
@@ -441,14 +472,16 @@ export function InvoiceFormModal({
                       </span>
                     )}
                     {nextIdx >= skema.length && (
-                      <span className="text-xs text-success font-medium">Semua termin sudah diinvoice ✓</span>
+                      <span className="text-xs text-warning w-full mt-0.5">
+                        Semua termin skema sudah diinvoice, tapi masih ada sisa {formatRupiah(sisaBelumDitagih ?? 0)} yang belum ditagih.
+                      </span>
                     )}
                   </div>
                 );
               })()}
 
               <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-medium text-ink">Termin Pembayaran *</label>
+                <label className="text-xs font-medium text-ink">Termin Pembayaran <span className="text-danger">*</span></label>
                 {rabTotal != null && sisaTagihan != null && (
                   <span className={`text-xs font-medium ${Math.abs(sisaTagihan) < 1 ? "text-success" : sisaTagihan < 0 ? "text-danger" : "text-warning"}`}>
                     Sisa: {formatRupiah(sisaTagihan)}
@@ -463,7 +496,7 @@ export function InvoiceFormModal({
                         <input
                           type="text" value={t.nama}
                           onChange={(e) => updateTermin(t.id, "nama", e.target.value)}
-                          disabled={isRabLunas}
+                          disabled={isRabTertagihPenuh}
                           placeholder={idx === 0 ? "DP" : idx === termins.length - 1 ? "Pelunasan" : `Termin ${idx + 1}`}
                           className="w-full px-2.5 py-1.5 border border-line-strong rounded-md text-xs text-ink outline-none focus:ring-1 focus:ring-accent/25 disabled:opacity-60 disabled:cursor-not-allowed"
                         />
@@ -473,7 +506,7 @@ export function InvoiceFormModal({
                           <input
                             type="number" value={t.persen}
                             onChange={(e) => updateTermin(t.id, "persen", e.target.value)}
-                            disabled={isRabLunas}
+                            disabled={isRabTertagihPenuh}
                             placeholder="0" min="0" max="100" step="any"
                             className="w-full pl-2.5 pr-7 py-1.5 border border-line-strong rounded-md text-xs text-ink outline-none focus:ring-1 focus:ring-accent/25 disabled:opacity-60 disabled:cursor-not-allowed"
                           />
@@ -484,7 +517,7 @@ export function InvoiceFormModal({
                         <NumberInput
                           value={t.jumlah}
                           onValueChange={(v) => updateTermin(t.id, "jumlah", v)}
-                          disabled={isRabLunas}
+                          disabled={isRabTertagihPenuh}
                           placeholder="Rp"
                           className="w-full px-2.5 py-1.5 border border-line-strong rounded-md text-xs text-ink outline-none focus:ring-1 focus:ring-accent/25 disabled:opacity-60 disabled:cursor-not-allowed"
                         />
@@ -493,7 +526,7 @@ export function InvoiceFormModal({
                         <input
                           type="date" value={t.due_date}
                           onChange={(e) => updateTermin(t.id, "due_date", e.target.value)}
-                          disabled={isRabLunas}
+                          disabled={isRabTertagihPenuh}
                           className="w-full px-2.5 py-1.5 border border-line-strong rounded-md text-xs text-ink outline-none focus:ring-1 focus:ring-accent/25 disabled:opacity-60 disabled:cursor-not-allowed"
                         />
                       </div>
@@ -501,7 +534,7 @@ export function InvoiceFormModal({
                     <button
                       type="button"
                       onClick={() => setTermins((prev) => prev.filter((x) => x.id !== t.id))}
-                      disabled={termins.length === 1 || isRabLunas}
+                      disabled={termins.length === 1 || isRabTertagihPenuh}
                       className="mt-1 text-faint hover:text-danger transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -512,7 +545,7 @@ export function InvoiceFormModal({
               <button
                 type="button"
                 onClick={() => setTermins((prev) => [...prev, newTermin(prev.length)])}
-                disabled={isRabLunas}
+                disabled={isRabTertagihPenuh}
                 className="mt-2 flex items-center gap-1.5 text-xs text-muted hover:text-ink transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-faint"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
@@ -530,12 +563,13 @@ export function InvoiceFormModal({
             <textarea id="invoice-form-modal-catatan"
               value={form.notes}
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-              disabled={isRabLunas}
+              disabled={isRabTertagihPenuh}
               rows={2}
               className="w-full px-3 py-2 border border-line-strong rounded-md text-sm text-ink outline-none focus:ring-2 focus:ring-accent/25 resize-none disabled:opacity-60 disabled:cursor-not-allowed"
               placeholder="Catatan tambahan…"
             />
           </div>
+          </>)}
 
           <div className="flex gap-3 pt-1">
             <button
@@ -545,14 +579,16 @@ export function InvoiceFormModal({
               Batal
             </button>
             <button
-              type="submit" disabled={saving || isRabLunas || !selectedRabId}
-              title={isRabLunas ? "RAB ini sudah lunas" : !selectedRabId ? "Wajib pilih RAB terlebih dahulu" : undefined}
+              type="submit" disabled={saving || isRabTertagihPenuh || !selectedRabId}
+              title={isRabTertagihPenuh ? "Seluruh nilai RAB sudah ditagih" : !selectedRabId ? "Wajib pilih RAB terlebih dahulu" : undefined}
               className="flex-1 px-4 py-2 text-sm font-medium text-white bg-accent rounded-md hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {saving
                 ? "Menyimpan…"
                 : isRabLunas
                 ? "RAB Sudah Lunas"
+                : isRabTertagihPenuh
+                ? "RAB Sudah Ditagih Penuh"
                 : !selectedRabId
                 ? "Pilih RAB Dahulu"
                 : `Buat ${termins.filter((t) => t.nama && parseFloat(t.jumlah) > 0).length || ""} Invoice`}
